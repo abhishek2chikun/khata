@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="dev-secret-key-change-me-at-least-32chars")
     access_token_expire_minutes: int = 30
     algorithm: str = "HS256"
-    database_url: str = "postgresql://localhost/internal_billing"
+    database_url: str = "postgresql+psycopg://localhost/internal_billing"
 
     model_config = SettingsConfigDict(env_prefix="BILLING_", extra="ignore")
 
