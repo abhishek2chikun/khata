@@ -1,6 +1,6 @@
 """auth tables
 
-Revision ID: 0001_auth_tables
+Revision ID: 0001_auth
 Revises:
 Create Date: 2026-04-19 00:00:00
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0001_auth_tables"
+revision: str = "0001_auth"
 down_revision: str | None = None
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None

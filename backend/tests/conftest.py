@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.db import get_engine, get_session_factory
 from app.main import create_app
 from app.models.app_user import AppUser
+from app.models.base import Base
 from app.services.auth_service import bootstrap_user
 
 
@@ -33,7 +34,10 @@ def db_session(migrated_database: None) -> Generator[Session, None, None]:
 @pytest.fixture(autouse=True)
 def clean_tables(db_session: Session) -> Generator[None, None, None]:
     yield
-    db_session.execute(text("TRUNCATE TABLE user_sessions, app_users RESTART IDENTITY CASCADE"))
+    table_names = [table.name for table in Base.metadata.sorted_tables]
+    if table_names:
+        joined = ", ".join(table_names)
+        db_session.execute(text(f"TRUNCATE TABLE {joined} RESTART IDENTITY CASCADE"))
     db_session.commit()
 
 

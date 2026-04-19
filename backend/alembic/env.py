@@ -6,6 +6,10 @@ from sqlalchemy import engine_from_config, pool
 from app.config import get_settings
 from app.models.app_user import AppUser  # noqa: F401
 from app.models.base import Base
+from app.models.company_profile import CompanyProfile  # noqa: F401
+from app.models.product import Product  # noqa: F401
+from app.models.seller import Seller  # noqa: F401
+from app.models.stock_movement import StockMovement  # noqa: F401
 from app.models.user_session import UserSession  # noqa: F401
 
 config = context.config

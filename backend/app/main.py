@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.routers.company_profile import router as company_profile_router
+from app.routers.products import router as products_router
+from app.routers.sellers import router as sellers_router
 from app.routers.auth import router as auth_router
 
 
@@ -29,6 +32,9 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth_router)
+    app.include_router(products_router)
+    app.include_router(sellers_router)
+    app.include_router(company_profile_router)
 
     return app
 
