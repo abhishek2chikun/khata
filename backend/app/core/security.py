@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 
 from app.config import get_settings
@@ -26,3 +27,13 @@ def create_access_token(subject: str) -> str:
 def decode_token(token: str) -> dict:
     settings = get_settings()
     return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+
+
+__all__ = [
+    "CryptContext",
+    "InvalidTokenError",
+    "create_access_token",
+    "decode_token",
+    "hash_password",
+    "verify_password",
+]
