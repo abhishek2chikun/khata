@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ProductCreateRequest(BaseModel):
@@ -28,6 +28,19 @@ class ProductUpdateRequest(BaseModel):
     buying_price_excl_tax: Decimal | None = None
     buying_gst_rate: Decimal | None = None
     quantity_on_hand: Decimal | None = None
+
+
+class StockAdjustmentRequest(BaseModel):
+    request_id: uuid.UUID
+    quantity_delta: Decimal
+    reason: str | None = None
+
+    @field_validator("quantity_delta")
+    @classmethod
+    def validate_non_zero_quantity(cls, value: Decimal) -> Decimal:
+        if value == 0:
+            raise ValueError("quantity_delta must be non-zero")
+        return value
 
 
 class ProductResponse(BaseModel):
