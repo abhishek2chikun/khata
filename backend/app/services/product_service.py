@@ -1,5 +1,7 @@
 import hashlib
 import json
+from decimal import Decimal
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
@@ -85,6 +87,45 @@ def update_product(session: Session, product_id, payload: ProductUpdateRequest) 
 def archive_product(session: Session, product_id) -> Product:
     product = get_product(session, product_id)
     product.is_active = False
+    session.commit()
+    session.refresh(product)
+    return product
+
+
+def adjust_stock(session: Session, product_id, request_id: UUID, quantity_delta, reason: str | None, current_user: CurrentUserResponse):
+    product = session.scalar(select(Product).where(Product.id == product_id).with_for_update())
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"code": "NOT_FOUND", "message": "Product not found"}})
+    if not product.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "PRODUCT_ARCHIVED", "message": "Archived product cannot be adjusted"}})
+
+    quantity_delta = Decimal(quantity_delta)
+    movement_hash = hashlib.sha256(
+        json.dumps(
+            {"product_id": str(product.id), "request_id": str(request_id), "quantity_delta": str(quantity_delta), "reason": reason},
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    existing = session.scalar(select(StockMovement).where(StockMovement.request_id == request_id))
+    if existing is not None:
+        if existing.request_hash != movement_hash:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "request_id already used with different payload"}})
+        session.refresh(product)
+        return product
+
+    product.quantity_on_hand += quantity_delta
+    session.add(
+        StockMovement(
+            product_id=product.id,
+            request_id=request_id,
+            request_hash=movement_hash,
+            movement_type="MANUAL_ADJUSTMENT",
+            quantity_delta=quantity_delta,
+            reason=reason,
+            created_by_user_id=current_user.id,
+        )
+    )
     session.commit()
     session.refresh(product)
     return product

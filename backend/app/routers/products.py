@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.schemas.auth import CurrentUserResponse
-from app.schemas.product import ProductCreateRequest, ProductResponse, ProductUpdateRequest
+from app.schemas.product import ProductCreateRequest, ProductResponse, ProductUpdateRequest, StockAdjustmentRequest
 from app.services import product_service
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -33,3 +33,17 @@ def update_product(product_id: str, payload: ProductUpdateRequest, _: CurrentUse
 @router.delete("/{product_id}", response_model=ProductResponse)
 def archive_product(product_id: str, _: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> ProductResponse:
     return ProductResponse.model_validate(product_service.archive_product(session, product_id))
+
+
+@router.post("/{product_id}/adjust-stock", response_model=ProductResponse)
+def adjust_stock(product_id: str, payload: StockAdjustmentRequest, current_user: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> ProductResponse:
+    return ProductResponse.model_validate(
+        product_service.adjust_stock(
+            session,
+            product_id,
+            payload.request_id,
+            payload.quantity_delta,
+            payload.reason,
+            current_user,
+        )
+    )
