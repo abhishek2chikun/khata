@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'auth/auth_controller.dart';
 import 'auth/auth_service.dart';
 import 'auth/session_store.dart';
+import 'config/api_base_url.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/inventory_list_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/product_form_screen.dart';
+import 'models/product.dart';
 import 'screens/seller_list_screen.dart';
 import 'services/api_client.dart';
 import 'services/invoices_service.dart';
@@ -16,29 +18,32 @@ import 'services/payments_service.dart';
 import 'services/products_service.dart';
 import 'services/sellers_service.dart';
 
-void main() {
-  final authService = HttpAuthService(baseUri: Uri.parse('http://localhost:8000/'));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final baseUri = await resolveApiBaseUri();
+  final authService = HttpAuthService(baseUri: baseUri);
   final sessionStore = SecureSessionStore();
   final controller = AuthController(
     authService: authService,
     sessionStore: sessionStore,
   );
   final apiClient = ApiClient(
-    baseUri: Uri.parse('http://localhost:8000/'),
+    baseUri: baseUri,
     httpClient: HttpClient(),
     authService: authService,
     sessionStore: sessionStore,
     onAuthorizationFailed: controller.logout,
   );
   runApp(
-      BillingApp(
-        controller: controller,
-        productsService: ApiProductsService(apiClient: apiClient),
-        sellersService: ApiSellersService(apiClient: apiClient),
-        paymentsService: ApiPaymentsService(apiClient: apiClient),
-        invoicesService: ApiInvoicesService(apiClient: apiClient),
-      ),
-    );
+    BillingApp(
+      controller: controller,
+      productsService: ApiProductsService(apiClient: apiClient),
+      sellersService: ApiSellersService(apiClient: apiClient),
+      paymentsService: ApiPaymentsService(apiClient: apiClient),
+      invoicesService: ApiInvoicesService(apiClient: apiClient),
+    ),
+  );
 }
 
 class BillingApp extends StatefulWidget {
@@ -78,7 +83,7 @@ class _BillingAppState extends State<BillingApp> {
           home: Scaffold(
             body: _buildBody(),
           ),
-        ),
+        );
       },
     );
   }
@@ -120,15 +125,16 @@ class _BillingAppState extends State<BillingApp> {
         onLogout: widget.controller.logout,
         onAddProduct: () async {
           final result = await Navigator.of(context).push<Product>(
-            MaterialPageRoute<ProductFormScreen>(
-              builder: (_) => ProductFormScreen(productsService: widget.productsService),
+            MaterialPageRoute<Product>(
+              builder: (_) =>
+                  ProductFormScreen(productsService: widget.productsService),
             ),
           );
           return result != null;
         },
         onEditProduct: (product) async {
           final result = await Navigator.of(context).push<Product>(
-            MaterialPageRoute<ProductFormScreen>(
+            MaterialPageRoute<Product>(
               builder: (_) => ProductFormScreen(
                 productsService: widget.productsService,
                 product: product,
