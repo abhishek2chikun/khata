@@ -11,15 +11,13 @@ class InventoryListScreen extends StatefulWidget {
     required this.productsService,
     required this.onAddProduct,
     required this.onEditProduct,
-    this.onViewSellers,
-    this.onLogout,
+    this.drawer,
   });
 
   final ProductsService productsService;
   final Future<bool> Function() onAddProduct;
   final Future<bool> Function(Product product) onEditProduct;
-  final Future<void> Function()? onViewSellers;
-  final VoidCallback? onLogout;
+  final Widget? drawer;
 
   @override
   State<InventoryListScreen> createState() => _InventoryListScreenState();
@@ -51,22 +49,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('Inventory'),
-        actions: <Widget>[
-          if (widget.onViewSellers != null)
-            IconButton(
-              onPressed: widget.onViewSellers,
-              icon: const Icon(Icons.people_outline),
-              tooltip: 'View sellers',
-            ),
-          if (widget.onLogout != null)
-            IconButton(
-              onPressed: widget.onLogout,
-              icon: const Icon(Icons.logout),
-              tooltip: 'Log out',
-            ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -148,7 +133,8 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('${product.company} • ${product.category} • ${product.itemCode}'),
+                Text(
+                    '${product.company} • ${product.category} • ${product.itemCode}'),
                 if (product.isLowStock)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
@@ -171,7 +157,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   ),
                 IconButton(
                   key: Key('editProductButton-${product.id}'),
-                  onPressed: product.isActive ? () => _handleEditProduct(product) : null,
+                  onPressed: product.isActive
+                      ? () => _handleEditProduct(product)
+                      : null,
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Edit product',
                 ),

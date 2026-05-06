@@ -15,11 +15,13 @@ class SellerListScreen extends StatefulWidget {
     required this.sellersService,
     required this.paymentsService,
     required this.onCreateInvoice,
+    this.drawer,
   });
 
   final SellersService sellersService;
   final PaymentsService paymentsService;
   final Future<bool> Function(Seller seller) onCreateInvoice;
+  final Widget? drawer;
 
   @override
   State<SellerListScreen> createState() => _SellerListScreenState();
@@ -48,6 +50,7 @@ class _SellerListScreenState extends State<SellerListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(title: const Text('Sellers')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createSeller,
@@ -186,7 +189,8 @@ class _SellerListScreenState extends State<SellerListScreen> {
   Future<void> _createSeller() async {
     final created = await showDialog<bool>(
           context: context,
-          builder: (_) => _CreateSellerDialog(sellersService: widget.sellersService),
+          builder: (_) =>
+              _CreateSellerDialog(sellersService: widget.sellersService),
         ) ??
         false;
     if (created && mounted) {
@@ -301,10 +305,18 @@ class _CreateSellerDialogState extends State<_CreateSellerDialog> {
         CreateSellerInput(
           name: _nameController.text.trim(),
           address: _addressController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          gstin: _gstinController.text.trim().isEmpty ? null : _gstinController.text.trim(),
-          state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
-          stateCode: _stateCodeController.text.trim().isEmpty ? null : _stateCodeController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          gstin: _gstinController.text.trim().isEmpty
+              ? null
+              : _gstinController.text.trim(),
+          state: _stateController.text.trim().isEmpty
+              ? null
+              : _stateController.text.trim(),
+          stateCode: _stateCodeController.text.trim().isEmpty
+              ? null
+              : _stateCodeController.text.trim(),
         ),
       );
       if (!mounted) {

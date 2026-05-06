@@ -2,11 +2,16 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a robust Flutter + FastAPI + PostgreSQL internal billing system with authenticated cached sessions, ledger-driven khata, atomic invoice creation and cancellation, and mobile parity for inventory, sellers, payments, and invoicing.
+**Goal:** Build a robust Flutter + FastAPI + PostgreSQL internal billing system with authenticated cached sessions, ledger-driven khata, atomic invoice creation and cancellation, mobile parity for inventory, sellers, payments, and invoicing, plus practical seed/import paths for real manual testing.
 
 **Architecture:** Use a monorepo with `backend/` for FastAPI and `mobile/` for Flutter. The backend is the only writer of business data and owns auth, idempotency, financial invariants, tax normalization, stock locking, and auditability. Flutter is a thin authenticated client that stores only secure session state and transient invoice-draft state.
 
-**Tech Stack:** FastAPI, SQLAlchemy 2.0, Alembic, PostgreSQL, Pydantic, PyJWT, Argon2/passlib, pytest, Flutter, dio, flutter_secure_storage, ChangeNotifier.
+**Tech Stack:** FastAPI, SQLAlchemy 2.0, Alembic, PostgreSQL, Pydantic, PyJWT, Argon2/passlib, pytest, Flutter, `dart:io` `HttpClient` (or a future shared HTTP client wrapper), flutter_secure_storage, ChangeNotifier.
+
+## Current Drift Notes
+
+- The current mobile implementation uses `dart:io` networking rather than `dio`, so future tasks should extend the shared client abstractions already in `mobile/lib/services/`.
+- Manual QA needs seeded company profile, sellers, products, and invoices because invoicing depends on backend master data and state metadata before the mobile UX can be exercised end-to-end.
 
 ---
 
@@ -70,8 +75,10 @@
 - `backend/app/routers/company_profile.py`
 - `backend/app/routers/invoices.py`
 - `backend/app/commands/bootstrap_user.py`
+- `backend/app/commands/seed_demo_data.py`
 - `backend/tests/conftest.py`
 - `backend/tests/commands/test_bootstrap_user.py`
+- `backend/tests/commands/test_seed_demo_data.py`
 - `backend/tests/services/test_security.py`
 - `backend/tests/services/test_idempotency.py`
 - `backend/tests/services/test_pricing.py`
@@ -90,6 +97,7 @@
 
 - `mobile/pubspec.yaml`
 - `mobile/lib/main.dart`
+- `mobile/lib/config/api_base_url.dart`
 - `mobile/lib/auth/auth_service.dart`
 - `mobile/lib/auth/session_store.dart`
 - `mobile/lib/auth/auth_controller.dart`
