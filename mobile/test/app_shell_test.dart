@@ -4,12 +4,15 @@ import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/main.dart' as app;
+import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
+import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/seller.dart';
 import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
@@ -28,6 +31,7 @@ void main() {
           controller: controller,
           productsService: FakeProductsService(),
           sellersService: FakeSellersService(),
+          companyProfileService: FakeCompanyProfileService(),
           paymentsService: FakePaymentsService(),
           invoicesService: FakeInvoicesService(),
         ),
@@ -37,13 +41,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Internal Billing'), findsOneWidget);
-    expect(find.text('Sign in with your username and password.'), findsOneWidget);
+    expect(
+        find.text('Sign in with your username and password.'), findsOneWidget);
   });
 }
 
 class FakeAuthService implements AuthService {
   @override
-  Future<AuthSessionTokens> login({required String username, required String password}) {
+  Future<AuthSessionTokens> login(
+      {required String username, required String password}) {
     throw UnimplementedError();
   }
 
@@ -92,7 +98,8 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> updateProduct({required String id, required UpdateProductInput input}) {
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input}) {
     throw UnimplementedError();
   }
 }
@@ -116,12 +123,14 @@ class FakeSellersService implements SellersService {
 
 class FakePaymentsService implements PaymentsService {
   @override
-  Future<void> addBalanceAdjustment({required String sellerId, required BalanceAdjustmentInput input}) {
+  Future<void> addBalanceAdjustment(
+      {required String sellerId, required BalanceAdjustmentInput input}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> addOpeningBalance({required String sellerId, required OpeningBalanceInput input}) {
+  Future<void> addOpeningBalance(
+      {required String sellerId, required OpeningBalanceInput input}) {
     throw UnimplementedError();
   }
 
@@ -133,12 +142,41 @@ class FakePaymentsService implements PaymentsService {
 
 class FakeInvoicesService implements InvoicesService {
   @override
-  Future<CreateInvoiceResult> createInvoice({required InvoiceDraft draft, required String requestId}) {
+  Future<InvoiceDetail> cancelInvoice(
+      {required String invoiceId, required String reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CreateInvoiceResult> createInvoice(
+      {required InvoiceDraft draft, required String requestId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvoiceDetail> fetchInvoiceDetail(String invoiceId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<InvoiceSummary>> listInvoices({String? status}) {
     throw UnimplementedError();
   }
 
   @override
   Future<InvoiceQuote> quoteInvoice(InvoiceDraft draft) {
+    throw UnimplementedError();
+  }
+}
+
+class FakeCompanyProfileService implements CompanyProfileService {
+  @override
+  Future<CompanyProfile> fetchCompanyProfile() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input) {
     throw UnimplementedError();
   }
 }

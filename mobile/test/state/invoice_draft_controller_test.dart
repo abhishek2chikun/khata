@@ -5,13 +5,16 @@ import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
+import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/seller.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/state/invoice_draft_controller.dart';
 
 void main() {
-  test('invoice draft controller reuses request id across safe retry after submit failure timeout', () async {
+  test(
+      'invoice draft controller reuses request id across safe retry after submit failure timeout',
+      () async {
     final invoicesService = FakeInvoicesService(
       createResponses: <Object>[
         const SocketException('timed out'),
@@ -39,10 +42,13 @@ void main() {
 
     expect(controller.createdInvoice?.id, 'inv-1');
     expect(controller.requestId, isNull);
-    expect(invoicesService.createRequestIds, <String>[firstRequestId!, firstRequestId]);
+    expect(invoicesService.createRequestIds,
+        <String>[firstRequestId!, firstRequestId]);
   });
 
-  test('editing draft after failure clears request id so next submit uses a new one', () async {
+  test(
+      'editing draft after failure clears request id so next submit uses a new one',
+      () async {
     final invoicesService = FakeInvoicesService(
       createResponses: <Object>[
         const ApiError(message: 'Unable to save invoice', statusCode: 500),
@@ -102,12 +108,15 @@ const _product = Product(
 
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
+  sellerId: 'seller-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
   paymentMode: 'CREDIT',
   sellerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
   grandTotal: 118,
+  notes: null,
+  cancelReason: null,
   items: const <InvoiceDetailItem>[
     InvoiceDetailItem(
       productName: 'Blue Pen',
@@ -153,5 +162,21 @@ class FakeInvoicesService implements InvoicesService {
       throw quoteError!;
     }
     return quoteResponse!;
+  }
+
+  @override
+  Future<InvoiceDetail> cancelInvoice(
+      {required String invoiceId, required String reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvoiceDetail> fetchInvoiceDetail(String invoiceId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<InvoiceSummary>> listInvoices({String? status}) {
+    throw UnimplementedError();
   }
 }

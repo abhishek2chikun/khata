@@ -6,6 +6,7 @@ import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
+import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/seller.dart';
 import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
@@ -15,10 +16,13 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
 
 void main() {
-  testWidgets('create invoice screen can build draft request quote and show preview path', (tester) async {
+  testWidgets(
+      'create invoice screen can build draft request quote and show preview path',
+      (tester) async {
     final invoicesService = FakeInvoicesService(
       quoteResponse: _quote,
-      createResult: CreateInvoiceResult(invoice: _invoiceDetail, warnings: const <InvoiceWarning>[]),
+      createResult: CreateInvoiceResult(
+          invoice: _invoiceDetail, warnings: const <InvoiceWarning>[]),
     );
 
     await tester.pumpWidget(
@@ -37,8 +41,10 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('invoiceDateField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
+    await tester.enterText(
+        find.byKey(const Key('invoiceDateField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Blue Pen').last);
@@ -59,15 +65,19 @@ void main() {
     expect(find.text('236.00'), findsWidgets);
     expect(invoicesService.quotedDrafts, hasLength(1));
     expect(invoicesService.quotedDrafts.single.seller?.id, 'seller-1');
-    expect(invoicesService.quotedDrafts.single.items.single.product?.id, 'product-1');
+    expect(invoicesService.quotedDrafts.single.items.single.product?.id,
+        'product-1');
   });
 
-  testWidgets('create invoice screen keeps draft intact and shows error on quote failure', (tester) async {
+  testWidgets(
+      'create invoice screen keeps draft intact and shows error on quote failure',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(
-            quoteError: const ApiError(message: 'Quote failed', statusCode: 400),
+            quoteError:
+                const ApiError(message: 'Quote failed', statusCode: 400),
           ),
           productsService: FakeProductsService(products: <Product>[_product]),
           sellersService: FakeSellersService(sellers: <Seller>[_seller]),
@@ -80,8 +90,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('invoiceDateField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
+    await tester.enterText(
+        find.byKey(const Key('invoiceDateField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Blue Pen').last);
@@ -98,7 +110,9 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
-  testWidgets('preview submit path keeps draft intact and surfaces commit time warnings on create response', (
+  testWidgets(
+      'preview submit path keeps draft intact and surfaces commit time warnings on create response',
+      (
     tester,
   ) async {
     final invoicesService = FakeInvoicesService(
@@ -139,7 +153,9 @@ void main() {
     expect(invoicesService.createdDrafts, hasLength(1));
   });
 
-  testWidgets('preview submit path shows create failure and preserves draft for retry', (tester) async {
+  testWidgets(
+      'preview submit path shows create failure and preserves draft for retry',
+      (tester) async {
     final invoicesService = FakeInvoicesService(
       quoteResponse: _quote,
       createError: const ApiError(message: 'Create failed', statusCode: 500),
@@ -176,13 +192,16 @@ void main() {
     expect(find.text('ABC Stores'), findsWidgets);
   });
 
-  testWidgets('seller preselected flow shows seller and skips seller selection changes by default', (tester) async {
+  testWidgets(
+      'seller preselected flow shows seller and skips seller selection changes by default',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller, _otherSeller]),
+          sellersService:
+              FakeSellersService(sellers: <Seller>[_seller, _otherSeller]),
           initialSeller: _seller,
         ),
       ),
@@ -193,15 +212,19 @@ void main() {
     expect(find.byKey(const Key('sellerPickerField')), findsNothing);
   });
 
-  testWidgets('create invoice screen uses active-only products and filters archived sellers', (tester) async {
-    final productsService = FakeProductsService(products: <Product>[_product, _archivedProduct]);
+  testWidgets(
+      'create invoice screen uses active-only products and filters archived sellers',
+      (tester) async {
+    final productsService =
+        FakeProductsService(products: <Product>[_product, _archivedProduct]);
 
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: productsService,
-          sellersService: FakeSellersService(sellers: <Seller>[_seller, _archivedSeller]),
+          sellersService:
+              FakeSellersService(sellers: <Seller>[_seller, _archivedSeller]),
         ),
       ),
     );
@@ -217,7 +240,9 @@ void main() {
     expect(find.text('Archived Seller'), findsNothing);
   });
 
-  testWidgets('create invoice screen shows load error banner on network failure', (tester) async {
+  testWidgets(
+      'create invoice screen shows load error banner on network failure',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
@@ -241,8 +266,10 @@ Future<void> _fillDraft(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('ABC Stores').last);
   await tester.pumpAndSettle();
-  await tester.enterText(find.byKey(const Key('invoiceDateField')), '2026-04-20');
-  await tester.enterText(find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
+  await tester.enterText(
+      find.byKey(const Key('invoiceDateField')), '2026-04-20');
+  await tester.enterText(
+      find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
   await tester.tap(find.byKey(const Key('productPickerField-0')));
   await tester.pumpAndSettle();
   await tester.tap(find.text('Blue Pen').last);
@@ -336,12 +363,15 @@ const _quote = InvoiceQuote(
 
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
+  sellerId: 'seller-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
   paymentMode: 'CREDIT',
   sellerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
   grandTotal: 236,
+  notes: null,
+  cancelReason: null,
   items: const <InvoiceDetailItem>[
     InvoiceDetailItem(
       productName: 'Blue Pen',
@@ -352,7 +382,11 @@ final _invoiceDetail = InvoiceDetail(
 );
 
 class FakeInvoicesService implements InvoicesService {
-  FakeInvoicesService({this.quoteResponse, this.quoteError, this.createResult, this.createError});
+  FakeInvoicesService(
+      {this.quoteResponse,
+      this.quoteError,
+      this.createResult,
+      this.createError});
 
   final InvoiceQuote? quoteResponse;
   final Object? quoteError;
@@ -381,6 +415,22 @@ class FakeInvoicesService implements InvoicesService {
     }
     return quoteResponse!;
   }
+
+  @override
+  Future<InvoiceDetail> cancelInvoice(
+      {required String invoiceId, required String reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvoiceDetail> fetchInvoiceDetail(String invoiceId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<InvoiceSummary>> listInvoices({String? status}) {
+    throw UnimplementedError();
+  }
 }
 
 class FakeProductsService implements ProductsService {
@@ -405,7 +455,8 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> updateProduct({required String id, required UpdateProductInput input}) {
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input}) {
     throw UnimplementedError();
   }
 }

@@ -69,6 +69,19 @@ BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_
   --display-name Owner
 ```
 
+## Seed Demo Data
+
+Once the bootstrap user exists, seed a realistic manual-testing dataset:
+
+```bash
+BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
+  PYTHONPATH=backend \
+  .venv/bin/python -m app.commands.seed_demo_data \
+  --username owner
+```
+
+This is safe to re-run. It upserts the active company profile, creates sample sellers/products if missing, and creates the same demo ledger/invoice events idempotently.
+
 ## Run The API
 
 The Flutter app now auto-detects a local FastAPI backend by checking these common development URLs in order:
@@ -142,10 +155,12 @@ Reset the database schema before a full backend verification run:
 docker exec khata-postgres psql -U khata -d internal_billing -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 ```
 
+Backend tests are destructive. Prefer a separate PostgreSQL database for tests, such as `internal_billing_test`.
+
 Run the full backend suite:
 
 ```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
+BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing_test' \
   PYTHONPATH=backend \
   .venv/bin/python -m pytest backend/tests -q
 ```
@@ -153,10 +168,12 @@ BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_
 Run the targeted end-to-end backend test:
 
 ```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
+BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing_test' \
   PYTHONPATH=backend \
   .venv/bin/python -m pytest backend/tests/api/test_end_to_end_flow.py -q
 ```
+
+If you intentionally want to run destructive tests against a non-test database, add `BILLING_ALLOW_TEST_DATABASE_RESET=1`.
 
 Run the mobile test suite:
 

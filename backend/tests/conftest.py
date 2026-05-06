@@ -3,6 +3,7 @@ import subprocess
 import sys
 import uuid
 from collections.abc import Generator
+from urllib.parse import urlparse
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,8 +20,26 @@ from app.models.invoice_item import InvoiceItem  # noqa: F401
 from app.services.auth_service import bootstrap_user
 
 
+def _assert_safe_test_database() -> None:
+    database_url = get_settings().database_url
+    if os.environ.get("BILLING_ALLOW_TEST_DATABASE_RESET") == "1":
+        return
+
+    parsed = urlparse(database_url)
+    database_name = (parsed.path or "").rsplit("/", 1)[-1].lower()
+    if "test" in database_name or "pytest" in database_name:
+        return
+
+    raise RuntimeError(
+        "Refusing to run backend tests against a non-test database. "
+        "Use a dedicated test database name containing 'test', or set "
+        "BILLING_ALLOW_TEST_DATABASE_RESET=1 if you intentionally want destructive resets."
+    )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def migrated_database() -> Generator[None, None, None]:
+    _assert_safe_test_database()
     subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=os.path.join(os.getcwd(), "backend"), check=True)
     yield
 
@@ -35,12 +54,17 @@ def db_session(migrated_database: None) -> Generator[Session, None, None]:
 
 @pytest.fixture(autouse=True)
 def clean_tables(db_session: Session) -> Generator[None, None, None]:
-    yield
     table_names = [table.name for table in Base.metadata.sorted_tables]
-    if table_names:
-        joined = ", ".join(table_names)
-        db_session.execute(text(f"TRUNCATE TABLE {joined} RESTART IDENTITY CASCADE"))
-    db_session.commit()
+
+    def truncate_all() -> None:
+        if table_names:
+            joined = ", ".join(table_names)
+            db_session.execute(text(f"TRUNCATE TABLE {joined} RESTART IDENTITY CASCADE"))
+        db_session.commit()
+
+    truncate_all()
+    yield
+    truncate_all()
 
 
 @pytest.fixture()
