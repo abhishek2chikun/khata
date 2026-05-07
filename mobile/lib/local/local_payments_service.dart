@@ -80,6 +80,8 @@ class LocalPaymentsService implements PaymentsService {
     required Map<String, dynamic> payload,
   }) async {
     await _ensureActiveSeller(sellerId);
+    _validateRequestId(requestId);
+    _validateDateOnly(occurredOn);
     _validatePositiveAmount(amount);
 
     final requestHash = _entryHash(<String, dynamic>{
@@ -113,6 +115,9 @@ class LocalPaymentsService implements PaymentsService {
               sellerId: sellerId,
               requestId: Value(requestId),
               requestHash: Value(requestHash),
+              openingBalanceSellerId: Value(
+                entryType == 'OPENING_BALANCE' ? sellerId : null,
+              ),
               entryType: entryType,
               amount: _normalizeDecimal(amount),
               occurredOn: occurredOn,
@@ -199,6 +204,41 @@ class LocalPaymentsService implements PaymentsService {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
         message: 'amount must be greater than zero',
+        statusCode: 422,
+      );
+    }
+  }
+
+  void _validateRequestId(String requestId) {
+    final uuidPattern = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    if (!uuidPattern.hasMatch(requestId)) {
+      throw const ApiError(
+        code: 'VALIDATION_ERROR',
+        message: 'request_id must be a valid UUID',
+        statusCode: 422,
+      );
+    }
+  }
+
+  void _validateDateOnly(String value) {
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+    if (match == null) {
+      throw const ApiError(
+        code: 'VALIDATION_ERROR',
+        message: 'occurred_on must be a valid date',
+        statusCode: 422,
+      );
+    }
+    final year = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final day = int.parse(match.group(3)!);
+    final parsed = DateTime.utc(year, month, day);
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      throw const ApiError(
+        code: 'VALIDATION_ERROR',
+        message: 'occurred_on must be a valid date',
         statusCode: 422,
       );
     }

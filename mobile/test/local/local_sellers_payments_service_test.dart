@@ -127,8 +127,8 @@ void main() {
 
     await paymentsService.addOpeningBalance(
       sellerId: seller.id,
-      input: const OpeningBalanceInput(
-        requestId: 'open-1',
+      input: OpeningBalanceInput(
+        requestId: _uuid(1),
         amount: 1250.5,
         occurredOn: '2026-01-02',
       ),
@@ -154,7 +154,7 @@ void main() {
 
     await paymentsService.recordPayment(
       RecordPaymentInput(
-        requestId: 'payment-1',
+        requestId: _uuid(2),
         sellerId: seller.id,
         amount: 10,
         occurredOn: '2026-01-03',
@@ -175,15 +175,15 @@ void main() {
 
     await paymentsService.addOpeningBalance(
       sellerId: seller.id,
-      input: const OpeningBalanceInput(
-        requestId: 'open-1',
+      input: OpeningBalanceInput(
+        requestId: _uuid(3),
         amount: 1000,
         occurredOn: '2026-01-01',
       ),
     );
     await paymentsService.recordPayment(
       RecordPaymentInput(
-        requestId: 'payment-1',
+        requestId: _uuid(4),
         sellerId: seller.id,
         amount: 250.25,
         occurredOn: '2026-01-03',
@@ -192,8 +192,8 @@ void main() {
     );
     await paymentsService.addBalanceAdjustment(
       sellerId: seller.id,
-      input: const BalanceAdjustmentInput(
-        requestId: 'increase-1',
+      input: BalanceAdjustmentInput(
+        requestId: _uuid(5),
         direction: 'INCREASE',
         amount: 50,
         occurredOn: '2026-01-04',
@@ -201,8 +201,8 @@ void main() {
     );
     await paymentsService.addBalanceAdjustment(
       sellerId: seller.id,
-      input: const BalanceAdjustmentInput(
-        requestId: 'decrease-1',
+      input: BalanceAdjustmentInput(
+        requestId: _uuid(6),
         direction: 'DECREASE',
         amount: 100,
         occurredOn: '2026-01-05',
@@ -230,8 +230,8 @@ void main() {
 
     await paymentsService.addBalanceAdjustment(
       sellerId: seller.id,
-      input: const BalanceAdjustmentInput(
-        requestId: 'second-created',
+      input: BalanceAdjustmentInput(
+        requestId: _uuid(7),
         direction: 'INCREASE',
         amount: 20,
         occurredOn: '2026-01-02',
@@ -239,16 +239,16 @@ void main() {
     );
     await paymentsService.addOpeningBalance(
       sellerId: seller.id,
-      input: const OpeningBalanceInput(
-        requestId: 'first-by-date',
+      input: OpeningBalanceInput(
+        requestId: _uuid(8),
         amount: 100,
         occurredOn: '2026-01-01',
       ),
     );
     await paymentsService.addBalanceAdjustment(
       sellerId: seller.id,
-      input: const BalanceAdjustmentInput(
-        requestId: 'third-created',
+      input: BalanceAdjustmentInput(
+        requestId: _uuid(9),
         direction: 'DECREASE',
         amount: 10,
         occurredOn: '2026-01-02',
@@ -273,8 +273,8 @@ void main() {
 
     await paymentsService.addOpeningBalance(
       sellerId: seller.id,
-      input: const OpeningBalanceInput(
-        requestId: 'open-1',
+      input: OpeningBalanceInput(
+        requestId: _uuid(10),
         amount: 100,
         occurredOn: '2026-01-01',
       ),
@@ -282,8 +282,8 @@ void main() {
 
     await paymentsService.addOpeningBalance(
       sellerId: seller.id,
-      input: const OpeningBalanceInput(
-        requestId: 'open-1',
+      input: OpeningBalanceInput(
+        requestId: _uuid(10),
         amount: 100,
         occurredOn: '2026-01-01',
       ),
@@ -291,8 +291,8 @@ void main() {
     await expectLater(
       () => paymentsService.addOpeningBalance(
         sellerId: seller.id,
-        input: const OpeningBalanceInput(
-          requestId: 'open-2',
+        input: OpeningBalanceInput(
+          requestId: _uuid(11),
           amount: 200,
           occurredOn: '2026-01-02',
         ),
@@ -302,8 +302,8 @@ void main() {
     await expectLater(
       () => paymentsService.addOpeningBalance(
         sellerId: seller.id,
-        input: const OpeningBalanceInput(
-          requestId: 'open-1',
+        input: OpeningBalanceInput(
+          requestId: _uuid(10),
           amount: 150,
           occurredOn: '2026-01-01',
         ),
@@ -312,6 +312,115 @@ void main() {
     );
     expect(
         await database.select(database.sellerTransactions).get(), hasLength(1));
+  });
+
+  test('database rejects a second opening balance for the same seller',
+      () async {
+    final seller = await sellersService.createSeller(_sellerInput());
+
+    await _seedSellerTransaction(
+      database,
+      id: 'opening-1',
+      sellerId: seller.id,
+      requestId: _uuid(12),
+      entryType: 'OPENING_BALANCE',
+      occurredOn: '2026-01-01',
+    );
+
+    await expectLater(
+      () => _seedSellerTransaction(
+        database,
+        id: 'opening-2',
+        sellerId: seller.id,
+        requestId: _uuid(13),
+        entryType: 'OPENING_BALANCE',
+        occurredOn: '2026-01-02',
+      ),
+      throwsA(anything),
+    );
+    expect(
+        await database.select(database.sellerTransactions).get(), hasLength(1));
+  });
+
+  test('rejects non-UUID request IDs without inserting ledger rows', () async {
+    final seller = await sellersService.createSeller(_sellerInput());
+
+    await expectLater(
+      () => paymentsService.addOpeningBalance(
+        sellerId: seller.id,
+        input: const OpeningBalanceInput(
+          requestId: 'not-a-uuid',
+          amount: 100,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.recordPayment(
+        RecordPaymentInput(
+          requestId: 'not-a-uuid',
+          sellerId: seller.id,
+          amount: 10,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.addBalanceAdjustment(
+        sellerId: seller.id,
+        input: const BalanceAdjustmentInput(
+          requestId: 'not-a-uuid',
+          direction: 'INCREASE',
+          amount: 10,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    expect(await database.select(database.sellerTransactions).get(), isEmpty);
+  });
+
+  test('rejects invalid occurred dates without inserting ledger rows',
+      () async {
+    final seller = await sellersService.createSeller(_sellerInput());
+
+    await expectLater(
+      () => paymentsService.addOpeningBalance(
+        sellerId: seller.id,
+        input: OpeningBalanceInput(
+          requestId: _uuid(14),
+          amount: 100,
+          occurredOn: '2026-02-30',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.recordPayment(
+        RecordPaymentInput(
+          requestId: _uuid(15),
+          sellerId: seller.id,
+          amount: 10,
+          occurredOn: '2026-1-1',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.addBalanceAdjustment(
+        sellerId: seller.id,
+        input: BalanceAdjustmentInput(
+          requestId: _uuid(16),
+          direction: 'DECREASE',
+          amount: 10,
+          occurredOn: 'not-a-date',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    expect(await database.select(database.sellerTransactions).get(), isEmpty);
   });
 }
 
@@ -337,6 +446,10 @@ Matcher _apiError({required String code, required int statusCode}) {
   return isA<ApiError>()
       .having((error) => error.code, 'code', code)
       .having((error) => error.statusCode, 'statusCode', statusCode);
+}
+
+String _uuid(int value) {
+  return '00000000-0000-4000-8000-${value.toString().padLeft(12, '0')}';
 }
 
 Future<void> _seedLocalUser(LocalDatabase database) {
@@ -370,6 +483,32 @@ Future<void> _seedSeller(
           isActive: Value(isActive),
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
+        ),
+      );
+}
+
+Future<void> _seedSellerTransaction(
+  LocalDatabase database, {
+  required String id,
+  required String sellerId,
+  required String requestId,
+  required String entryType,
+  required String occurredOn,
+}) {
+  return database.into(database.sellerTransactions).insert(
+        SellerTransactionsCompanion.insert(
+          id: id,
+          sellerId: sellerId,
+          requestId: Value(requestId),
+          requestHash: const Value('request-hash'),
+          openingBalanceSellerId: Value(
+            entryType == 'OPENING_BALANCE' ? sellerId : null,
+          ),
+          entryType: entryType,
+          amount: '100',
+          occurredOn: occurredOn,
+          createdByUserId: 'local-system-user',
+          createdAt: '2026-01-01T00:00:00.000Z',
         ),
       );
 }

@@ -4280,6 +4280,12 @@ class $SellerTransactionsTable extends SellerTransactions
   late final GeneratedColumn<String> requestHash = GeneratedColumn<String>(
       'request_hash', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _openingBalanceSellerIdMeta =
+      const VerificationMeta('openingBalanceSellerId');
+  @override
+  late final GeneratedColumn<String> openingBalanceSellerId =
+      GeneratedColumn<String>('opening_balance_seller_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _entryTypeMeta =
       const VerificationMeta('entryType');
   @override
@@ -4324,6 +4330,7 @@ class $SellerTransactionsTable extends SellerTransactions
         invoiceId,
         requestId,
         requestHash,
+        openingBalanceSellerId,
         entryType,
         amount,
         occurredOn,
@@ -4365,6 +4372,12 @@ class $SellerTransactionsTable extends SellerTransactions
           _requestHashMeta,
           requestHash.isAcceptableOrUnknown(
               data['request_hash']!, _requestHashMeta));
+    }
+    if (data.containsKey('opening_balance_seller_id')) {
+      context.handle(
+          _openingBalanceSellerIdMeta,
+          openingBalanceSellerId.isAcceptableOrUnknown(
+              data['opening_balance_seller_id']!, _openingBalanceSellerIdMeta));
     }
     if (data.containsKey('entry_type')) {
       context.handle(_entryTypeMeta,
@@ -4412,6 +4425,7 @@ class $SellerTransactionsTable extends SellerTransactions
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
         {requestId},
+        {openingBalanceSellerId},
       ];
   @override
   SellerTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -4427,6 +4441,9 @@ class $SellerTransactionsTable extends SellerTransactions
           .read(DriftSqlType.string, data['${effectivePrefix}request_id']),
       requestHash: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}request_hash']),
+      openingBalanceSellerId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}opening_balance_seller_id']),
       entryType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}entry_type'])!,
       amount: attachedDatabase.typeMapping
@@ -4455,6 +4472,7 @@ class SellerTransaction extends DataClass
   final String? invoiceId;
   final String? requestId;
   final String? requestHash;
+  final String? openingBalanceSellerId;
   final String entryType;
   final String amount;
   final String occurredOn;
@@ -4467,6 +4485,7 @@ class SellerTransaction extends DataClass
       this.invoiceId,
       this.requestId,
       this.requestHash,
+      this.openingBalanceSellerId,
       required this.entryType,
       required this.amount,
       required this.occurredOn,
@@ -4486,6 +4505,10 @@ class SellerTransaction extends DataClass
     }
     if (!nullToAbsent || requestHash != null) {
       map['request_hash'] = Variable<String>(requestHash);
+    }
+    if (!nullToAbsent || openingBalanceSellerId != null) {
+      map['opening_balance_seller_id'] =
+          Variable<String>(openingBalanceSellerId);
     }
     map['entry_type'] = Variable<String>(entryType);
     map['amount'] = Variable<String>(amount);
@@ -4511,6 +4534,9 @@ class SellerTransaction extends DataClass
       requestHash: requestHash == null && nullToAbsent
           ? const Value.absent()
           : Value(requestHash),
+      openingBalanceSellerId: openingBalanceSellerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(openingBalanceSellerId),
       entryType: Value(entryType),
       amount: Value(amount),
       occurredOn: Value(occurredOn),
@@ -4530,6 +4556,8 @@ class SellerTransaction extends DataClass
       invoiceId: serializer.fromJson<String?>(json['invoiceId']),
       requestId: serializer.fromJson<String?>(json['requestId']),
       requestHash: serializer.fromJson<String?>(json['requestHash']),
+      openingBalanceSellerId:
+          serializer.fromJson<String?>(json['openingBalanceSellerId']),
       entryType: serializer.fromJson<String>(json['entryType']),
       amount: serializer.fromJson<String>(json['amount']),
       occurredOn: serializer.fromJson<String>(json['occurredOn']),
@@ -4547,6 +4575,8 @@ class SellerTransaction extends DataClass
       'invoiceId': serializer.toJson<String?>(invoiceId),
       'requestId': serializer.toJson<String?>(requestId),
       'requestHash': serializer.toJson<String?>(requestHash),
+      'openingBalanceSellerId':
+          serializer.toJson<String?>(openingBalanceSellerId),
       'entryType': serializer.toJson<String>(entryType),
       'amount': serializer.toJson<String>(amount),
       'occurredOn': serializer.toJson<String>(occurredOn),
@@ -4562,6 +4592,7 @@ class SellerTransaction extends DataClass
           Value<String?> invoiceId = const Value.absent(),
           Value<String?> requestId = const Value.absent(),
           Value<String?> requestHash = const Value.absent(),
+          Value<String?> openingBalanceSellerId = const Value.absent(),
           String? entryType,
           String? amount,
           String? occurredOn,
@@ -4574,6 +4605,9 @@ class SellerTransaction extends DataClass
         invoiceId: invoiceId.present ? invoiceId.value : this.invoiceId,
         requestId: requestId.present ? requestId.value : this.requestId,
         requestHash: requestHash.present ? requestHash.value : this.requestHash,
+        openingBalanceSellerId: openingBalanceSellerId.present
+            ? openingBalanceSellerId.value
+            : this.openingBalanceSellerId,
         entryType: entryType ?? this.entryType,
         amount: amount ?? this.amount,
         occurredOn: occurredOn ?? this.occurredOn,
@@ -4589,6 +4623,9 @@ class SellerTransaction extends DataClass
       requestId: data.requestId.present ? data.requestId.value : this.requestId,
       requestHash:
           data.requestHash.present ? data.requestHash.value : this.requestHash,
+      openingBalanceSellerId: data.openingBalanceSellerId.present
+          ? data.openingBalanceSellerId.value
+          : this.openingBalanceSellerId,
       entryType: data.entryType.present ? data.entryType.value : this.entryType,
       amount: data.amount.present ? data.amount.value : this.amount,
       occurredOn:
@@ -4609,6 +4646,7 @@ class SellerTransaction extends DataClass
           ..write('invoiceId: $invoiceId, ')
           ..write('requestId: $requestId, ')
           ..write('requestHash: $requestHash, ')
+          ..write('openingBalanceSellerId: $openingBalanceSellerId, ')
           ..write('entryType: $entryType, ')
           ..write('amount: $amount, ')
           ..write('occurredOn: $occurredOn, ')
@@ -4626,6 +4664,7 @@ class SellerTransaction extends DataClass
       invoiceId,
       requestId,
       requestHash,
+      openingBalanceSellerId,
       entryType,
       amount,
       occurredOn,
@@ -4641,6 +4680,7 @@ class SellerTransaction extends DataClass
           other.invoiceId == this.invoiceId &&
           other.requestId == this.requestId &&
           other.requestHash == this.requestHash &&
+          other.openingBalanceSellerId == this.openingBalanceSellerId &&
           other.entryType == this.entryType &&
           other.amount == this.amount &&
           other.occurredOn == this.occurredOn &&
@@ -4655,6 +4695,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
   final Value<String?> invoiceId;
   final Value<String?> requestId;
   final Value<String?> requestHash;
+  final Value<String?> openingBalanceSellerId;
   final Value<String> entryType;
   final Value<String> amount;
   final Value<String> occurredOn;
@@ -4668,6 +4709,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     this.invoiceId = const Value.absent(),
     this.requestId = const Value.absent(),
     this.requestHash = const Value.absent(),
+    this.openingBalanceSellerId = const Value.absent(),
     this.entryType = const Value.absent(),
     this.amount = const Value.absent(),
     this.occurredOn = const Value.absent(),
@@ -4682,6 +4724,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     this.invoiceId = const Value.absent(),
     this.requestId = const Value.absent(),
     this.requestHash = const Value.absent(),
+    this.openingBalanceSellerId = const Value.absent(),
     required String entryType,
     required String amount,
     required String occurredOn,
@@ -4702,6 +4745,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     Expression<String>? invoiceId,
     Expression<String>? requestId,
     Expression<String>? requestHash,
+    Expression<String>? openingBalanceSellerId,
     Expression<String>? entryType,
     Expression<String>? amount,
     Expression<String>? occurredOn,
@@ -4716,6 +4760,8 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
       if (invoiceId != null) 'invoice_id': invoiceId,
       if (requestId != null) 'request_id': requestId,
       if (requestHash != null) 'request_hash': requestHash,
+      if (openingBalanceSellerId != null)
+        'opening_balance_seller_id': openingBalanceSellerId,
       if (entryType != null) 'entry_type': entryType,
       if (amount != null) 'amount': amount,
       if (occurredOn != null) 'occurred_on': occurredOn,
@@ -4732,6 +4778,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
       Value<String?>? invoiceId,
       Value<String?>? requestId,
       Value<String?>? requestHash,
+      Value<String?>? openingBalanceSellerId,
       Value<String>? entryType,
       Value<String>? amount,
       Value<String>? occurredOn,
@@ -4745,6 +4792,8 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
       invoiceId: invoiceId ?? this.invoiceId,
       requestId: requestId ?? this.requestId,
       requestHash: requestHash ?? this.requestHash,
+      openingBalanceSellerId:
+          openingBalanceSellerId ?? this.openingBalanceSellerId,
       entryType: entryType ?? this.entryType,
       amount: amount ?? this.amount,
       occurredOn: occurredOn ?? this.occurredOn,
@@ -4772,6 +4821,10 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     }
     if (requestHash.present) {
       map['request_hash'] = Variable<String>(requestHash.value);
+    }
+    if (openingBalanceSellerId.present) {
+      map['opening_balance_seller_id'] =
+          Variable<String>(openingBalanceSellerId.value);
     }
     if (entryType.present) {
       map['entry_type'] = Variable<String>(entryType.value);
@@ -4805,6 +4858,7 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
           ..write('invoiceId: $invoiceId, ')
           ..write('requestId: $requestId, ')
           ..write('requestHash: $requestHash, ')
+          ..write('openingBalanceSellerId: $openingBalanceSellerId, ')
           ..write('entryType: $entryType, ')
           ..write('amount: $amount, ')
           ..write('occurredOn: $occurredOn, ')
@@ -11125,6 +11179,7 @@ typedef $$SellerTransactionsTableCreateCompanionBuilder
   Value<String?> invoiceId,
   Value<String?> requestId,
   Value<String?> requestHash,
+  Value<String?> openingBalanceSellerId,
   required String entryType,
   required String amount,
   required String occurredOn,
@@ -11140,6 +11195,7 @@ typedef $$SellerTransactionsTableUpdateCompanionBuilder
   Value<String?> invoiceId,
   Value<String?> requestId,
   Value<String?> requestHash,
+  Value<String?> openingBalanceSellerId,
   Value<String> entryType,
   Value<String> amount,
   Value<String> occurredOn,
@@ -11217,6 +11273,10 @@ class $$SellerTransactionsTableFilterComposer
 
   ColumnFilters<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get openingBalanceSellerId => $composableBuilder(
+      column: $table.openingBalanceSellerId,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get entryType => $composableBuilder(
       column: $table.entryType, builder: (column) => ColumnFilters(column));
@@ -11312,6 +11372,10 @@ class $$SellerTransactionsTableOrderingComposer
   ColumnOrderings<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get openingBalanceSellerId => $composableBuilder(
+      column: $table.openingBalanceSellerId,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get entryType => $composableBuilder(
       column: $table.entryType, builder: (column) => ColumnOrderings(column));
 
@@ -11405,6 +11469,9 @@ class $$SellerTransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => column);
+
+  GeneratedColumn<String> get openingBalanceSellerId => $composableBuilder(
+      column: $table.openingBalanceSellerId, builder: (column) => column);
 
   GeneratedColumn<String> get entryType =>
       $composableBuilder(column: $table.entryType, builder: (column) => column);
@@ -11513,6 +11580,7 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             Value<String?> invoiceId = const Value.absent(),
             Value<String?> requestId = const Value.absent(),
             Value<String?> requestHash = const Value.absent(),
+            Value<String?> openingBalanceSellerId = const Value.absent(),
             Value<String> entryType = const Value.absent(),
             Value<String> amount = const Value.absent(),
             Value<String> occurredOn = const Value.absent(),
@@ -11527,6 +11595,7 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             invoiceId: invoiceId,
             requestId: requestId,
             requestHash: requestHash,
+            openingBalanceSellerId: openingBalanceSellerId,
             entryType: entryType,
             amount: amount,
             occurredOn: occurredOn,
@@ -11541,6 +11610,7 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             Value<String?> invoiceId = const Value.absent(),
             Value<String?> requestId = const Value.absent(),
             Value<String?> requestHash = const Value.absent(),
+            Value<String?> openingBalanceSellerId = const Value.absent(),
             required String entryType,
             required String amount,
             required String occurredOn,
@@ -11555,6 +11625,7 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             invoiceId: invoiceId,
             requestId: requestId,
             requestHash: requestHash,
+            openingBalanceSellerId: openingBalanceSellerId,
             entryType: entryType,
             amount: amount,
             occurredOn: occurredOn,
