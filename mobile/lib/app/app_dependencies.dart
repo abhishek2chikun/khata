@@ -4,6 +4,8 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
 import '../config/api_base_url.dart';
+import '../local/local_auth_service.dart';
+import '../local/local_database.dart';
 import '../services/api_client.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
@@ -51,8 +53,27 @@ class AppDependencies {
           onApiHttpClientsCreated: onApiHttpClientsCreated,
         );
       case DataMode.local:
-        throw UnimplementedError('Local data mode is added in a later task');
+        return _createLocalDependencies();
     }
+  }
+
+  static Future<AppDependencies> _createLocalDependencies() async {
+    final database = LocalDatabase();
+    final authService = LocalAuthService(database: database);
+    final controller = AuthController(
+      authService: authService,
+      sessionStore: SecureSessionStore(),
+    );
+    return AppDependencies(
+      mode: DataMode.local,
+      controller: controller,
+      productsService: _UnavailableLocalProductsService(),
+      sellersService: _UnavailableLocalSellersService(),
+      companyProfileService: _UnavailableLocalCompanyProfileService(),
+      paymentsService: _UnavailableLocalPaymentsService(),
+      invoicesService: _UnavailableLocalInvoicesService(),
+      dispose: database.close,
+    );
   }
 
   static Future<AppDependencies> _createApiDependencies({
@@ -97,4 +118,39 @@ class AppDependencies {
   Future<void> dispose() async {
     await _dispose?.call();
   }
+}
+
+class _UnavailableLocalProductsService implements ProductsService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'Local products service is added in a later task',
+      );
+}
+
+class _UnavailableLocalSellersService implements SellersService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'Local sellers service is added in a later task',
+      );
+}
+
+class _UnavailableLocalCompanyProfileService implements CompanyProfileService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'Local company profile service is added in a later task',
+      );
+}
+
+class _UnavailableLocalPaymentsService implements PaymentsService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'Local payments service is added in a later task',
+      );
+}
+
+class _UnavailableLocalInvoicesService implements InvoicesService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'Local invoices service is added in a later task',
+      );
 }
