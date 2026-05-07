@@ -1,7 +1,12 @@
+import 'package:drift/drift.dart';
+
+import '../local/local_database.dart';
 import 'backup_scheduler.dart';
 
 abstract class DriveBackupService {
   Future<BackupScheduleSettings> loadSettings();
+
+  Future<void> saveSettings(BackupScheduleSettings settings);
 
   Future<void> exportBackup();
 
@@ -26,6 +31,13 @@ class GoogleDriveBackupService implements DriveBackupService {
   }
 
   @override
+  Future<void> saveSettings(BackupScheduleSettings settings) {
+    throw const DriveBackupConfigurationException(
+      'Google Drive backup settings require local backup configuration.',
+    );
+  }
+
+  @override
   Future<void> exportBackup() {
     throw const DriveBackupConfigurationException(
       'Google Drive backup requires OAuth and Drive upload configuration.',
@@ -37,6 +49,80 @@ class GoogleDriveBackupService implements DriveBackupService {
     throw const DriveBackupConfigurationException(
       'Google Drive restore requires OAuth and Drive file selection configuration.',
     );
+  }
+}
+
+class LocalDriveBackupService implements DriveBackupService {
+  LocalDriveBackupService({required LocalDatabase database})
+      : _database = database;
+
+  final LocalDatabase _database;
+
+  static const _settingsId = 'local-backup-settings';
+
+  @override
+  Future<BackupScheduleSettings> loadSettings() async {
+    final row = await (_database.select(_database.backupSettings)
+          ..where((settings) => settings.id.equals(_settingsId)))
+        .getSingleOrNull();
+    if (row == null) {
+      return const BackupScheduleSettings();
+    }
+    return BackupScheduleSettings(
+      automaticBackupsEnabled: row.automaticBackupsEnabled,
+      dailyBackupTime: BackupTimeOfDay.parse(row.dailyBackupTime),
+      lastBackupAt: row.lastBackupAt == null
+          ? null
+          : DateTime.tryParse(row.lastBackupAt!),
+    );
+  }
+
+  @override
+  Future<void> saveSettings(BackupScheduleSettings settings) async {
+    await _database.into(_database.backupSettings).insertOnConflictUpdate(
+          BackupSettingsCompanion(
+            id: const Value(_settingsId),
+            automaticBackupsEnabled: Value(settings.automaticBackupsEnabled),
+            dailyBackupTime: Value(settings.dailyBackupTime.format24Hour()),
+            lastBackupAt:
+                Value(settings.lastBackupAt?.toUtc().toIso8601String()),
+            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+          ),
+        );
+  }
+
+  @override
+  Future<void> exportBackup() {
+    throw const DriveBackupConfigurationException(
+      'Google Drive backup requires OAuth and Drive upload configuration.',
+    );
+  }
+
+  @override
+  Future<void> importBackup() {
+    throw const DriveBackupConfigurationException(
+      'Google Drive restore requires OAuth and Drive file selection configuration.',
+    );
+  }
+}
+
+class LocalBackupEventRecorder implements BackupEventRecorder {
+  LocalBackupEventRecorder({required LocalDatabase database})
+      : _database = database;
+
+  final LocalDatabase _database;
+
+  @override
+  Future<void> recordBackupFailure(String message) async {
+    await _database.into(_database.backupEvents).insert(
+          BackupEventsCompanion.insert(
+            id: 'backup-failure-${DateTime.now().microsecondsSinceEpoch}',
+            eventType: 'automatic_backup',
+            status: 'failure',
+            message: Value(message),
+            createdAt: DateTime.now().toUtc().toIso8601String(),
+          ),
+        );
   }
 }
 
@@ -54,6 +140,11 @@ class FakeDriveBackupService implements DriveBackupService {
 
   @override
   Future<BackupScheduleSettings> loadSettings() async => _settings;
+
+  @override
+  Future<void> saveSettings(BackupScheduleSettings settings) async {
+    _settings = settings;
+  }
 
   @override
   Future<void> exportBackup() async {

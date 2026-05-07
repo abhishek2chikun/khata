@@ -115,6 +115,26 @@ void main() {
     expect(
         adapter.registeredTimes, [const BackupTimeOfDay(hour: 1, minute: 30)]);
   });
+
+  test('records catch-up backup failures before surfacing them', () async {
+    final recorder = _RecordingBackupEventRecorder();
+    final scheduler = BackupScheduler(
+      settingsLoader: () async => BackupScheduleSettings(
+        automaticBackupsEnabled: true,
+        lastBackupAt: DateTime(2026, 5, 7, 23, 59),
+      ),
+      runBackup: () async {
+        throw StateError('drive unavailable');
+      },
+      eventRecorder: recorder,
+    );
+
+    await expectLater(
+      () => scheduler.runCatchUpIfDue(now: DateTime(2026, 5, 8, 0, 1)),
+      throwsA(isA<StateError>()),
+    );
+    expect(recorder.failures.single, contains('drive unavailable'));
+  });
 }
 
 class _RecordingBackupScheduleAdapter implements BackupScheduleAdapter {
@@ -123,5 +143,14 @@ class _RecordingBackupScheduleAdapter implements BackupScheduleAdapter {
   @override
   Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime) async {
     registeredTimes.add(dailyBackupTime);
+  }
+}
+
+class _RecordingBackupEventRecorder implements BackupEventRecorder {
+  final failures = <String>[];
+
+  @override
+  Future<void> recordBackupFailure(String message) async {
+    failures.add(message);
   }
 }

@@ -118,6 +118,65 @@ void main() {
     expect(scheduler.registerRuns, 1);
   });
 
+  testWidgets('local mode runs catch-up when schedule registration fails',
+      (tester) async {
+    final scheduler = _FakeBackupScheduler(throwOnRegister: true);
+    final dependencies = AppDependencies(
+      mode: DataMode.local,
+      controller: AuthController(
+        authService: _AuthenticatedAuthService(),
+        sessionStore: _AuthenticatedSessionStore(),
+      ),
+      productsService: _FakeProductsService(),
+      sellersService: _FakeSellersService(),
+      companyProfileService: _FakeCompanyProfileService(),
+      paymentsService: _FakePaymentsService(),
+      invoicesService: _FakeInvoicesService(),
+      hasLocalUsers: () async => true,
+    );
+
+    await tester.pumpWidget(
+      BillingApp(
+        dependencies: dependencies,
+        backupScheduler: scheduler,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inventory'), findsWidgets);
+    expect(scheduler.registerRuns, 1);
+    expect(scheduler.catchUpRuns, 1);
+  });
+
+  testWidgets('local mode keeps app shell open when catch-up fails',
+      (tester) async {
+    final scheduler = _FakeBackupScheduler(throwOnCatchUp: true);
+    final dependencies = AppDependencies(
+      mode: DataMode.local,
+      controller: AuthController(
+        authService: _AuthenticatedAuthService(),
+        sessionStore: _AuthenticatedSessionStore(),
+      ),
+      productsService: _FakeProductsService(),
+      sellersService: _FakeSellersService(),
+      companyProfileService: _FakeCompanyProfileService(),
+      paymentsService: _FakePaymentsService(),
+      invoicesService: _FakeInvoicesService(),
+      hasLocalUsers: () async => true,
+    );
+
+    await tester.pumpWidget(
+      BillingApp(
+        dependencies: dependencies,
+        backupScheduler: scheduler,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inventory'), findsWidgets);
+    expect(scheduler.catchUpRuns, 1);
+  });
+
   testWidgets('api mode does not run local backup scheduling', (tester) async {
     final scheduler = _FakeBackupScheduler();
     final dependencies = AppDependencies(
@@ -147,18 +206,31 @@ void main() {
 }
 
 class _FakeBackupScheduler implements BackupScheduler {
+  _FakeBackupScheduler({
+    this.throwOnRegister = false,
+    this.throwOnCatchUp = false,
+  });
+
+  final bool throwOnRegister;
+  final bool throwOnCatchUp;
   int catchUpRuns = 0;
   int registerRuns = 0;
 
   @override
   Future<bool> runCatchUpIfDue({DateTime? now}) async {
     catchUpRuns += 1;
+    if (throwOnCatchUp) {
+      throw StateError('catch-up failed');
+    }
     return true;
   }
 
   @override
   Future<void> registerPlatformSchedule() async {
     registerRuns += 1;
+    if (throwOnRegister) {
+      throw StateError('schedule failed');
+    }
   }
 }
 

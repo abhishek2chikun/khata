@@ -56,6 +56,30 @@ void main() {
     expect(service.importCount, 1);
   });
 
+  testWidgets('backup screen persists automatic backup settings and daily time',
+      (tester) async {
+    final service = FakeDriveBackupService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupScreen(driveBackupService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Automatic backups'));
+    await tester.enterText(find.bySemanticsLabel('Daily backup hour'), '2');
+    await tester.enterText(find.bySemanticsLabel('Daily backup minute'), '45');
+    await tester.tap(find.text('Save backup schedule'));
+    await tester.pumpAndSettle();
+
+    final settings = await service.loadSettings();
+    expect(settings.automaticBackupsEnabled, isTrue);
+    expect(
+        settings.dailyBackupTime, const BackupTimeOfDay(hour: 2, minute: 45));
+    expect(find.text('Daily backup time: 02:45'), findsOneWidget);
+  });
+
   testWidgets('local mode drawer shows backup destination and opens screen',
       (tester) async {
     final dependencies = AppDependencies(

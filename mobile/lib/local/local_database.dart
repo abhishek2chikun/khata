@@ -254,6 +254,8 @@ class BackupSettings extends Table {
   TextColumn get backupDirectory => text().nullable()();
   BoolColumn get automaticBackupsEnabled =>
       boolean().withDefault(const Constant(false))();
+  TextColumn get dailyBackupTime =>
+      text().withDefault(const Constant('00:00'))();
   TextColumn get lastBackupAt => text().nullable()();
   TextColumn get updatedAt => text()();
 

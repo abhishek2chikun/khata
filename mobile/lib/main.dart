@@ -54,8 +54,9 @@ class BillingApp extends StatefulWidget {
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
         invoicesService = invoicesService ?? dependencies!.invoicesService,
-        driveBackupService = driveBackupService,
-        backupScheduler = backupScheduler;
+        driveBackupService =
+            driveBackupService ?? dependencies?.driveBackupService,
+        backupScheduler = backupScheduler ?? dependencies?.backupScheduler;
 
   final AppDependencies? dependencies;
   final AuthController controller;
@@ -246,9 +247,13 @@ class _BillingAppState extends State<BillingApp> {
     Future<void>.microtask(() async {
       try {
         await scheduler.registerPlatformSchedule();
-        await scheduler.runCatchUpIfDue();
       } on Object {
         // Backup scheduling must not block opening the local app shell.
+      }
+      try {
+        await scheduler.runCatchUpIfDue();
+      } on Object {
+        // Catch-up failures are recorded by the scheduler and should not block startup.
       }
     });
   }
