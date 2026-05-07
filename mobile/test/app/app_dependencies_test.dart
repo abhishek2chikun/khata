@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
+import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_sellers_service.dart';
@@ -86,6 +88,43 @@ void main() {
     expect(dependencies.productsService, isA<LocalProductsService>());
     expect(dependencies.sellersService, isA<LocalSellersService>());
     expect(dependencies.paymentsService, isA<LocalPaymentsService>());
+    await dependencies.dispose();
+  });
+
+  test('local hasLocalUsers returns true when multiple users exist', () async {
+    final database = db.LocalDatabase.memory();
+    await database.into(database.localUsers).insert(
+          db.LocalUsersCompanion.insert(
+            id: 'local-user-1',
+            username: 'owner',
+            passwordHash: 'hash-1',
+            salt: 'salt-1',
+            passwordHashVersion: 1,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            displayName: const Value('Owner'),
+          ),
+        );
+    await database.into(database.localUsers).insert(
+          db.LocalUsersCompanion.insert(
+            id: 'local-user-2',
+            username: 'system',
+            passwordHash: 'hash-2',
+            salt: 'salt-2',
+            passwordHashVersion: 1,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            displayName: const Value('System'),
+          ),
+        );
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.local,
+      localDatabase: database,
+      sessionStore: _FakeSessionStore(),
+    );
+
+    await expectLater(dependencies.hasLocalUsers!(), completion(isTrue));
+
     await dependencies.dispose();
   });
 

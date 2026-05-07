@@ -88,7 +88,7 @@ class AppDependencies {
     final backupService = LocalDriveBackupService(database: localDatabase);
     final controller = AuthController(
       authService: authService,
-      sessionStore: sessionStore ?? SecureSessionStore(),
+      sessionStore: sessionStore ?? SecureSessionStore(keyPrefix: 'auth.local'),
     );
     return AppDependencies(
       mode: DataMode.local,
@@ -107,10 +107,10 @@ class AppDependencies {
         eventRecorder: LocalBackupEventRecorder(database: localDatabase),
       ),
       hasLocalUsers: () async {
-        final user = await localDatabase
-            .select(localDatabase.localUsers)
-            .getSingleOrNull();
-        return user != null;
+        final users = await (localDatabase.select(localDatabase.localUsers)
+              ..limit(1))
+            .get();
+        return users.isNotEmpty;
       },
       dispose: localDatabase.close,
     );
