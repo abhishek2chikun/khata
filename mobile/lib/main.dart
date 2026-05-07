@@ -74,6 +74,15 @@ class _BillingAppState extends State<BillingApp> {
   }
 
   @override
+  void dispose() {
+    final dependencies = widget.dependencies;
+    if (dependencies != null) {
+      Future<void>.microtask(dependencies.dispose);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.controller,
