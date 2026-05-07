@@ -6,6 +6,7 @@ import '../auth/session_store.dart';
 import '../config/api_base_url.dart';
 import '../local/local_auth_service.dart';
 import '../local/local_database.dart';
+import '../local/local_products_service.dart';
 import '../services/api_client.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
@@ -67,7 +68,7 @@ class AppDependencies {
     return AppDependencies(
       mode: DataMode.local,
       controller: controller,
-      productsService: _UnavailableLocalProductsService(),
+      productsService: LocalProductsService(database: database),
       sellersService: _UnavailableLocalSellersService(),
       companyProfileService: _UnavailableLocalCompanyProfileService(),
       paymentsService: _UnavailableLocalPaymentsService(),
@@ -118,13 +119,6 @@ class AppDependencies {
   Future<void> dispose() async {
     await _dispose?.call();
   }
-}
-
-class _UnavailableLocalProductsService implements ProductsService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'Local products service is added in a later task',
-      );
 }
 
 class _UnavailableLocalSellersService implements SellersService {
