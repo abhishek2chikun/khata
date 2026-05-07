@@ -294,6 +294,46 @@ void main() {
     );
     expect(await database.select(database.invoices).get(), isEmpty);
   });
+
+  test('explicit place of supply bypasses mismatched seller metadata',
+      () async {
+    final mismatchedSeller = await sellersService.createSeller(
+      _sellerInput(
+        name: 'Override Stores',
+        phone: '7777777777',
+        state: 'Delhi',
+        stateCode: '27',
+      ),
+    );
+    final draft = _draft(
+      seller: mismatchedSeller,
+      product: product,
+      quantity: 1,
+      placeOfSupplyStateCode: '27',
+    );
+
+    final quote = await invoicesService.quoteInvoice(draft);
+    final result = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(11),
+    );
+
+    expect(quote.placeOfSupplyStateCode, '27');
+    expect(result.invoice.status, 'ACTIVE');
+    expect(await database.select(database.invoices).get(), hasLength(1));
+  });
+
+  test('invalid create request ID returns validation error with bad request',
+      () async {
+    await expectLater(
+      () => invoicesService.createInvoice(
+        draft: _draft(seller: seller, product: product, quantity: 1),
+        requestId: 'not-a-uuid',
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
 }
 
 UpsertCompanyProfileInput _companyInput({
@@ -344,11 +384,13 @@ InvoiceDraft _draft({
   required double quantity,
   String paymentMode = 'CREDIT',
   double discountPercent = 0,
+  String? placeOfSupplyStateCode,
 }) {
   return InvoiceDraft(
     seller: seller,
     invoiceDate: '2026-01-10',
     paymentMode: paymentMode,
+    placeOfSupplyStateCode: placeOfSupplyStateCode,
     items: <InvoiceDraftItem>[
       InvoiceDraftItem(
         product: product,

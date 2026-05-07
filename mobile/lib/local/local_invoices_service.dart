@@ -333,7 +333,9 @@ class LocalInvoicesService implements InvoicesService {
       stateCode: company.stateCode,
       message: 'Company profile state and state_code do not match',
     );
-    if (seller.state != null && seller.stateCode != null) {
+    if (_emptyToNull(draft.placeOfSupplyStateCode) == null &&
+        seller.state != null &&
+        seller.stateCode != null) {
       _validateStateMetadata(
         state: seller.state!,
         stateCode: seller.stateCode!,
@@ -675,7 +677,7 @@ class LocalInvoicesService implements InvoicesService {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
         message: 'request_id must be a valid UUID',
-        statusCode: 422,
+        statusCode: 400,
       );
     }
   }
