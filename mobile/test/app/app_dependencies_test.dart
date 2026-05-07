@@ -74,17 +74,17 @@ void main() {
     );
   });
 
-  test('local dependencies throw placeholder error', () {
+  test('local dependencies create local auth with service placeholders',
+      () async {
+    final dependencies = await AppDependencies.create(mode: DataMode.local);
+
+    expect(dependencies.mode, DataMode.local);
+    expect(dependencies.controller, isA<AuthController>());
     expect(
-      () => AppDependencies.create(mode: DataMode.local),
-      throwsA(
-        isA<UnimplementedError>().having(
-          (error) => error.message,
-          'message',
-          contains('Local data mode is added in a later task'),
-        ),
-      ),
+      () => dependencies.productsService.fetchProducts(),
+      throwsA(isA<UnimplementedError>()),
     );
+    await dependencies.dispose();
   });
 
   test('default dependencies resolve to api mode', () async {
