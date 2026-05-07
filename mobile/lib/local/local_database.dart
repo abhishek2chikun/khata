@@ -169,6 +169,7 @@ class SellerTransactions extends Table {
   TextColumn get invoiceId => text().nullable().references(Invoices, #id)();
   TextColumn get requestId => text().nullable()();
   TextColumn get requestHash => text().nullable()();
+  TextColumn get openingBalanceSellerId => text().nullable()();
   TextColumn get entryType => text()();
   TextColumn get amount => text()();
   TextColumn get occurredOn => text()();
@@ -182,6 +183,7 @@ class SellerTransactions extends Table {
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
         {requestId},
+        {openingBalanceSellerId},
       ];
 }
 
