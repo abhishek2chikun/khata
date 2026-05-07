@@ -98,6 +98,42 @@ void main() {
     expect(database.backupSettings.automaticBackupsEnabled, isA<GeneratedColumn<bool>>());
   });
 
+  test('business table nullability and column types match backend models', () async {
+    final database = LocalDatabase.memory();
+    addTearDown(database.close);
+
+    _expectRequired(database, 'products', 'company');
+    _expectRequired(database, 'products', 'category');
+    _expectRequired(database, 'products', 'item_code');
+    _expectNullable(database, 'products', 'buying_price_excl_tax');
+    _expectNullable(database, 'products', 'buying_gst_rate');
+
+    _expectRequired(database, 'sellers', 'address');
+    _expectRequired(database, 'company_profiles', 'address');
+    _expectRequired(database, 'company_profiles', 'city');
+    _expectRequired(database, 'company_profiles', 'state');
+    _expectRequired(database, 'company_profiles', 'state_code');
+
+    _expectRequired(database, 'invoices', 'seller_address');
+    _expectRequired(database, 'invoices', 'place_of_supply_state');
+    _expectRequired(database, 'invoices', 'place_of_supply_state_code');
+    _expectRequired(database, 'invoices', 'company_address');
+    _expectRequired(database, 'invoices', 'company_city');
+    _expectRequired(database, 'invoices', 'company_state');
+    _expectRequired(database, 'invoices', 'company_state_code');
+    _expectRequired(database, 'invoices', 'payment_mode');
+    expect(_column(database, 'invoices', 'invoice_number'), isA<GeneratedColumn<int>>());
+
+    _expectNullable(database, 'stock_movements', 'request_id');
+    _expectNullable(database, 'stock_movements', 'request_hash');
+    _expectNullable(database, 'seller_transactions', 'request_id');
+    _expectNullable(database, 'seller_transactions', 'request_hash');
+
+    _expectRequired(database, 'invoice_items', 'product_code');
+    _expectRequired(database, 'invoice_items', 'company');
+    _expectRequired(database, 'invoice_items', 'category');
+  });
+
   test('foreign key constraints reject orphan invoice items', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
@@ -111,6 +147,9 @@ void main() {
           product_id,
           line_number,
           product_name,
+          product_code,
+          company,
+          category,
           quantity,
           pricing_mode,
           entered_unit_price,
@@ -134,6 +173,9 @@ void main() {
           'missing-product',
           1,
           'Missing Product',
+          'MISSING-1',
+          'Missing Company',
+          'Missing Category',
           '1',
           'exclusive',
           '10',
@@ -162,4 +204,21 @@ void main() {
 Set<String> _columnNames(LocalDatabase database, String tableName) {
   final table = database.allTables.singleWhere((table) => table.actualTableName == tableName);
   return table.$columns.map((column) => column.$name).toSet();
+}
+
+GeneratedColumn<Object> _column(LocalDatabase database, String tableName, String columnName) {
+  final table = database.allTables.singleWhere((table) => table.actualTableName == tableName);
+  return table.$columns.singleWhere((column) => column.$name == columnName);
+}
+
+void _expectRequired(LocalDatabase database, String tableName, String columnName) {
+  final column = _column(database, tableName, columnName);
+  expect(column.$nullable, isFalse, reason: '$tableName.$columnName should be NOT NULL');
+  expect(column.requiredDuringInsert, isTrue, reason: '$tableName.$columnName should require insert values');
+}
+
+void _expectNullable(LocalDatabase database, String tableName, String columnName) {
+  final column = _column(database, tableName, columnName);
+  expect(column.$nullable, isTrue, reason: '$tableName.$columnName should allow null');
+  expect(column.requiredDuringInsert, isFalse, reason: '$tableName.$columnName should not require insert values');
 }

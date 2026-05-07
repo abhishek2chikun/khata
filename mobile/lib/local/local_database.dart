@@ -22,12 +22,12 @@ class LocalUsers extends Table {
 
 class Products extends Table {
   TextColumn get id => text()();
-  TextColumn get company => text().nullable()();
-  TextColumn get category => text().nullable()();
+  TextColumn get company => text()();
+  TextColumn get category => text()();
   TextColumn get itemName => text()();
-  TextColumn get itemCode => text().nullable()();
-  TextColumn get buyingPriceExclTax => text()();
-  TextColumn get buyingGstRate => text()();
+  TextColumn get itemCode => text()();
+  TextColumn get buyingPriceExclTax => text().nullable()();
+  TextColumn get buyingGstRate => text().nullable()();
   TextColumn get defaultSellingPriceExclTax => text()();
   TextColumn get defaultGstRate => text()();
   TextColumn get quantityOnHand => text()();
@@ -43,7 +43,7 @@ class Products extends Table {
 class Sellers extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  TextColumn get address => text().nullable()();
+  TextColumn get address => text()();
   TextColumn get state => text().nullable()();
   TextColumn get stateCode => text().nullable()();
   TextColumn get phone => text().nullable()();
@@ -59,10 +59,10 @@ class Sellers extends Table {
 class CompanyProfiles extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  TextColumn get address => text().nullable()();
-  TextColumn get city => text().nullable()();
-  TextColumn get state => text().nullable()();
-  TextColumn get stateCode => text().nullable()();
+  TextColumn get address => text()();
+  TextColumn get city => text()();
+  TextColumn get state => text()();
+  TextColumn get stateCode => text()();
   TextColumn get gstin => text().nullable()();
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
@@ -83,21 +83,21 @@ class Invoices extends Table {
   TextColumn get id => text()();
   TextColumn get requestId => text()();
   TextColumn get requestHash => text()();
-  TextColumn get invoiceNumber => text()();
+  IntColumn get invoiceNumber => integer()();
   TextColumn get sellerId => text().references(Sellers, #id)();
   TextColumn get sellerName => text()();
-  TextColumn get sellerAddress => text().nullable()();
+  TextColumn get sellerAddress => text()();
   TextColumn get sellerState => text().nullable()();
   TextColumn get sellerStateCode => text().nullable()();
   TextColumn get sellerPhone => text().nullable()();
   TextColumn get sellerGstin => text().nullable()();
-  TextColumn get placeOfSupplyState => text().nullable()();
-  TextColumn get placeOfSupplyStateCode => text().nullable()();
+  TextColumn get placeOfSupplyState => text()();
+  TextColumn get placeOfSupplyStateCode => text()();
   TextColumn get companyName => text()();
-  TextColumn get companyAddress => text().nullable()();
-  TextColumn get companyCity => text().nullable()();
-  TextColumn get companyState => text().nullable()();
-  TextColumn get companyStateCode => text().nullable()();
+  TextColumn get companyAddress => text()();
+  TextColumn get companyCity => text()();
+  TextColumn get companyState => text()();
+  TextColumn get companyStateCode => text()();
   TextColumn get companyGstin => text().nullable()();
   TextColumn get companyPhone => text().nullable()();
   TextColumn get companyEmail => text().nullable()();
@@ -109,7 +109,7 @@ class Invoices extends Table {
   TextColumn get invoiceDate => text()();
   TextColumn get taxRegime => text()();
   TextColumn get status => text()();
-  TextColumn get paymentMode => text().nullable()();
+  TextColumn get paymentMode => text()();
   TextColumn get subtotal => text()();
   TextColumn get discountTotal => text()();
   TextColumn get taxableTotal => text()();
@@ -134,8 +134,8 @@ class StockMovements extends Table {
   TextColumn get id => text()();
   TextColumn get productId => text().references(Products, #id)();
   TextColumn get invoiceId => text().nullable().references(Invoices, #id)();
-  TextColumn get requestId => text()();
-  TextColumn get requestHash => text()();
+  TextColumn get requestId => text().nullable()();
+  TextColumn get requestHash => text().nullable()();
   TextColumn get movementType => text()();
   TextColumn get quantityDelta => text()();
   TextColumn get reason => text().nullable()();
@@ -150,8 +150,8 @@ class SellerTransactions extends Table {
   TextColumn get id => text()();
   TextColumn get sellerId => text().references(Sellers, #id)();
   TextColumn get invoiceId => text().nullable().references(Invoices, #id)();
-  TextColumn get requestId => text()();
-  TextColumn get requestHash => text()();
+  TextColumn get requestId => text().nullable()();
+  TextColumn get requestHash => text().nullable()();
   TextColumn get entryType => text()();
   TextColumn get amount => text()();
   TextColumn get occurredOn => text()();
@@ -169,9 +169,9 @@ class InvoiceItems extends Table {
   TextColumn get productId => text().references(Products, #id)();
   IntColumn get lineNumber => integer()();
   TextColumn get productName => text()();
-  TextColumn get productCode => text().nullable()();
-  TextColumn get company => text().nullable()();
-  TextColumn get category => text().nullable()();
+  TextColumn get productCode => text()();
+  TextColumn get company => text()();
+  TextColumn get category => text()();
   TextColumn get quantity => text()();
   TextColumn get pricingMode => text()();
   TextColumn get enteredUnitPrice => text()();
