@@ -145,6 +145,13 @@ class Invoices extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {requestId},
+        {invoiceNumber},
+        {cancelRequestId},
+      ];
 }
 
 class StockMovements extends Table {

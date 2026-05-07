@@ -5,7 +5,9 @@ import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
 import '../config/api_base_url.dart';
 import '../local/local_auth_service.dart';
+import '../local/local_company_profile_service.dart';
 import '../local/local_database.dart';
+import '../local/local_invoices_service.dart';
 import '../local/local_payments_service.dart';
 import '../local/local_products_service.dart';
 import '../local/local_sellers_service.dart';
@@ -72,9 +74,9 @@ class AppDependencies {
       controller: controller,
       productsService: LocalProductsService(database: database),
       sellersService: LocalSellersService(database: database),
-      companyProfileService: _UnavailableLocalCompanyProfileService(),
+      companyProfileService: LocalCompanyProfileService(database: database),
       paymentsService: LocalPaymentsService(database: database),
-      invoicesService: _UnavailableLocalInvoicesService(),
+      invoicesService: LocalInvoicesService(database: database),
       dispose: database.close,
     );
   }
@@ -121,18 +123,4 @@ class AppDependencies {
   Future<void> dispose() async {
     await _dispose?.call();
   }
-}
-
-class _UnavailableLocalCompanyProfileService implements CompanyProfileService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'Local company profile service is added in a later task',
-      );
-}
-
-class _UnavailableLocalInvoicesService implements InvoicesService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'Local invoices service is added in a later task',
-      );
 }
