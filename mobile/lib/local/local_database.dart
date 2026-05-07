@@ -43,6 +43,12 @@ class Products extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {company, category, itemName},
+        {itemCode},
+      ];
 }
 
 class Sellers extends Table {
