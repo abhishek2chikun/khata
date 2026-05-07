@@ -93,7 +93,7 @@ mobile/
 Run without a backend:
 
 ```bash
-(cd /Users/abhishek/python_venv/khata_app/mobile && \
+(cd mobile && \
   flutter run -d emulator-5554 --dart-define=DATA_MODE=local)
 ```
 
