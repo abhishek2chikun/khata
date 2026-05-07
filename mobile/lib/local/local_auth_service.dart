@@ -32,18 +32,28 @@ class LocalAuthService implements AuthService {
     final passwordHash = _passwordHasher.hashPassword(password);
     final now = DateTime.now().toUtc().toIso8601String();
     final userId = _generateToken();
-    await _database.into(_database.localUsers).insert(
-          LocalUsersCompanion.insert(
-            id: userId,
-            username: username,
-            passwordHash: passwordHash.hash,
-            displayName: Value(displayName),
-            salt: passwordHash.salt,
-            passwordHashVersion: passwordHash.version,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
+    try {
+      await _database.into(_database.localUsers).insert(
+            LocalUsersCompanion.insert(
+              id: userId,
+              username: username,
+              passwordHash: passwordHash.hash,
+              displayName: Value(displayName),
+              salt: passwordHash.salt,
+              passwordHashVersion: passwordHash.version,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    } on Object {
+      final duplicateUser = await (_database.select(_database.localUsers)
+            ..where((user) => user.username.equals(username)))
+          .getSingleOrNull();
+      if (duplicateUser != null) {
+        throw const AuthException('Username already exists', statusCode: 409);
+      }
+      rethrow;
+    }
     return AuthUser(id: userId, username: username, displayName: displayName);
   }
 
@@ -56,6 +66,7 @@ class LocalAuthService implements AuthService {
           ..where((user) => user.username.equals(username)))
         .getSingleOrNull();
     if (user == null ||
+        !user.isActive ||
         !_passwordHasher.verify(
           password: password,
           salt: user.salt,
@@ -74,9 +85,10 @@ class LocalAuthService implements AuthService {
     final now = DateTime.now().toUtc().toIso8601String();
     await _database.into(_database.localSessions).insert(
           LocalSessionsCompanion.insert(
-            id: refreshToken,
+            id: _generateToken(),
             localUserId: user.id,
             sessionTokenHash: _passwordHasher.hashToken(accessToken),
+            refreshTokenHash: _passwordHasher.hashToken(refreshToken),
             createdAt: now,
           ),
         );
@@ -91,24 +103,42 @@ class LocalAuthService implements AuthService {
   @override
   Future<AuthSessionTokens> refresh({required String refreshToken}) async {
     final session = await (_database.select(_database.localSessions)
-          ..where((session) => session.id.equals(refreshToken)))
+          ..where(
+            (session) => session.refreshTokenHash.equals(
+              _passwordHasher.hashToken(refreshToken),
+            ),
+          ))
         .getSingleOrNull();
     if (session == null) {
       throw _invalidCredentials();
     }
 
+    final user = await (_database.select(_database.localUsers)
+          ..where((user) => user.id.equals(session.localUserId)))
+        .getSingleOrNull();
+    if (user == null || !user.isActive) {
+      throw _invalidCredentials();
+    }
+
     final accessToken = _generateToken();
-    await (_database.update(_database.localSessions)
-          ..where((storedSession) => storedSession.id.equals(refreshToken)))
-        .write(
-      LocalSessionsCompanion(
-        sessionTokenHash: Value(_passwordHasher.hashToken(accessToken)),
-      ),
-    );
+    final newRefreshToken = _generateToken();
+    final now = DateTime.now().toUtc().toIso8601String();
+    await (_database.delete(_database.localSessions)
+          ..where((storedSession) => storedSession.id.equals(session.id)))
+        .go();
+    await _database.into(_database.localSessions).insert(
+          LocalSessionsCompanion.insert(
+            id: _generateToken(),
+            localUserId: user.id,
+            sessionTokenHash: _passwordHasher.hashToken(accessToken),
+            refreshTokenHash: _passwordHasher.hashToken(newRefreshToken),
+            createdAt: now,
+          ),
+        );
 
     return AuthSessionTokens(
       accessToken: accessToken,
-      refreshToken: refreshToken,
+      refreshToken: newRefreshToken,
       tokenType: 'bearer',
     );
   }
@@ -116,7 +146,11 @@ class LocalAuthService implements AuthService {
   @override
   Future<void> logout({required String refreshToken}) async {
     await (_database.delete(_database.localSessions)
-          ..where((session) => session.id.equals(refreshToken)))
+          ..where(
+            (session) => session.refreshTokenHash.equals(
+              _passwordHasher.hashToken(refreshToken),
+            ),
+          ))
         .go();
   }
 
@@ -135,7 +169,10 @@ class LocalAuthService implements AuthService {
 
     final user = await (_database.select(_database.localUsers)
           ..where((user) => user.id.equals(session.localUserId)))
-        .getSingle();
+        .getSingleOrNull();
+    if (user == null || !user.isActive) {
+      throw _invalidCredentials();
+    }
     return AuthUser(
       id: user.id,
       username: user.username,
