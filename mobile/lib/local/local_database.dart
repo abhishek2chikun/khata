@@ -18,6 +18,11 @@ class LocalUsers extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {username},
+      ];
 }
 
 class Products extends Table {
@@ -121,7 +126,8 @@ class Invoices extends Table {
   TextColumn get cancelRequestId => text().nullable()();
   TextColumn get cancelRequestHash => text().nullable()();
   @ReferenceName('canceledInvoices')
-  TextColumn get canceledByUserId => text().nullable().references(LocalUsers, #id)();
+  TextColumn get canceledByUserId =>
+      text().nullable().references(LocalUsers, #id)();
   TextColumn get cancelReason => text().nullable()();
   TextColumn get canceledAt => text().nullable()();
   TextColumn get createdAt => text()();
@@ -198,6 +204,7 @@ class LocalSessions extends Table {
   TextColumn get id => text()();
   TextColumn get localUserId => text().references(LocalUsers, #id)();
   TextColumn get sessionTokenHash => text()();
+  TextColumn get refreshTokenHash => text()();
   TextColumn get createdAt => text()();
   TextColumn get expiresAt => text().nullable()();
 
@@ -220,7 +227,8 @@ class BackupEvents extends Table {
 class BackupSettings extends Table {
   TextColumn get id => text()();
   TextColumn get backupDirectory => text().nullable()();
-  BoolColumn get automaticBackupsEnabled => boolean().withDefault(const Constant(false))();
+  BoolColumn get automaticBackupsEnabled =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get lastBackupAt => text().nullable()();
   TextColumn get updatedAt => text()();
 

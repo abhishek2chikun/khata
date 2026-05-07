@@ -148,6 +148,10 @@ class $LocalUsersTable extends LocalUsers
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {username},
+      ];
+  @override
   LocalUser map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LocalUser(
@@ -6775,6 +6779,12 @@ class $LocalSessionsTable extends LocalSessions
   late final GeneratedColumn<String> sessionTokenHash = GeneratedColumn<String>(
       'session_token_hash', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _refreshTokenHashMeta =
+      const VerificationMeta('refreshTokenHash');
+  @override
+  late final GeneratedColumn<String> refreshTokenHash = GeneratedColumn<String>(
+      'refresh_token_hash', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -6788,8 +6798,14 @@ class $LocalSessionsTable extends LocalSessions
       'expires_at', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, localUserId, sessionTokenHash, createdAt, expiresAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        localUserId,
+        sessionTokenHash,
+        refreshTokenHash,
+        createdAt,
+        expiresAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6821,6 +6837,14 @@ class $LocalSessionsTable extends LocalSessions
     } else if (isInserting) {
       context.missing(_sessionTokenHashMeta);
     }
+    if (data.containsKey('refresh_token_hash')) {
+      context.handle(
+          _refreshTokenHashMeta,
+          refreshTokenHash.isAcceptableOrUnknown(
+              data['refresh_token_hash']!, _refreshTokenHashMeta));
+    } else if (isInserting) {
+      context.missing(_refreshTokenHashMeta);
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -6846,6 +6870,8 @@ class $LocalSessionsTable extends LocalSessions
           .read(DriftSqlType.string, data['${effectivePrefix}local_user_id'])!,
       sessionTokenHash: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}session_token_hash'])!,
+      refreshTokenHash: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}refresh_token_hash'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
       expiresAt: attachedDatabase.typeMapping
@@ -6863,12 +6889,14 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
   final String id;
   final String localUserId;
   final String sessionTokenHash;
+  final String refreshTokenHash;
   final String createdAt;
   final String? expiresAt;
   const LocalSession(
       {required this.id,
       required this.localUserId,
       required this.sessionTokenHash,
+      required this.refreshTokenHash,
       required this.createdAt,
       this.expiresAt});
   @override
@@ -6877,6 +6905,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
     map['id'] = Variable<String>(id);
     map['local_user_id'] = Variable<String>(localUserId);
     map['session_token_hash'] = Variable<String>(sessionTokenHash);
+    map['refresh_token_hash'] = Variable<String>(refreshTokenHash);
     map['created_at'] = Variable<String>(createdAt);
     if (!nullToAbsent || expiresAt != null) {
       map['expires_at'] = Variable<String>(expiresAt);
@@ -6889,6 +6918,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
       id: Value(id),
       localUserId: Value(localUserId),
       sessionTokenHash: Value(sessionTokenHash),
+      refreshTokenHash: Value(refreshTokenHash),
       createdAt: Value(createdAt),
       expiresAt: expiresAt == null && nullToAbsent
           ? const Value.absent()
@@ -6903,6 +6933,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
       id: serializer.fromJson<String>(json['id']),
       localUserId: serializer.fromJson<String>(json['localUserId']),
       sessionTokenHash: serializer.fromJson<String>(json['sessionTokenHash']),
+      refreshTokenHash: serializer.fromJson<String>(json['refreshTokenHash']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       expiresAt: serializer.fromJson<String?>(json['expiresAt']),
     );
@@ -6914,6 +6945,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
       'id': serializer.toJson<String>(id),
       'localUserId': serializer.toJson<String>(localUserId),
       'sessionTokenHash': serializer.toJson<String>(sessionTokenHash),
+      'refreshTokenHash': serializer.toJson<String>(refreshTokenHash),
       'createdAt': serializer.toJson<String>(createdAt),
       'expiresAt': serializer.toJson<String?>(expiresAt),
     };
@@ -6923,12 +6955,14 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
           {String? id,
           String? localUserId,
           String? sessionTokenHash,
+          String? refreshTokenHash,
           String? createdAt,
           Value<String?> expiresAt = const Value.absent()}) =>
       LocalSession(
         id: id ?? this.id,
         localUserId: localUserId ?? this.localUserId,
         sessionTokenHash: sessionTokenHash ?? this.sessionTokenHash,
+        refreshTokenHash: refreshTokenHash ?? this.refreshTokenHash,
         createdAt: createdAt ?? this.createdAt,
         expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
       );
@@ -6940,6 +6974,9 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
       sessionTokenHash: data.sessionTokenHash.present
           ? data.sessionTokenHash.value
           : this.sessionTokenHash,
+      refreshTokenHash: data.refreshTokenHash.present
+          ? data.refreshTokenHash.value
+          : this.refreshTokenHash,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
     );
@@ -6951,6 +6988,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
           ..write('id: $id, ')
           ..write('localUserId: $localUserId, ')
           ..write('sessionTokenHash: $sessionTokenHash, ')
+          ..write('refreshTokenHash: $refreshTokenHash, ')
           ..write('createdAt: $createdAt, ')
           ..write('expiresAt: $expiresAt')
           ..write(')'))
@@ -6958,8 +6996,8 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, localUserId, sessionTokenHash, createdAt, expiresAt);
+  int get hashCode => Object.hash(id, localUserId, sessionTokenHash,
+      refreshTokenHash, createdAt, expiresAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6967,6 +7005,7 @@ class LocalSession extends DataClass implements Insertable<LocalSession> {
           other.id == this.id &&
           other.localUserId == this.localUserId &&
           other.sessionTokenHash == this.sessionTokenHash &&
+          other.refreshTokenHash == this.refreshTokenHash &&
           other.createdAt == this.createdAt &&
           other.expiresAt == this.expiresAt);
 }
@@ -6975,6 +7014,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
   final Value<String> id;
   final Value<String> localUserId;
   final Value<String> sessionTokenHash;
+  final Value<String> refreshTokenHash;
   final Value<String> createdAt;
   final Value<String?> expiresAt;
   final Value<int> rowid;
@@ -6982,6 +7022,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
     this.id = const Value.absent(),
     this.localUserId = const Value.absent(),
     this.sessionTokenHash = const Value.absent(),
+    this.refreshTokenHash = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.expiresAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -6990,17 +7031,20 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
     required String id,
     required String localUserId,
     required String sessionTokenHash,
+    required String refreshTokenHash,
     required String createdAt,
     this.expiresAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         localUserId = Value(localUserId),
         sessionTokenHash = Value(sessionTokenHash),
+        refreshTokenHash = Value(refreshTokenHash),
         createdAt = Value(createdAt);
   static Insertable<LocalSession> custom({
     Expression<String>? id,
     Expression<String>? localUserId,
     Expression<String>? sessionTokenHash,
+    Expression<String>? refreshTokenHash,
     Expression<String>? createdAt,
     Expression<String>? expiresAt,
     Expression<int>? rowid,
@@ -7009,6 +7053,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
       if (id != null) 'id': id,
       if (localUserId != null) 'local_user_id': localUserId,
       if (sessionTokenHash != null) 'session_token_hash': sessionTokenHash,
+      if (refreshTokenHash != null) 'refresh_token_hash': refreshTokenHash,
       if (createdAt != null) 'created_at': createdAt,
       if (expiresAt != null) 'expires_at': expiresAt,
       if (rowid != null) 'rowid': rowid,
@@ -7019,6 +7064,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
       {Value<String>? id,
       Value<String>? localUserId,
       Value<String>? sessionTokenHash,
+      Value<String>? refreshTokenHash,
       Value<String>? createdAt,
       Value<String?>? expiresAt,
       Value<int>? rowid}) {
@@ -7026,6 +7072,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
       id: id ?? this.id,
       localUserId: localUserId ?? this.localUserId,
       sessionTokenHash: sessionTokenHash ?? this.sessionTokenHash,
+      refreshTokenHash: refreshTokenHash ?? this.refreshTokenHash,
       createdAt: createdAt ?? this.createdAt,
       expiresAt: expiresAt ?? this.expiresAt,
       rowid: rowid ?? this.rowid,
@@ -7043,6 +7090,9 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
     }
     if (sessionTokenHash.present) {
       map['session_token_hash'] = Variable<String>(sessionTokenHash.value);
+    }
+    if (refreshTokenHash.present) {
+      map['refresh_token_hash'] = Variable<String>(refreshTokenHash.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
@@ -7062,6 +7112,7 @@ class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
           ..write('id: $id, ')
           ..write('localUserId: $localUserId, ')
           ..write('sessionTokenHash: $sessionTokenHash, ')
+          ..write('refreshTokenHash: $refreshTokenHash, ')
           ..write('createdAt: $createdAt, ')
           ..write('expiresAt: $expiresAt, ')
           ..write('rowid: $rowid')
@@ -12602,6 +12653,7 @@ typedef $$LocalSessionsTableCreateCompanionBuilder = LocalSessionsCompanion
   required String id,
   required String localUserId,
   required String sessionTokenHash,
+  required String refreshTokenHash,
   required String createdAt,
   Value<String?> expiresAt,
   Value<int> rowid,
@@ -12611,6 +12663,7 @@ typedef $$LocalSessionsTableUpdateCompanionBuilder = LocalSessionsCompanion
   Value<String> id,
   Value<String> localUserId,
   Value<String> sessionTokenHash,
+  Value<String> refreshTokenHash,
   Value<String> createdAt,
   Value<String?> expiresAt,
   Value<int> rowid,
@@ -12651,6 +12704,10 @@ class $$LocalSessionsTableFilterComposer
 
   ColumnFilters<String> get sessionTokenHash => $composableBuilder(
       column: $table.sessionTokenHash,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get refreshTokenHash => $composableBuilder(
+      column: $table.refreshTokenHash,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get createdAt => $composableBuilder(
@@ -12696,6 +12753,10 @@ class $$LocalSessionsTableOrderingComposer
       column: $table.sessionTokenHash,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get refreshTokenHash => $composableBuilder(
+      column: $table.refreshTokenHash,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -12737,6 +12798,9 @@ class $$LocalSessionsTableAnnotationComposer
 
   GeneratedColumn<String> get sessionTokenHash => $composableBuilder(
       column: $table.sessionTokenHash, builder: (column) => column);
+
+  GeneratedColumn<String> get refreshTokenHash => $composableBuilder(
+      column: $table.refreshTokenHash, builder: (column) => column);
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -12792,6 +12856,7 @@ class $$LocalSessionsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> localUserId = const Value.absent(),
             Value<String> sessionTokenHash = const Value.absent(),
+            Value<String> refreshTokenHash = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String?> expiresAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -12800,6 +12865,7 @@ class $$LocalSessionsTableTableManager extends RootTableManager<
             id: id,
             localUserId: localUserId,
             sessionTokenHash: sessionTokenHash,
+            refreshTokenHash: refreshTokenHash,
             createdAt: createdAt,
             expiresAt: expiresAt,
             rowid: rowid,
@@ -12808,6 +12874,7 @@ class $$LocalSessionsTableTableManager extends RootTableManager<
             required String id,
             required String localUserId,
             required String sessionTokenHash,
+            required String refreshTokenHash,
             required String createdAt,
             Value<String?> expiresAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -12816,6 +12883,7 @@ class $$LocalSessionsTableTableManager extends RootTableManager<
             id: id,
             localUserId: localUserId,
             sessionTokenHash: sessionTokenHash,
+            refreshTokenHash: refreshTokenHash,
             createdAt: createdAt,
             expiresAt: expiresAt,
             rowid: rowid,
