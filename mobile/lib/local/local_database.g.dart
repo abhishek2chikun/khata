@@ -498,14 +498,14 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       const VerificationMeta('company');
   @override
   late final GeneratedColumn<String> company = GeneratedColumn<String>(
-      'company', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _categoryMeta =
       const VerificationMeta('category');
   @override
   late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'category', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _itemNameMeta =
       const VerificationMeta('itemName');
   @override
@@ -516,20 +516,20 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       const VerificationMeta('itemCode');
   @override
   late final GeneratedColumn<String> itemCode = GeneratedColumn<String>(
-      'item_code', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'item_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _buyingPriceExclTaxMeta =
       const VerificationMeta('buyingPriceExclTax');
   @override
   late final GeneratedColumn<String> buyingPriceExclTax =
-      GeneratedColumn<String>('buying_price_excl_tax', aliasedName, false,
-          type: DriftSqlType.string, requiredDuringInsert: true);
+      GeneratedColumn<String>('buying_price_excl_tax', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _buyingGstRateMeta =
       const VerificationMeta('buyingGstRate');
   @override
   late final GeneratedColumn<String> buyingGstRate = GeneratedColumn<String>(
-      'buying_gst_rate', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'buying_gst_rate', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _defaultSellingPriceExclTaxMeta =
       const VerificationMeta('defaultSellingPriceExclTax');
   @override
@@ -612,10 +612,14 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     if (data.containsKey('company')) {
       context.handle(_companyMeta,
           company.isAcceptableOrUnknown(data['company']!, _companyMeta));
+    } else if (isInserting) {
+      context.missing(_companyMeta);
     }
     if (data.containsKey('category')) {
       context.handle(_categoryMeta,
           category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
     }
     if (data.containsKey('item_name')) {
       context.handle(_itemNameMeta,
@@ -626,22 +630,20 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     if (data.containsKey('item_code')) {
       context.handle(_itemCodeMeta,
           itemCode.isAcceptableOrUnknown(data['item_code']!, _itemCodeMeta));
+    } else if (isInserting) {
+      context.missing(_itemCodeMeta);
     }
     if (data.containsKey('buying_price_excl_tax')) {
       context.handle(
           _buyingPriceExclTaxMeta,
           buyingPriceExclTax.isAcceptableOrUnknown(
               data['buying_price_excl_tax']!, _buyingPriceExclTaxMeta));
-    } else if (isInserting) {
-      context.missing(_buyingPriceExclTaxMeta);
     }
     if (data.containsKey('buying_gst_rate')) {
       context.handle(
           _buyingGstRateMeta,
           buyingGstRate.isAcceptableOrUnknown(
               data['buying_gst_rate']!, _buyingGstRateMeta));
-    } else if (isInserting) {
-      context.missing(_buyingGstRateMeta);
     }
     if (data.containsKey('default_selling_price_excl_tax')) {
       context.handle(
@@ -704,17 +706,17 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       company: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company']),
+          .read(DriftSqlType.string, data['${effectivePrefix}company'])!,
       category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category']),
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
       itemName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}item_name'])!,
       itemCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}item_code']),
-      buyingPriceExclTax: attachedDatabase.typeMapping.read(DriftSqlType.string,
-          data['${effectivePrefix}buying_price_excl_tax'])!,
-      buyingGstRate: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}buying_gst_rate'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}item_code'])!,
+      buyingPriceExclTax: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}buying_price_excl_tax']),
+      buyingGstRate: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buying_gst_rate']),
       defaultSellingPriceExclTax: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}default_selling_price_excl_tax'])!,
@@ -741,12 +743,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
 
 class Product extends DataClass implements Insertable<Product> {
   final String id;
-  final String? company;
-  final String? category;
+  final String company;
+  final String category;
   final String itemName;
-  final String? itemCode;
-  final String buyingPriceExclTax;
-  final String buyingGstRate;
+  final String itemCode;
+  final String? buyingPriceExclTax;
+  final String? buyingGstRate;
   final String defaultSellingPriceExclTax;
   final String defaultGstRate;
   final String quantityOnHand;
@@ -756,12 +758,12 @@ class Product extends DataClass implements Insertable<Product> {
   final String updatedAt;
   const Product(
       {required this.id,
-      this.company,
-      this.category,
+      required this.company,
+      required this.category,
       required this.itemName,
-      this.itemCode,
-      required this.buyingPriceExclTax,
-      required this.buyingGstRate,
+      required this.itemCode,
+      this.buyingPriceExclTax,
+      this.buyingGstRate,
       required this.defaultSellingPriceExclTax,
       required this.defaultGstRate,
       required this.quantityOnHand,
@@ -773,18 +775,16 @@ class Product extends DataClass implements Insertable<Product> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    if (!nullToAbsent || company != null) {
-      map['company'] = Variable<String>(company);
-    }
-    if (!nullToAbsent || category != null) {
-      map['category'] = Variable<String>(category);
-    }
+    map['company'] = Variable<String>(company);
+    map['category'] = Variable<String>(category);
     map['item_name'] = Variable<String>(itemName);
-    if (!nullToAbsent || itemCode != null) {
-      map['item_code'] = Variable<String>(itemCode);
+    map['item_code'] = Variable<String>(itemCode);
+    if (!nullToAbsent || buyingPriceExclTax != null) {
+      map['buying_price_excl_tax'] = Variable<String>(buyingPriceExclTax);
     }
-    map['buying_price_excl_tax'] = Variable<String>(buyingPriceExclTax);
-    map['buying_gst_rate'] = Variable<String>(buyingGstRate);
+    if (!nullToAbsent || buyingGstRate != null) {
+      map['buying_gst_rate'] = Variable<String>(buyingGstRate);
+    }
     map['default_selling_price_excl_tax'] =
         Variable<String>(defaultSellingPriceExclTax);
     map['default_gst_rate'] = Variable<String>(defaultGstRate);
@@ -799,18 +799,16 @@ class Product extends DataClass implements Insertable<Product> {
   ProductsCompanion toCompanion(bool nullToAbsent) {
     return ProductsCompanion(
       id: Value(id),
-      company: company == null && nullToAbsent
-          ? const Value.absent()
-          : Value(company),
-      category: category == null && nullToAbsent
-          ? const Value.absent()
-          : Value(category),
+      company: Value(company),
+      category: Value(category),
       itemName: Value(itemName),
-      itemCode: itemCode == null && nullToAbsent
+      itemCode: Value(itemCode),
+      buyingPriceExclTax: buyingPriceExclTax == null && nullToAbsent
           ? const Value.absent()
-          : Value(itemCode),
-      buyingPriceExclTax: Value(buyingPriceExclTax),
-      buyingGstRate: Value(buyingGstRate),
+          : Value(buyingPriceExclTax),
+      buyingGstRate: buyingGstRate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(buyingGstRate),
       defaultSellingPriceExclTax: Value(defaultSellingPriceExclTax),
       defaultGstRate: Value(defaultGstRate),
       quantityOnHand: Value(quantityOnHand),
@@ -826,13 +824,13 @@ class Product extends DataClass implements Insertable<Product> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Product(
       id: serializer.fromJson<String>(json['id']),
-      company: serializer.fromJson<String?>(json['company']),
-      category: serializer.fromJson<String?>(json['category']),
+      company: serializer.fromJson<String>(json['company']),
+      category: serializer.fromJson<String>(json['category']),
       itemName: serializer.fromJson<String>(json['itemName']),
-      itemCode: serializer.fromJson<String?>(json['itemCode']),
+      itemCode: serializer.fromJson<String>(json['itemCode']),
       buyingPriceExclTax:
-          serializer.fromJson<String>(json['buyingPriceExclTax']),
-      buyingGstRate: serializer.fromJson<String>(json['buyingGstRate']),
+          serializer.fromJson<String?>(json['buyingPriceExclTax']),
+      buyingGstRate: serializer.fromJson<String?>(json['buyingGstRate']),
       defaultSellingPriceExclTax:
           serializer.fromJson<String>(json['defaultSellingPriceExclTax']),
       defaultGstRate: serializer.fromJson<String>(json['defaultGstRate']),
@@ -848,12 +846,12 @@ class Product extends DataClass implements Insertable<Product> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'company': serializer.toJson<String?>(company),
-      'category': serializer.toJson<String?>(category),
+      'company': serializer.toJson<String>(company),
+      'category': serializer.toJson<String>(category),
       'itemName': serializer.toJson<String>(itemName),
-      'itemCode': serializer.toJson<String?>(itemCode),
-      'buyingPriceExclTax': serializer.toJson<String>(buyingPriceExclTax),
-      'buyingGstRate': serializer.toJson<String>(buyingGstRate),
+      'itemCode': serializer.toJson<String>(itemCode),
+      'buyingPriceExclTax': serializer.toJson<String?>(buyingPriceExclTax),
+      'buyingGstRate': serializer.toJson<String?>(buyingGstRate),
       'defaultSellingPriceExclTax':
           serializer.toJson<String>(defaultSellingPriceExclTax),
       'defaultGstRate': serializer.toJson<String>(defaultGstRate),
@@ -867,12 +865,12 @@ class Product extends DataClass implements Insertable<Product> {
 
   Product copyWith(
           {String? id,
-          Value<String?> company = const Value.absent(),
-          Value<String?> category = const Value.absent(),
+          String? company,
+          String? category,
           String? itemName,
-          Value<String?> itemCode = const Value.absent(),
-          String? buyingPriceExclTax,
-          String? buyingGstRate,
+          String? itemCode,
+          Value<String?> buyingPriceExclTax = const Value.absent(),
+          Value<String?> buyingGstRate = const Value.absent(),
           String? defaultSellingPriceExclTax,
           String? defaultGstRate,
           String? quantityOnHand,
@@ -882,12 +880,15 @@ class Product extends DataClass implements Insertable<Product> {
           String? updatedAt}) =>
       Product(
         id: id ?? this.id,
-        company: company.present ? company.value : this.company,
-        category: category.present ? category.value : this.category,
+        company: company ?? this.company,
+        category: category ?? this.category,
         itemName: itemName ?? this.itemName,
-        itemCode: itemCode.present ? itemCode.value : this.itemCode,
-        buyingPriceExclTax: buyingPriceExclTax ?? this.buyingPriceExclTax,
-        buyingGstRate: buyingGstRate ?? this.buyingGstRate,
+        itemCode: itemCode ?? this.itemCode,
+        buyingPriceExclTax: buyingPriceExclTax.present
+            ? buyingPriceExclTax.value
+            : this.buyingPriceExclTax,
+        buyingGstRate:
+            buyingGstRate.present ? buyingGstRate.value : this.buyingGstRate,
         defaultSellingPriceExclTax:
             defaultSellingPriceExclTax ?? this.defaultSellingPriceExclTax,
         defaultGstRate: defaultGstRate ?? this.defaultGstRate,
@@ -987,12 +988,12 @@ class Product extends DataClass implements Insertable<Product> {
 
 class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String> id;
-  final Value<String?> company;
-  final Value<String?> category;
+  final Value<String> company;
+  final Value<String> category;
   final Value<String> itemName;
-  final Value<String?> itemCode;
-  final Value<String> buyingPriceExclTax;
-  final Value<String> buyingGstRate;
+  final Value<String> itemCode;
+  final Value<String?> buyingPriceExclTax;
+  final Value<String?> buyingGstRate;
   final Value<String> defaultSellingPriceExclTax;
   final Value<String> defaultGstRate;
   final Value<String> quantityOnHand;
@@ -1020,12 +1021,12 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   });
   ProductsCompanion.insert({
     required String id,
-    this.company = const Value.absent(),
-    this.category = const Value.absent(),
+    required String company,
+    required String category,
     required String itemName,
-    this.itemCode = const Value.absent(),
-    required String buyingPriceExclTax,
-    required String buyingGstRate,
+    required String itemCode,
+    this.buyingPriceExclTax = const Value.absent(),
+    this.buyingGstRate = const Value.absent(),
     required String defaultSellingPriceExclTax,
     required String defaultGstRate,
     required String quantityOnHand,
@@ -1035,9 +1036,10 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required String updatedAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
+        company = Value(company),
+        category = Value(category),
         itemName = Value(itemName),
-        buyingPriceExclTax = Value(buyingPriceExclTax),
-        buyingGstRate = Value(buyingGstRate),
+        itemCode = Value(itemCode),
         defaultSellingPriceExclTax = Value(defaultSellingPriceExclTax),
         defaultGstRate = Value(defaultGstRate),
         quantityOnHand = Value(quantityOnHand),
@@ -1084,12 +1086,12 @@ class ProductsCompanion extends UpdateCompanion<Product> {
 
   ProductsCompanion copyWith(
       {Value<String>? id,
-      Value<String?>? company,
-      Value<String?>? category,
+      Value<String>? company,
+      Value<String>? category,
       Value<String>? itemName,
-      Value<String?>? itemCode,
-      Value<String>? buyingPriceExclTax,
-      Value<String>? buyingGstRate,
+      Value<String>? itemCode,
+      Value<String?>? buyingPriceExclTax,
+      Value<String?>? buyingGstRate,
       Value<String>? defaultSellingPriceExclTax,
       Value<String>? defaultGstRate,
       Value<String>? quantityOnHand,
@@ -1212,8 +1214,8 @@ class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
       const VerificationMeta('address');
   @override
   late final GeneratedColumn<String> address = GeneratedColumn<String>(
-      'address', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'address', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _stateMeta = const VerificationMeta('state');
   @override
   late final GeneratedColumn<String> state = GeneratedColumn<String>(
@@ -1294,6 +1296,8 @@ class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
     if (data.containsKey('address')) {
       context.handle(_addressMeta,
           address.isAcceptableOrUnknown(data['address']!, _addressMeta));
+    } else if (isInserting) {
+      context.missing(_addressMeta);
     }
     if (data.containsKey('state')) {
       context.handle(
@@ -1341,7 +1345,7 @@ class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       address: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}address']),
+          .read(DriftSqlType.string, data['${effectivePrefix}address'])!,
       state: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}state']),
       stateCode: attachedDatabase.typeMapping
@@ -1368,7 +1372,7 @@ class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
 class Seller extends DataClass implements Insertable<Seller> {
   final String id;
   final String name;
-  final String? address;
+  final String address;
   final String? state;
   final String? stateCode;
   final String? phone;
@@ -1379,7 +1383,7 @@ class Seller extends DataClass implements Insertable<Seller> {
   const Seller(
       {required this.id,
       required this.name,
-      this.address,
+      required this.address,
       this.state,
       this.stateCode,
       this.phone,
@@ -1392,9 +1396,7 @@ class Seller extends DataClass implements Insertable<Seller> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
-    if (!nullToAbsent || address != null) {
-      map['address'] = Variable<String>(address);
-    }
+    map['address'] = Variable<String>(address);
     if (!nullToAbsent || state != null) {
       map['state'] = Variable<String>(state);
     }
@@ -1417,9 +1419,7 @@ class Seller extends DataClass implements Insertable<Seller> {
     return SellersCompanion(
       id: Value(id),
       name: Value(name),
-      address: address == null && nullToAbsent
-          ? const Value.absent()
-          : Value(address),
+      address: Value(address),
       state:
           state == null && nullToAbsent ? const Value.absent() : Value(state),
       stateCode: stateCode == null && nullToAbsent
@@ -1441,7 +1441,7 @@ class Seller extends DataClass implements Insertable<Seller> {
     return Seller(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      address: serializer.fromJson<String?>(json['address']),
+      address: serializer.fromJson<String>(json['address']),
       state: serializer.fromJson<String?>(json['state']),
       stateCode: serializer.fromJson<String?>(json['stateCode']),
       phone: serializer.fromJson<String?>(json['phone']),
@@ -1457,7 +1457,7 @@ class Seller extends DataClass implements Insertable<Seller> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
-      'address': serializer.toJson<String?>(address),
+      'address': serializer.toJson<String>(address),
       'state': serializer.toJson<String?>(state),
       'stateCode': serializer.toJson<String?>(stateCode),
       'phone': serializer.toJson<String?>(phone),
@@ -1471,7 +1471,7 @@ class Seller extends DataClass implements Insertable<Seller> {
   Seller copyWith(
           {String? id,
           String? name,
-          Value<String?> address = const Value.absent(),
+          String? address,
           Value<String?> state = const Value.absent(),
           Value<String?> stateCode = const Value.absent(),
           Value<String?> phone = const Value.absent(),
@@ -1482,7 +1482,7 @@ class Seller extends DataClass implements Insertable<Seller> {
       Seller(
         id: id ?? this.id,
         name: name ?? this.name,
-        address: address.present ? address.value : this.address,
+        address: address ?? this.address,
         state: state.present ? state.value : this.state,
         stateCode: stateCode.present ? stateCode.value : this.stateCode,
         phone: phone.present ? phone.value : this.phone,
@@ -1545,7 +1545,7 @@ class Seller extends DataClass implements Insertable<Seller> {
 class SellersCompanion extends UpdateCompanion<Seller> {
   final Value<String> id;
   final Value<String> name;
-  final Value<String?> address;
+  final Value<String> address;
   final Value<String?> state;
   final Value<String?> stateCode;
   final Value<String?> phone;
@@ -1570,7 +1570,7 @@ class SellersCompanion extends UpdateCompanion<Seller> {
   SellersCompanion.insert({
     required String id,
     required String name,
-    this.address = const Value.absent(),
+    required String address,
     this.state = const Value.absent(),
     this.stateCode = const Value.absent(),
     this.phone = const Value.absent(),
@@ -1581,6 +1581,7 @@ class SellersCompanion extends UpdateCompanion<Seller> {
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
+        address = Value(address),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<Seller> custom({
@@ -1614,7 +1615,7 @@ class SellersCompanion extends UpdateCompanion<Seller> {
   SellersCompanion copyWith(
       {Value<String>? id,
       Value<String>? name,
-      Value<String?>? address,
+      Value<String>? address,
       Value<String?>? state,
       Value<String?>? stateCode,
       Value<String?>? phone,
@@ -1721,9 +1722,9 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   static const VerificationMeta _invoiceNumberMeta =
       const VerificationMeta('invoiceNumber');
   @override
-  late final GeneratedColumn<String> invoiceNumber = GeneratedColumn<String>(
+  late final GeneratedColumn<int> invoiceNumber = GeneratedColumn<int>(
       'invoice_number', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _sellerIdMeta =
       const VerificationMeta('sellerId');
   @override
@@ -1743,8 +1744,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       const VerificationMeta('sellerAddress');
   @override
   late final GeneratedColumn<String> sellerAddress = GeneratedColumn<String>(
-      'seller_address', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'seller_address', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _sellerStateMeta =
       const VerificationMeta('sellerState');
   @override
@@ -1773,14 +1774,14 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       const VerificationMeta('placeOfSupplyState');
   @override
   late final GeneratedColumn<String> placeOfSupplyState =
-      GeneratedColumn<String>('place_of_supply_state', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
+      GeneratedColumn<String>('place_of_supply_state', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _placeOfSupplyStateCodeMeta =
       const VerificationMeta('placeOfSupplyStateCode');
   @override
   late final GeneratedColumn<String> placeOfSupplyStateCode =
-      GeneratedColumn<String>('place_of_supply_state_code', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
+      GeneratedColumn<String>('place_of_supply_state_code', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyNameMeta =
       const VerificationMeta('companyName');
   @override
@@ -1791,26 +1792,26 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       const VerificationMeta('companyAddress');
   @override
   late final GeneratedColumn<String> companyAddress = GeneratedColumn<String>(
-      'company_address', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company_address', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyCityMeta =
       const VerificationMeta('companyCity');
   @override
   late final GeneratedColumn<String> companyCity = GeneratedColumn<String>(
-      'company_city', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company_city', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyStateMeta =
       const VerificationMeta('companyState');
   @override
   late final GeneratedColumn<String> companyState = GeneratedColumn<String>(
-      'company_state', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company_state', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyStateCodeMeta =
       const VerificationMeta('companyStateCode');
   @override
   late final GeneratedColumn<String> companyStateCode = GeneratedColumn<String>(
-      'company_state_code', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company_state_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyGstinMeta =
       const VerificationMeta('companyGstin');
   @override
@@ -1880,8 +1881,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       const VerificationMeta('paymentMode');
   @override
   late final GeneratedColumn<String> paymentMode = GeneratedColumn<String>(
-      'payment_mode', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'payment_mode', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _subtotalMeta =
       const VerificationMeta('subtotal');
   @override
@@ -2067,6 +2068,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _sellerAddressMeta,
           sellerAddress.isAcceptableOrUnknown(
               data['seller_address']!, _sellerAddressMeta));
+    } else if (isInserting) {
+      context.missing(_sellerAddressMeta);
     }
     if (data.containsKey('seller_state')) {
       context.handle(
@@ -2097,6 +2100,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _placeOfSupplyStateMeta,
           placeOfSupplyState.isAcceptableOrUnknown(
               data['place_of_supply_state']!, _placeOfSupplyStateMeta));
+    } else if (isInserting) {
+      context.missing(_placeOfSupplyStateMeta);
     }
     if (data.containsKey('place_of_supply_state_code')) {
       context.handle(
@@ -2104,6 +2109,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           placeOfSupplyStateCode.isAcceptableOrUnknown(
               data['place_of_supply_state_code']!,
               _placeOfSupplyStateCodeMeta));
+    } else if (isInserting) {
+      context.missing(_placeOfSupplyStateCodeMeta);
     }
     if (data.containsKey('company_name')) {
       context.handle(
@@ -2118,24 +2125,32 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _companyAddressMeta,
           companyAddress.isAcceptableOrUnknown(
               data['company_address']!, _companyAddressMeta));
+    } else if (isInserting) {
+      context.missing(_companyAddressMeta);
     }
     if (data.containsKey('company_city')) {
       context.handle(
           _companyCityMeta,
           companyCity.isAcceptableOrUnknown(
               data['company_city']!, _companyCityMeta));
+    } else if (isInserting) {
+      context.missing(_companyCityMeta);
     }
     if (data.containsKey('company_state')) {
       context.handle(
           _companyStateMeta,
           companyState.isAcceptableOrUnknown(
               data['company_state']!, _companyStateMeta));
+    } else if (isInserting) {
+      context.missing(_companyStateMeta);
     }
     if (data.containsKey('company_state_code')) {
       context.handle(
           _companyStateCodeMeta,
           companyStateCode.isAcceptableOrUnknown(
               data['company_state_code']!, _companyStateCodeMeta));
+    } else if (isInserting) {
+      context.missing(_companyStateCodeMeta);
     }
     if (data.containsKey('company_gstin')) {
       context.handle(
@@ -2210,6 +2225,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _paymentModeMeta,
           paymentMode.isAcceptableOrUnknown(
               data['payment_mode']!, _paymentModeMeta));
+    } else if (isInserting) {
+      context.missing(_paymentModeMeta);
     }
     if (data.containsKey('subtotal')) {
       context.handle(_subtotalMeta,
@@ -2311,13 +2328,13 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       requestHash: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}request_hash'])!,
       invoiceNumber: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}invoice_number'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}invoice_number'])!,
       sellerId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}seller_id'])!,
       sellerName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}seller_name'])!,
       sellerAddress: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}seller_address']),
+          .read(DriftSqlType.string, data['${effectivePrefix}seller_address'])!,
       sellerState: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}seller_state']),
       sellerStateCode: attachedDatabase.typeMapping.read(
@@ -2326,21 +2343,21 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           .read(DriftSqlType.string, data['${effectivePrefix}seller_phone']),
       sellerGstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}seller_gstin']),
-      placeOfSupplyState: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}place_of_supply_state']),
+      placeOfSupplyState: attachedDatabase.typeMapping.read(DriftSqlType.string,
+          data['${effectivePrefix}place_of_supply_state'])!,
       placeOfSupplyStateCode: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
-          data['${effectivePrefix}place_of_supply_state_code']),
+          data['${effectivePrefix}place_of_supply_state_code'])!,
       companyName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}company_name'])!,
-      companyAddress: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company_address']),
+      companyAddress: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}company_address'])!,
       companyCity: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company_city']),
+          .read(DriftSqlType.string, data['${effectivePrefix}company_city'])!,
       companyState: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company_state']),
+          .read(DriftSqlType.string, data['${effectivePrefix}company_state'])!,
       companyStateCode: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}company_state_code']),
+          DriftSqlType.string, data['${effectivePrefix}company_state_code'])!,
       companyGstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}company_gstin']),
       companyPhone: attachedDatabase.typeMapping
@@ -2364,7 +2381,7 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       paymentMode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}payment_mode']),
+          .read(DriftSqlType.string, data['${effectivePrefix}payment_mode'])!,
       subtotal: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}subtotal'])!,
       discountTotal: attachedDatabase.typeMapping
@@ -2404,21 +2421,21 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String id;
   final String requestId;
   final String requestHash;
-  final String invoiceNumber;
+  final int invoiceNumber;
   final String sellerId;
   final String sellerName;
-  final String? sellerAddress;
+  final String sellerAddress;
   final String? sellerState;
   final String? sellerStateCode;
   final String? sellerPhone;
   final String? sellerGstin;
-  final String? placeOfSupplyState;
-  final String? placeOfSupplyStateCode;
+  final String placeOfSupplyState;
+  final String placeOfSupplyStateCode;
   final String companyName;
-  final String? companyAddress;
-  final String? companyCity;
-  final String? companyState;
-  final String? companyStateCode;
+  final String companyAddress;
+  final String companyCity;
+  final String companyState;
+  final String companyStateCode;
   final String? companyGstin;
   final String? companyPhone;
   final String? companyEmail;
@@ -2430,7 +2447,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String invoiceDate;
   final String taxRegime;
   final String status;
-  final String? paymentMode;
+  final String paymentMode;
   final String subtotal;
   final String discountTotal;
   final String taxableTotal;
@@ -2451,18 +2468,18 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       required this.invoiceNumber,
       required this.sellerId,
       required this.sellerName,
-      this.sellerAddress,
+      required this.sellerAddress,
       this.sellerState,
       this.sellerStateCode,
       this.sellerPhone,
       this.sellerGstin,
-      this.placeOfSupplyState,
-      this.placeOfSupplyStateCode,
+      required this.placeOfSupplyState,
+      required this.placeOfSupplyStateCode,
       required this.companyName,
-      this.companyAddress,
-      this.companyCity,
-      this.companyState,
-      this.companyStateCode,
+      required this.companyAddress,
+      required this.companyCity,
+      required this.companyState,
+      required this.companyStateCode,
       this.companyGstin,
       this.companyPhone,
       this.companyEmail,
@@ -2474,7 +2491,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       required this.invoiceDate,
       required this.taxRegime,
       required this.status,
-      this.paymentMode,
+      required this.paymentMode,
       required this.subtotal,
       required this.discountTotal,
       required this.taxableTotal,
@@ -2494,12 +2511,10 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     map['id'] = Variable<String>(id);
     map['request_id'] = Variable<String>(requestId);
     map['request_hash'] = Variable<String>(requestHash);
-    map['invoice_number'] = Variable<String>(invoiceNumber);
+    map['invoice_number'] = Variable<int>(invoiceNumber);
     map['seller_id'] = Variable<String>(sellerId);
     map['seller_name'] = Variable<String>(sellerName);
-    if (!nullToAbsent || sellerAddress != null) {
-      map['seller_address'] = Variable<String>(sellerAddress);
-    }
+    map['seller_address'] = Variable<String>(sellerAddress);
     if (!nullToAbsent || sellerState != null) {
       map['seller_state'] = Variable<String>(sellerState);
     }
@@ -2512,26 +2527,14 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     if (!nullToAbsent || sellerGstin != null) {
       map['seller_gstin'] = Variable<String>(sellerGstin);
     }
-    if (!nullToAbsent || placeOfSupplyState != null) {
-      map['place_of_supply_state'] = Variable<String>(placeOfSupplyState);
-    }
-    if (!nullToAbsent || placeOfSupplyStateCode != null) {
-      map['place_of_supply_state_code'] =
-          Variable<String>(placeOfSupplyStateCode);
-    }
+    map['place_of_supply_state'] = Variable<String>(placeOfSupplyState);
+    map['place_of_supply_state_code'] =
+        Variable<String>(placeOfSupplyStateCode);
     map['company_name'] = Variable<String>(companyName);
-    if (!nullToAbsent || companyAddress != null) {
-      map['company_address'] = Variable<String>(companyAddress);
-    }
-    if (!nullToAbsent || companyCity != null) {
-      map['company_city'] = Variable<String>(companyCity);
-    }
-    if (!nullToAbsent || companyState != null) {
-      map['company_state'] = Variable<String>(companyState);
-    }
-    if (!nullToAbsent || companyStateCode != null) {
-      map['company_state_code'] = Variable<String>(companyStateCode);
-    }
+    map['company_address'] = Variable<String>(companyAddress);
+    map['company_city'] = Variable<String>(companyCity);
+    map['company_state'] = Variable<String>(companyState);
+    map['company_state_code'] = Variable<String>(companyStateCode);
     if (!nullToAbsent || companyGstin != null) {
       map['company_gstin'] = Variable<String>(companyGstin);
     }
@@ -2559,9 +2562,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     map['invoice_date'] = Variable<String>(invoiceDate);
     map['tax_regime'] = Variable<String>(taxRegime);
     map['status'] = Variable<String>(status);
-    if (!nullToAbsent || paymentMode != null) {
-      map['payment_mode'] = Variable<String>(paymentMode);
-    }
+    map['payment_mode'] = Variable<String>(paymentMode);
     map['subtotal'] = Variable<String>(subtotal);
     map['discount_total'] = Variable<String>(discountTotal);
     map['taxable_total'] = Variable<String>(taxableTotal);
@@ -2598,9 +2599,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       invoiceNumber: Value(invoiceNumber),
       sellerId: Value(sellerId),
       sellerName: Value(sellerName),
-      sellerAddress: sellerAddress == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sellerAddress),
+      sellerAddress: Value(sellerAddress),
       sellerState: sellerState == null && nullToAbsent
           ? const Value.absent()
           : Value(sellerState),
@@ -2613,25 +2612,13 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       sellerGstin: sellerGstin == null && nullToAbsent
           ? const Value.absent()
           : Value(sellerGstin),
-      placeOfSupplyState: placeOfSupplyState == null && nullToAbsent
-          ? const Value.absent()
-          : Value(placeOfSupplyState),
-      placeOfSupplyStateCode: placeOfSupplyStateCode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(placeOfSupplyStateCode),
+      placeOfSupplyState: Value(placeOfSupplyState),
+      placeOfSupplyStateCode: Value(placeOfSupplyStateCode),
       companyName: Value(companyName),
-      companyAddress: companyAddress == null && nullToAbsent
-          ? const Value.absent()
-          : Value(companyAddress),
-      companyCity: companyCity == null && nullToAbsent
-          ? const Value.absent()
-          : Value(companyCity),
-      companyState: companyState == null && nullToAbsent
-          ? const Value.absent()
-          : Value(companyState),
-      companyStateCode: companyStateCode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(companyStateCode),
+      companyAddress: Value(companyAddress),
+      companyCity: Value(companyCity),
+      companyState: Value(companyState),
+      companyStateCode: Value(companyStateCode),
       companyGstin: companyGstin == null && nullToAbsent
           ? const Value.absent()
           : Value(companyGstin),
@@ -2659,9 +2646,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       invoiceDate: Value(invoiceDate),
       taxRegime: Value(taxRegime),
       status: Value(status),
-      paymentMode: paymentMode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(paymentMode),
+      paymentMode: Value(paymentMode),
       subtotal: Value(subtotal),
       discountTotal: Value(discountTotal),
       taxableTotal: Value(taxableTotal),
@@ -2696,23 +2681,23 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       id: serializer.fromJson<String>(json['id']),
       requestId: serializer.fromJson<String>(json['requestId']),
       requestHash: serializer.fromJson<String>(json['requestHash']),
-      invoiceNumber: serializer.fromJson<String>(json['invoiceNumber']),
+      invoiceNumber: serializer.fromJson<int>(json['invoiceNumber']),
       sellerId: serializer.fromJson<String>(json['sellerId']),
       sellerName: serializer.fromJson<String>(json['sellerName']),
-      sellerAddress: serializer.fromJson<String?>(json['sellerAddress']),
+      sellerAddress: serializer.fromJson<String>(json['sellerAddress']),
       sellerState: serializer.fromJson<String?>(json['sellerState']),
       sellerStateCode: serializer.fromJson<String?>(json['sellerStateCode']),
       sellerPhone: serializer.fromJson<String?>(json['sellerPhone']),
       sellerGstin: serializer.fromJson<String?>(json['sellerGstin']),
       placeOfSupplyState:
-          serializer.fromJson<String?>(json['placeOfSupplyState']),
+          serializer.fromJson<String>(json['placeOfSupplyState']),
       placeOfSupplyStateCode:
-          serializer.fromJson<String?>(json['placeOfSupplyStateCode']),
+          serializer.fromJson<String>(json['placeOfSupplyStateCode']),
       companyName: serializer.fromJson<String>(json['companyName']),
-      companyAddress: serializer.fromJson<String?>(json['companyAddress']),
-      companyCity: serializer.fromJson<String?>(json['companyCity']),
-      companyState: serializer.fromJson<String?>(json['companyState']),
-      companyStateCode: serializer.fromJson<String?>(json['companyStateCode']),
+      companyAddress: serializer.fromJson<String>(json['companyAddress']),
+      companyCity: serializer.fromJson<String>(json['companyCity']),
+      companyState: serializer.fromJson<String>(json['companyState']),
+      companyStateCode: serializer.fromJson<String>(json['companyStateCode']),
       companyGstin: serializer.fromJson<String?>(json['companyGstin']),
       companyPhone: serializer.fromJson<String?>(json['companyPhone']),
       companyEmail: serializer.fromJson<String?>(json['companyEmail']),
@@ -2727,7 +2712,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       invoiceDate: serializer.fromJson<String>(json['invoiceDate']),
       taxRegime: serializer.fromJson<String>(json['taxRegime']),
       status: serializer.fromJson<String>(json['status']),
-      paymentMode: serializer.fromJson<String?>(json['paymentMode']),
+      paymentMode: serializer.fromJson<String>(json['paymentMode']),
       subtotal: serializer.fromJson<String>(json['subtotal']),
       discountTotal: serializer.fromJson<String>(json['discountTotal']),
       taxableTotal: serializer.fromJson<String>(json['taxableTotal']),
@@ -2751,22 +2736,22 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'id': serializer.toJson<String>(id),
       'requestId': serializer.toJson<String>(requestId),
       'requestHash': serializer.toJson<String>(requestHash),
-      'invoiceNumber': serializer.toJson<String>(invoiceNumber),
+      'invoiceNumber': serializer.toJson<int>(invoiceNumber),
       'sellerId': serializer.toJson<String>(sellerId),
       'sellerName': serializer.toJson<String>(sellerName),
-      'sellerAddress': serializer.toJson<String?>(sellerAddress),
+      'sellerAddress': serializer.toJson<String>(sellerAddress),
       'sellerState': serializer.toJson<String?>(sellerState),
       'sellerStateCode': serializer.toJson<String?>(sellerStateCode),
       'sellerPhone': serializer.toJson<String?>(sellerPhone),
       'sellerGstin': serializer.toJson<String?>(sellerGstin),
-      'placeOfSupplyState': serializer.toJson<String?>(placeOfSupplyState),
+      'placeOfSupplyState': serializer.toJson<String>(placeOfSupplyState),
       'placeOfSupplyStateCode':
-          serializer.toJson<String?>(placeOfSupplyStateCode),
+          serializer.toJson<String>(placeOfSupplyStateCode),
       'companyName': serializer.toJson<String>(companyName),
-      'companyAddress': serializer.toJson<String?>(companyAddress),
-      'companyCity': serializer.toJson<String?>(companyCity),
-      'companyState': serializer.toJson<String?>(companyState),
-      'companyStateCode': serializer.toJson<String?>(companyStateCode),
+      'companyAddress': serializer.toJson<String>(companyAddress),
+      'companyCity': serializer.toJson<String>(companyCity),
+      'companyState': serializer.toJson<String>(companyState),
+      'companyStateCode': serializer.toJson<String>(companyStateCode),
       'companyGstin': serializer.toJson<String?>(companyGstin),
       'companyPhone': serializer.toJson<String?>(companyPhone),
       'companyEmail': serializer.toJson<String?>(companyEmail),
@@ -2778,7 +2763,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'invoiceDate': serializer.toJson<String>(invoiceDate),
       'taxRegime': serializer.toJson<String>(taxRegime),
       'status': serializer.toJson<String>(status),
-      'paymentMode': serializer.toJson<String?>(paymentMode),
+      'paymentMode': serializer.toJson<String>(paymentMode),
       'subtotal': serializer.toJson<String>(subtotal),
       'discountTotal': serializer.toJson<String>(discountTotal),
       'taxableTotal': serializer.toJson<String>(taxableTotal),
@@ -2799,21 +2784,21 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           {String? id,
           String? requestId,
           String? requestHash,
-          String? invoiceNumber,
+          int? invoiceNumber,
           String? sellerId,
           String? sellerName,
-          Value<String?> sellerAddress = const Value.absent(),
+          String? sellerAddress,
           Value<String?> sellerState = const Value.absent(),
           Value<String?> sellerStateCode = const Value.absent(),
           Value<String?> sellerPhone = const Value.absent(),
           Value<String?> sellerGstin = const Value.absent(),
-          Value<String?> placeOfSupplyState = const Value.absent(),
-          Value<String?> placeOfSupplyStateCode = const Value.absent(),
+          String? placeOfSupplyState,
+          String? placeOfSupplyStateCode,
           String? companyName,
-          Value<String?> companyAddress = const Value.absent(),
-          Value<String?> companyCity = const Value.absent(),
-          Value<String?> companyState = const Value.absent(),
-          Value<String?> companyStateCode = const Value.absent(),
+          String? companyAddress,
+          String? companyCity,
+          String? companyState,
+          String? companyStateCode,
           Value<String?> companyGstin = const Value.absent(),
           Value<String?> companyPhone = const Value.absent(),
           Value<String?> companyEmail = const Value.absent(),
@@ -2825,7 +2810,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           String? invoiceDate,
           String? taxRegime,
           String? status,
-          Value<String?> paymentMode = const Value.absent(),
+          String? paymentMode,
           String? subtotal,
           String? discountTotal,
           String? taxableTotal,
@@ -2846,29 +2831,21 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         invoiceNumber: invoiceNumber ?? this.invoiceNumber,
         sellerId: sellerId ?? this.sellerId,
         sellerName: sellerName ?? this.sellerName,
-        sellerAddress:
-            sellerAddress.present ? sellerAddress.value : this.sellerAddress,
+        sellerAddress: sellerAddress ?? this.sellerAddress,
         sellerState: sellerState.present ? sellerState.value : this.sellerState,
         sellerStateCode: sellerStateCode.present
             ? sellerStateCode.value
             : this.sellerStateCode,
         sellerPhone: sellerPhone.present ? sellerPhone.value : this.sellerPhone,
         sellerGstin: sellerGstin.present ? sellerGstin.value : this.sellerGstin,
-        placeOfSupplyState: placeOfSupplyState.present
-            ? placeOfSupplyState.value
-            : this.placeOfSupplyState,
-        placeOfSupplyStateCode: placeOfSupplyStateCode.present
-            ? placeOfSupplyStateCode.value
-            : this.placeOfSupplyStateCode,
+        placeOfSupplyState: placeOfSupplyState ?? this.placeOfSupplyState,
+        placeOfSupplyStateCode:
+            placeOfSupplyStateCode ?? this.placeOfSupplyStateCode,
         companyName: companyName ?? this.companyName,
-        companyAddress:
-            companyAddress.present ? companyAddress.value : this.companyAddress,
-        companyCity: companyCity.present ? companyCity.value : this.companyCity,
-        companyState:
-            companyState.present ? companyState.value : this.companyState,
-        companyStateCode: companyStateCode.present
-            ? companyStateCode.value
-            : this.companyStateCode,
+        companyAddress: companyAddress ?? this.companyAddress,
+        companyCity: companyCity ?? this.companyCity,
+        companyState: companyState ?? this.companyState,
+        companyStateCode: companyStateCode ?? this.companyStateCode,
         companyGstin:
             companyGstin.present ? companyGstin.value : this.companyGstin,
         companyPhone:
@@ -2893,7 +2870,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         invoiceDate: invoiceDate ?? this.invoiceDate,
         taxRegime: taxRegime ?? this.taxRegime,
         status: status ?? this.status,
-        paymentMode: paymentMode.present ? paymentMode.value : this.paymentMode,
+        paymentMode: paymentMode ?? this.paymentMode,
         subtotal: subtotal ?? this.subtotal,
         discountTotal: discountTotal ?? this.discountTotal,
         taxableTotal: taxableTotal ?? this.taxableTotal,
@@ -3169,21 +3146,21 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String> id;
   final Value<String> requestId;
   final Value<String> requestHash;
-  final Value<String> invoiceNumber;
+  final Value<int> invoiceNumber;
   final Value<String> sellerId;
   final Value<String> sellerName;
-  final Value<String?> sellerAddress;
+  final Value<String> sellerAddress;
   final Value<String?> sellerState;
   final Value<String?> sellerStateCode;
   final Value<String?> sellerPhone;
   final Value<String?> sellerGstin;
-  final Value<String?> placeOfSupplyState;
-  final Value<String?> placeOfSupplyStateCode;
+  final Value<String> placeOfSupplyState;
+  final Value<String> placeOfSupplyStateCode;
   final Value<String> companyName;
-  final Value<String?> companyAddress;
-  final Value<String?> companyCity;
-  final Value<String?> companyState;
-  final Value<String?> companyStateCode;
+  final Value<String> companyAddress;
+  final Value<String> companyCity;
+  final Value<String> companyState;
+  final Value<String> companyStateCode;
   final Value<String?> companyGstin;
   final Value<String?> companyPhone;
   final Value<String?> companyEmail;
@@ -3195,7 +3172,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String> invoiceDate;
   final Value<String> taxRegime;
   final Value<String> status;
-  final Value<String?> paymentMode;
+  final Value<String> paymentMode;
   final Value<String> subtotal;
   final Value<String> discountTotal;
   final Value<String> taxableTotal;
@@ -3260,21 +3237,21 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     required String id,
     required String requestId,
     required String requestHash,
-    required String invoiceNumber,
+    required int invoiceNumber,
     required String sellerId,
     required String sellerName,
-    this.sellerAddress = const Value.absent(),
+    required String sellerAddress,
     this.sellerState = const Value.absent(),
     this.sellerStateCode = const Value.absent(),
     this.sellerPhone = const Value.absent(),
     this.sellerGstin = const Value.absent(),
-    this.placeOfSupplyState = const Value.absent(),
-    this.placeOfSupplyStateCode = const Value.absent(),
+    required String placeOfSupplyState,
+    required String placeOfSupplyStateCode,
     required String companyName,
-    this.companyAddress = const Value.absent(),
-    this.companyCity = const Value.absent(),
-    this.companyState = const Value.absent(),
-    this.companyStateCode = const Value.absent(),
+    required String companyAddress,
+    required String companyCity,
+    required String companyState,
+    required String companyStateCode,
     this.companyGstin = const Value.absent(),
     this.companyPhone = const Value.absent(),
     this.companyEmail = const Value.absent(),
@@ -3286,7 +3263,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     required String invoiceDate,
     required String taxRegime,
     required String status,
-    this.paymentMode = const Value.absent(),
+    required String paymentMode,
     required String subtotal,
     required String discountTotal,
     required String taxableTotal,
@@ -3307,10 +3284,18 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
         invoiceNumber = Value(invoiceNumber),
         sellerId = Value(sellerId),
         sellerName = Value(sellerName),
+        sellerAddress = Value(sellerAddress),
+        placeOfSupplyState = Value(placeOfSupplyState),
+        placeOfSupplyStateCode = Value(placeOfSupplyStateCode),
         companyName = Value(companyName),
+        companyAddress = Value(companyAddress),
+        companyCity = Value(companyCity),
+        companyState = Value(companyState),
+        companyStateCode = Value(companyStateCode),
         invoiceDate = Value(invoiceDate),
         taxRegime = Value(taxRegime),
         status = Value(status),
+        paymentMode = Value(paymentMode),
         subtotal = Value(subtotal),
         discountTotal = Value(discountTotal),
         taxableTotal = Value(taxableTotal),
@@ -3322,7 +3307,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? id,
     Expression<String>? requestId,
     Expression<String>? requestHash,
-    Expression<String>? invoiceNumber,
+    Expression<int>? invoiceNumber,
     Expression<String>? sellerId,
     Expression<String>? sellerName,
     Expression<String>? sellerAddress,
@@ -3420,21 +3405,21 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       {Value<String>? id,
       Value<String>? requestId,
       Value<String>? requestHash,
-      Value<String>? invoiceNumber,
+      Value<int>? invoiceNumber,
       Value<String>? sellerId,
       Value<String>? sellerName,
-      Value<String?>? sellerAddress,
+      Value<String>? sellerAddress,
       Value<String?>? sellerState,
       Value<String?>? sellerStateCode,
       Value<String?>? sellerPhone,
       Value<String?>? sellerGstin,
-      Value<String?>? placeOfSupplyState,
-      Value<String?>? placeOfSupplyStateCode,
+      Value<String>? placeOfSupplyState,
+      Value<String>? placeOfSupplyStateCode,
       Value<String>? companyName,
-      Value<String?>? companyAddress,
-      Value<String?>? companyCity,
-      Value<String?>? companyState,
-      Value<String?>? companyStateCode,
+      Value<String>? companyAddress,
+      Value<String>? companyCity,
+      Value<String>? companyState,
+      Value<String>? companyStateCode,
       Value<String?>? companyGstin,
       Value<String?>? companyPhone,
       Value<String?>? companyEmail,
@@ -3446,7 +3431,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       Value<String>? invoiceDate,
       Value<String>? taxRegime,
       Value<String>? status,
-      Value<String?>? paymentMode,
+      Value<String>? paymentMode,
       Value<String>? subtotal,
       Value<String>? discountTotal,
       Value<String>? taxableTotal,
@@ -3523,7 +3508,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       map['request_hash'] = Variable<String>(requestHash.value);
     }
     if (invoiceNumber.present) {
-      map['invoice_number'] = Variable<String>(invoiceNumber.value);
+      map['invoice_number'] = Variable<int>(invoiceNumber.value);
     }
     if (sellerId.present) {
       map['seller_id'] = Variable<String>(sellerId.value);
@@ -3734,14 +3719,14 @@ class $StockMovementsTable extends StockMovements
       const VerificationMeta('requestId');
   @override
   late final GeneratedColumn<String> requestId = GeneratedColumn<String>(
-      'request_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'request_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _requestHashMeta =
       const VerificationMeta('requestHash');
   @override
   late final GeneratedColumn<String> requestHash = GeneratedColumn<String>(
-      'request_hash', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'request_hash', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _movementTypeMeta =
       const VerificationMeta('movementType');
   @override
@@ -3815,16 +3800,12 @@ class $StockMovementsTable extends StockMovements
     if (data.containsKey('request_id')) {
       context.handle(_requestIdMeta,
           requestId.isAcceptableOrUnknown(data['request_id']!, _requestIdMeta));
-    } else if (isInserting) {
-      context.missing(_requestIdMeta);
     }
     if (data.containsKey('request_hash')) {
       context.handle(
           _requestHashMeta,
           requestHash.isAcceptableOrUnknown(
               data['request_hash']!, _requestHashMeta));
-    } else if (isInserting) {
-      context.missing(_requestHashMeta);
     }
     if (data.containsKey('movement_type')) {
       context.handle(
@@ -3876,9 +3857,9 @@ class $StockMovementsTable extends StockMovements
       invoiceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}invoice_id']),
       requestId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}request_id'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}request_id']),
       requestHash: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}request_hash'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}request_hash']),
       movementType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}movement_type'])!,
       quantityDelta: attachedDatabase.typeMapping
@@ -3902,8 +3883,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
   final String id;
   final String productId;
   final String? invoiceId;
-  final String requestId;
-  final String requestHash;
+  final String? requestId;
+  final String? requestHash;
   final String movementType;
   final String quantityDelta;
   final String? reason;
@@ -3913,8 +3894,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
       {required this.id,
       required this.productId,
       this.invoiceId,
-      required this.requestId,
-      required this.requestHash,
+      this.requestId,
+      this.requestHash,
       required this.movementType,
       required this.quantityDelta,
       this.reason,
@@ -3928,8 +3909,12 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
     if (!nullToAbsent || invoiceId != null) {
       map['invoice_id'] = Variable<String>(invoiceId);
     }
-    map['request_id'] = Variable<String>(requestId);
-    map['request_hash'] = Variable<String>(requestHash);
+    if (!nullToAbsent || requestId != null) {
+      map['request_id'] = Variable<String>(requestId);
+    }
+    if (!nullToAbsent || requestHash != null) {
+      map['request_hash'] = Variable<String>(requestHash);
+    }
     map['movement_type'] = Variable<String>(movementType);
     map['quantity_delta'] = Variable<String>(quantityDelta);
     if (!nullToAbsent || reason != null) {
@@ -3947,8 +3932,12 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
       invoiceId: invoiceId == null && nullToAbsent
           ? const Value.absent()
           : Value(invoiceId),
-      requestId: Value(requestId),
-      requestHash: Value(requestHash),
+      requestId: requestId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestId),
+      requestHash: requestHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestHash),
       movementType: Value(movementType),
       quantityDelta: Value(quantityDelta),
       reason:
@@ -3965,8 +3954,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
       id: serializer.fromJson<String>(json['id']),
       productId: serializer.fromJson<String>(json['productId']),
       invoiceId: serializer.fromJson<String?>(json['invoiceId']),
-      requestId: serializer.fromJson<String>(json['requestId']),
-      requestHash: serializer.fromJson<String>(json['requestHash']),
+      requestId: serializer.fromJson<String?>(json['requestId']),
+      requestHash: serializer.fromJson<String?>(json['requestHash']),
       movementType: serializer.fromJson<String>(json['movementType']),
       quantityDelta: serializer.fromJson<String>(json['quantityDelta']),
       reason: serializer.fromJson<String?>(json['reason']),
@@ -3981,8 +3970,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
       'id': serializer.toJson<String>(id),
       'productId': serializer.toJson<String>(productId),
       'invoiceId': serializer.toJson<String?>(invoiceId),
-      'requestId': serializer.toJson<String>(requestId),
-      'requestHash': serializer.toJson<String>(requestHash),
+      'requestId': serializer.toJson<String?>(requestId),
+      'requestHash': serializer.toJson<String?>(requestHash),
       'movementType': serializer.toJson<String>(movementType),
       'quantityDelta': serializer.toJson<String>(quantityDelta),
       'reason': serializer.toJson<String?>(reason),
@@ -3995,8 +3984,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
           {String? id,
           String? productId,
           Value<String?> invoiceId = const Value.absent(),
-          String? requestId,
-          String? requestHash,
+          Value<String?> requestId = const Value.absent(),
+          Value<String?> requestHash = const Value.absent(),
           String? movementType,
           String? quantityDelta,
           Value<String?> reason = const Value.absent(),
@@ -4006,8 +3995,8 @@ class StockMovement extends DataClass implements Insertable<StockMovement> {
         id: id ?? this.id,
         productId: productId ?? this.productId,
         invoiceId: invoiceId.present ? invoiceId.value : this.invoiceId,
-        requestId: requestId ?? this.requestId,
-        requestHash: requestHash ?? this.requestHash,
+        requestId: requestId.present ? requestId.value : this.requestId,
+        requestHash: requestHash.present ? requestHash.value : this.requestHash,
         movementType: movementType ?? this.movementType,
         quantityDelta: quantityDelta ?? this.quantityDelta,
         reason: reason.present ? reason.value : this.reason,
@@ -4085,8 +4074,8 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
   final Value<String> id;
   final Value<String> productId;
   final Value<String?> invoiceId;
-  final Value<String> requestId;
-  final Value<String> requestHash;
+  final Value<String?> requestId;
+  final Value<String?> requestHash;
   final Value<String> movementType;
   final Value<String> quantityDelta;
   final Value<String?> reason;
@@ -4110,8 +4099,8 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
     required String id,
     required String productId,
     this.invoiceId = const Value.absent(),
-    required String requestId,
-    required String requestHash,
+    this.requestId = const Value.absent(),
+    this.requestHash = const Value.absent(),
     required String movementType,
     required String quantityDelta,
     this.reason = const Value.absent(),
@@ -4120,8 +4109,6 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         productId = Value(productId),
-        requestId = Value(requestId),
-        requestHash = Value(requestHash),
         movementType = Value(movementType),
         quantityDelta = Value(quantityDelta),
         createdByUserId = Value(createdByUserId),
@@ -4158,8 +4145,8 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
       {Value<String>? id,
       Value<String>? productId,
       Value<String?>? invoiceId,
-      Value<String>? requestId,
-      Value<String>? requestHash,
+      Value<String?>? requestId,
+      Value<String?>? requestHash,
       Value<String>? movementType,
       Value<String>? quantityDelta,
       Value<String?>? reason,
@@ -4272,14 +4259,14 @@ class $SellerTransactionsTable extends SellerTransactions
       const VerificationMeta('requestId');
   @override
   late final GeneratedColumn<String> requestId = GeneratedColumn<String>(
-      'request_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'request_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _requestHashMeta =
       const VerificationMeta('requestHash');
   @override
   late final GeneratedColumn<String> requestHash = GeneratedColumn<String>(
-      'request_hash', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'request_hash', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _entryTypeMeta =
       const VerificationMeta('entryType');
   @override
@@ -4359,16 +4346,12 @@ class $SellerTransactionsTable extends SellerTransactions
     if (data.containsKey('request_id')) {
       context.handle(_requestIdMeta,
           requestId.isAcceptableOrUnknown(data['request_id']!, _requestIdMeta));
-    } else if (isInserting) {
-      context.missing(_requestIdMeta);
     }
     if (data.containsKey('request_hash')) {
       context.handle(
           _requestHashMeta,
           requestHash.isAcceptableOrUnknown(
               data['request_hash']!, _requestHashMeta));
-    } else if (isInserting) {
-      context.missing(_requestHashMeta);
     }
     if (data.containsKey('entry_type')) {
       context.handle(_entryTypeMeta,
@@ -4424,9 +4407,9 @@ class $SellerTransactionsTable extends SellerTransactions
       invoiceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}invoice_id']),
       requestId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}request_id'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}request_id']),
       requestHash: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}request_hash'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}request_hash']),
       entryType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}entry_type'])!,
       amount: attachedDatabase.typeMapping
@@ -4453,8 +4436,8 @@ class SellerTransaction extends DataClass
   final String id;
   final String sellerId;
   final String? invoiceId;
-  final String requestId;
-  final String requestHash;
+  final String? requestId;
+  final String? requestHash;
   final String entryType;
   final String amount;
   final String occurredOn;
@@ -4465,8 +4448,8 @@ class SellerTransaction extends DataClass
       {required this.id,
       required this.sellerId,
       this.invoiceId,
-      required this.requestId,
-      required this.requestHash,
+      this.requestId,
+      this.requestHash,
       required this.entryType,
       required this.amount,
       required this.occurredOn,
@@ -4481,8 +4464,12 @@ class SellerTransaction extends DataClass
     if (!nullToAbsent || invoiceId != null) {
       map['invoice_id'] = Variable<String>(invoiceId);
     }
-    map['request_id'] = Variable<String>(requestId);
-    map['request_hash'] = Variable<String>(requestHash);
+    if (!nullToAbsent || requestId != null) {
+      map['request_id'] = Variable<String>(requestId);
+    }
+    if (!nullToAbsent || requestHash != null) {
+      map['request_hash'] = Variable<String>(requestHash);
+    }
     map['entry_type'] = Variable<String>(entryType);
     map['amount'] = Variable<String>(amount);
     map['occurred_on'] = Variable<String>(occurredOn);
@@ -4501,8 +4488,12 @@ class SellerTransaction extends DataClass
       invoiceId: invoiceId == null && nullToAbsent
           ? const Value.absent()
           : Value(invoiceId),
-      requestId: Value(requestId),
-      requestHash: Value(requestHash),
+      requestId: requestId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestId),
+      requestHash: requestHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestHash),
       entryType: Value(entryType),
       amount: Value(amount),
       occurredOn: Value(occurredOn),
@@ -4520,8 +4511,8 @@ class SellerTransaction extends DataClass
       id: serializer.fromJson<String>(json['id']),
       sellerId: serializer.fromJson<String>(json['sellerId']),
       invoiceId: serializer.fromJson<String?>(json['invoiceId']),
-      requestId: serializer.fromJson<String>(json['requestId']),
-      requestHash: serializer.fromJson<String>(json['requestHash']),
+      requestId: serializer.fromJson<String?>(json['requestId']),
+      requestHash: serializer.fromJson<String?>(json['requestHash']),
       entryType: serializer.fromJson<String>(json['entryType']),
       amount: serializer.fromJson<String>(json['amount']),
       occurredOn: serializer.fromJson<String>(json['occurredOn']),
@@ -4537,8 +4528,8 @@ class SellerTransaction extends DataClass
       'id': serializer.toJson<String>(id),
       'sellerId': serializer.toJson<String>(sellerId),
       'invoiceId': serializer.toJson<String?>(invoiceId),
-      'requestId': serializer.toJson<String>(requestId),
-      'requestHash': serializer.toJson<String>(requestHash),
+      'requestId': serializer.toJson<String?>(requestId),
+      'requestHash': serializer.toJson<String?>(requestHash),
       'entryType': serializer.toJson<String>(entryType),
       'amount': serializer.toJson<String>(amount),
       'occurredOn': serializer.toJson<String>(occurredOn),
@@ -4552,8 +4543,8 @@ class SellerTransaction extends DataClass
           {String? id,
           String? sellerId,
           Value<String?> invoiceId = const Value.absent(),
-          String? requestId,
-          String? requestHash,
+          Value<String?> requestId = const Value.absent(),
+          Value<String?> requestHash = const Value.absent(),
           String? entryType,
           String? amount,
           String? occurredOn,
@@ -4564,8 +4555,8 @@ class SellerTransaction extends DataClass
         id: id ?? this.id,
         sellerId: sellerId ?? this.sellerId,
         invoiceId: invoiceId.present ? invoiceId.value : this.invoiceId,
-        requestId: requestId ?? this.requestId,
-        requestHash: requestHash ?? this.requestHash,
+        requestId: requestId.present ? requestId.value : this.requestId,
+        requestHash: requestHash.present ? requestHash.value : this.requestHash,
         entryType: entryType ?? this.entryType,
         amount: amount ?? this.amount,
         occurredOn: occurredOn ?? this.occurredOn,
@@ -4645,8 +4636,8 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
   final Value<String> id;
   final Value<String> sellerId;
   final Value<String?> invoiceId;
-  final Value<String> requestId;
-  final Value<String> requestHash;
+  final Value<String?> requestId;
+  final Value<String?> requestHash;
   final Value<String> entryType;
   final Value<String> amount;
   final Value<String> occurredOn;
@@ -4672,8 +4663,8 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     required String id,
     required String sellerId,
     this.invoiceId = const Value.absent(),
-    required String requestId,
-    required String requestHash,
+    this.requestId = const Value.absent(),
+    this.requestHash = const Value.absent(),
     required String entryType,
     required String amount,
     required String occurredOn,
@@ -4683,8 +4674,6 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         sellerId = Value(sellerId),
-        requestId = Value(requestId),
-        requestHash = Value(requestHash),
         entryType = Value(entryType),
         amount = Value(amount),
         occurredOn = Value(occurredOn),
@@ -4724,8 +4713,8 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
       {Value<String>? id,
       Value<String>? sellerId,
       Value<String?>? invoiceId,
-      Value<String>? requestId,
-      Value<String>? requestHash,
+      Value<String?>? requestId,
+      Value<String?>? requestHash,
       Value<String>? entryType,
       Value<String>? amount,
       Value<String>? occurredOn,
@@ -4831,24 +4820,24 @@ class $CompanyProfilesTable extends CompanyProfiles
       const VerificationMeta('address');
   @override
   late final GeneratedColumn<String> address = GeneratedColumn<String>(
-      'address', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'address', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _cityMeta = const VerificationMeta('city');
   @override
   late final GeneratedColumn<String> city = GeneratedColumn<String>(
-      'city', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'city', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _stateMeta = const VerificationMeta('state');
   @override
   late final GeneratedColumn<String> state = GeneratedColumn<String>(
-      'state', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'state', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _stateCodeMeta =
       const VerificationMeta('stateCode');
   @override
   late final GeneratedColumn<String> stateCode = GeneratedColumn<String>(
-      'state_code', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'state_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _gstinMeta = const VerificationMeta('gstin');
   @override
   late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
@@ -4960,18 +4949,26 @@ class $CompanyProfilesTable extends CompanyProfiles
     if (data.containsKey('address')) {
       context.handle(_addressMeta,
           address.isAcceptableOrUnknown(data['address']!, _addressMeta));
+    } else if (isInserting) {
+      context.missing(_addressMeta);
     }
     if (data.containsKey('city')) {
       context.handle(
           _cityMeta, city.isAcceptableOrUnknown(data['city']!, _cityMeta));
+    } else if (isInserting) {
+      context.missing(_cityMeta);
     }
     if (data.containsKey('state')) {
       context.handle(
           _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    } else if (isInserting) {
+      context.missing(_stateMeta);
     }
     if (data.containsKey('state_code')) {
       context.handle(_stateCodeMeta,
           stateCode.isAcceptableOrUnknown(data['state_code']!, _stateCodeMeta));
+    } else if (isInserting) {
+      context.missing(_stateCodeMeta);
     }
     if (data.containsKey('gstin')) {
       context.handle(
@@ -5041,13 +5038,13 @@ class $CompanyProfilesTable extends CompanyProfiles
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       address: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}address']),
+          .read(DriftSqlType.string, data['${effectivePrefix}address'])!,
       city: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}city']),
+          .read(DriftSqlType.string, data['${effectivePrefix}city'])!,
       state: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}state']),
+          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
       stateCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}state_code']),
+          .read(DriftSqlType.string, data['${effectivePrefix}state_code'])!,
       gstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}gstin']),
       phone: attachedDatabase.typeMapping
@@ -5082,10 +5079,10 @@ class $CompanyProfilesTable extends CompanyProfiles
 class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
   final String id;
   final String name;
-  final String? address;
-  final String? city;
-  final String? state;
-  final String? stateCode;
+  final String address;
+  final String city;
+  final String state;
+  final String stateCode;
   final String? gstin;
   final String? phone;
   final String? email;
@@ -5100,10 +5097,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
   const CompanyProfile(
       {required this.id,
       required this.name,
-      this.address,
-      this.city,
-      this.state,
-      this.stateCode,
+      required this.address,
+      required this.city,
+      required this.state,
+      required this.stateCode,
       this.gstin,
       this.phone,
       this.email,
@@ -5120,18 +5117,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
-    if (!nullToAbsent || address != null) {
-      map['address'] = Variable<String>(address);
-    }
-    if (!nullToAbsent || city != null) {
-      map['city'] = Variable<String>(city);
-    }
-    if (!nullToAbsent || state != null) {
-      map['state'] = Variable<String>(state);
-    }
-    if (!nullToAbsent || stateCode != null) {
-      map['state_code'] = Variable<String>(stateCode);
-    }
+    map['address'] = Variable<String>(address);
+    map['city'] = Variable<String>(city);
+    map['state'] = Variable<String>(state);
+    map['state_code'] = Variable<String>(stateCode);
     if (!nullToAbsent || gstin != null) {
       map['gstin'] = Variable<String>(gstin);
     }
@@ -5166,15 +5155,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
     return CompanyProfilesCompanion(
       id: Value(id),
       name: Value(name),
-      address: address == null && nullToAbsent
-          ? const Value.absent()
-          : Value(address),
-      city: city == null && nullToAbsent ? const Value.absent() : Value(city),
-      state:
-          state == null && nullToAbsent ? const Value.absent() : Value(state),
-      stateCode: stateCode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(stateCode),
+      address: Value(address),
+      city: Value(city),
+      state: Value(state),
+      stateCode: Value(stateCode),
       gstin:
           gstin == null && nullToAbsent ? const Value.absent() : Value(gstin),
       phone:
@@ -5208,10 +5192,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
     return CompanyProfile(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      address: serializer.fromJson<String?>(json['address']),
-      city: serializer.fromJson<String?>(json['city']),
-      state: serializer.fromJson<String?>(json['state']),
-      stateCode: serializer.fromJson<String?>(json['stateCode']),
+      address: serializer.fromJson<String>(json['address']),
+      city: serializer.fromJson<String>(json['city']),
+      state: serializer.fromJson<String>(json['state']),
+      stateCode: serializer.fromJson<String>(json['stateCode']),
       gstin: serializer.fromJson<String?>(json['gstin']),
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
@@ -5231,10 +5215,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
-      'address': serializer.toJson<String?>(address),
-      'city': serializer.toJson<String?>(city),
-      'state': serializer.toJson<String?>(state),
-      'stateCode': serializer.toJson<String?>(stateCode),
+      'address': serializer.toJson<String>(address),
+      'city': serializer.toJson<String>(city),
+      'state': serializer.toJson<String>(state),
+      'stateCode': serializer.toJson<String>(stateCode),
       'gstin': serializer.toJson<String?>(gstin),
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
@@ -5252,10 +5236,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
   CompanyProfile copyWith(
           {String? id,
           String? name,
-          Value<String?> address = const Value.absent(),
-          Value<String?> city = const Value.absent(),
-          Value<String?> state = const Value.absent(),
-          Value<String?> stateCode = const Value.absent(),
+          String? address,
+          String? city,
+          String? state,
+          String? stateCode,
           Value<String?> gstin = const Value.absent(),
           Value<String?> phone = const Value.absent(),
           Value<String?> email = const Value.absent(),
@@ -5270,10 +5254,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       CompanyProfile(
         id: id ?? this.id,
         name: name ?? this.name,
-        address: address.present ? address.value : this.address,
-        city: city.present ? city.value : this.city,
-        state: state.present ? state.value : this.state,
-        stateCode: stateCode.present ? stateCode.value : this.stateCode,
+        address: address ?? this.address,
+        city: city ?? this.city,
+        state: state ?? this.state,
+        stateCode: stateCode ?? this.stateCode,
         gstin: gstin.present ? gstin.value : this.gstin,
         phone: phone.present ? phone.value : this.phone,
         email: email.present ? email.value : this.email,
@@ -5382,10 +5366,10 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
 class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
   final Value<String> id;
   final Value<String> name;
-  final Value<String?> address;
-  final Value<String?> city;
-  final Value<String?> state;
-  final Value<String?> stateCode;
+  final Value<String> address;
+  final Value<String> city;
+  final Value<String> state;
+  final Value<String> stateCode;
   final Value<String?> gstin;
   final Value<String?> phone;
   final Value<String?> email;
@@ -5421,10 +5405,10 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
   CompanyProfilesCompanion.insert({
     required String id,
     required String name,
-    this.address = const Value.absent(),
-    this.city = const Value.absent(),
-    this.state = const Value.absent(),
-    this.stateCode = const Value.absent(),
+    required String address,
+    required String city,
+    required String state,
+    required String stateCode,
     this.gstin = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
@@ -5439,6 +5423,10 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
+        address = Value(address),
+        city = Value(city),
+        state = Value(state),
+        stateCode = Value(stateCode),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<CompanyProfile> custom({
@@ -5486,10 +5474,10 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
   CompanyProfilesCompanion copyWith(
       {Value<String>? id,
       Value<String>? name,
-      Value<String?>? address,
-      Value<String?>? city,
-      Value<String?>? state,
-      Value<String?>? stateCode,
+      Value<String>? address,
+      Value<String>? city,
+      Value<String>? state,
+      Value<String>? stateCode,
       Value<String?>? gstin,
       Value<String?>? phone,
       Value<String?>? email,
@@ -5655,20 +5643,20 @@ class $InvoiceItemsTable extends InvoiceItems
       const VerificationMeta('productCode');
   @override
   late final GeneratedColumn<String> productCode = GeneratedColumn<String>(
-      'product_code', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'product_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _companyMeta =
       const VerificationMeta('company');
   @override
   late final GeneratedColumn<String> company = GeneratedColumn<String>(
-      'company', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'company', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _categoryMeta =
       const VerificationMeta('category');
   @override
   late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'category', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _quantityMeta =
       const VerificationMeta('quantity');
   @override
@@ -5847,14 +5835,20 @@ class $InvoiceItemsTable extends InvoiceItems
           _productCodeMeta,
           productCode.isAcceptableOrUnknown(
               data['product_code']!, _productCodeMeta));
+    } else if (isInserting) {
+      context.missing(_productCodeMeta);
     }
     if (data.containsKey('company')) {
       context.handle(_companyMeta,
           company.isAcceptableOrUnknown(data['company']!, _companyMeta));
+    } else if (isInserting) {
+      context.missing(_companyMeta);
     }
     if (data.containsKey('category')) {
       context.handle(_categoryMeta,
           category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
     }
     if (data.containsKey('quantity')) {
       context.handle(_quantityMeta,
@@ -5998,11 +5992,11 @@ class $InvoiceItemsTable extends InvoiceItems
       productName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}product_name'])!,
       productCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}product_code']),
+          .read(DriftSqlType.string, data['${effectivePrefix}product_code'])!,
       company: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company']),
+          .read(DriftSqlType.string, data['${effectivePrefix}company'])!,
       category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category']),
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
       quantity: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}quantity'])!,
       pricingMode: attachedDatabase.typeMapping
@@ -6052,9 +6046,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
   final String productId;
   final int lineNumber;
   final String productName;
-  final String? productCode;
-  final String? company;
-  final String? category;
+  final String productCode;
+  final String company;
+  final String category;
   final String quantity;
   final String pricingMode;
   final String enteredUnitPrice;
@@ -6078,9 +6072,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       required this.productId,
       required this.lineNumber,
       required this.productName,
-      this.productCode,
-      this.company,
-      this.category,
+      required this.productCode,
+      required this.company,
+      required this.category,
       required this.quantity,
       required this.pricingMode,
       required this.enteredUnitPrice,
@@ -6106,15 +6100,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
     map['product_id'] = Variable<String>(productId);
     map['line_number'] = Variable<int>(lineNumber);
     map['product_name'] = Variable<String>(productName);
-    if (!nullToAbsent || productCode != null) {
-      map['product_code'] = Variable<String>(productCode);
-    }
-    if (!nullToAbsent || company != null) {
-      map['company'] = Variable<String>(company);
-    }
-    if (!nullToAbsent || category != null) {
-      map['category'] = Variable<String>(category);
-    }
+    map['product_code'] = Variable<String>(productCode);
+    map['company'] = Variable<String>(company);
+    map['category'] = Variable<String>(category);
     map['quantity'] = Variable<String>(quantity);
     map['pricing_mode'] = Variable<String>(pricingMode);
     map['entered_unit_price'] = Variable<String>(enteredUnitPrice);
@@ -6142,15 +6130,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       productId: Value(productId),
       lineNumber: Value(lineNumber),
       productName: Value(productName),
-      productCode: productCode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(productCode),
-      company: company == null && nullToAbsent
-          ? const Value.absent()
-          : Value(company),
-      category: category == null && nullToAbsent
-          ? const Value.absent()
-          : Value(category),
+      productCode: Value(productCode),
+      company: Value(company),
+      category: Value(category),
       quantity: Value(quantity),
       pricingMode: Value(pricingMode),
       enteredUnitPrice: Value(enteredUnitPrice),
@@ -6180,9 +6162,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       productId: serializer.fromJson<String>(json['productId']),
       lineNumber: serializer.fromJson<int>(json['lineNumber']),
       productName: serializer.fromJson<String>(json['productName']),
-      productCode: serializer.fromJson<String?>(json['productCode']),
-      company: serializer.fromJson<String?>(json['company']),
-      category: serializer.fromJson<String?>(json['category']),
+      productCode: serializer.fromJson<String>(json['productCode']),
+      company: serializer.fromJson<String>(json['company']),
+      category: serializer.fromJson<String>(json['category']),
       quantity: serializer.fromJson<String>(json['quantity']),
       pricingMode: serializer.fromJson<String>(json['pricingMode']),
       enteredUnitPrice: serializer.fromJson<String>(json['enteredUnitPrice']),
@@ -6211,9 +6193,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       'productId': serializer.toJson<String>(productId),
       'lineNumber': serializer.toJson<int>(lineNumber),
       'productName': serializer.toJson<String>(productName),
-      'productCode': serializer.toJson<String?>(productCode),
-      'company': serializer.toJson<String?>(company),
-      'category': serializer.toJson<String?>(category),
+      'productCode': serializer.toJson<String>(productCode),
+      'company': serializer.toJson<String>(company),
+      'category': serializer.toJson<String>(category),
       'quantity': serializer.toJson<String>(quantity),
       'pricingMode': serializer.toJson<String>(pricingMode),
       'enteredUnitPrice': serializer.toJson<String>(enteredUnitPrice),
@@ -6240,9 +6222,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           String? productId,
           int? lineNumber,
           String? productName,
-          Value<String?> productCode = const Value.absent(),
-          Value<String?> company = const Value.absent(),
-          Value<String?> category = const Value.absent(),
+          String? productCode,
+          String? company,
+          String? category,
           String? quantity,
           String? pricingMode,
           String? enteredUnitPrice,
@@ -6266,9 +6248,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         productId: productId ?? this.productId,
         lineNumber: lineNumber ?? this.lineNumber,
         productName: productName ?? this.productName,
-        productCode: productCode.present ? productCode.value : this.productCode,
-        company: company.present ? company.value : this.company,
-        category: category.present ? category.value : this.category,
+        productCode: productCode ?? this.productCode,
+        company: company ?? this.company,
+        category: category ?? this.category,
         quantity: quantity ?? this.quantity,
         pricingMode: pricingMode ?? this.pricingMode,
         enteredUnitPrice: enteredUnitPrice ?? this.enteredUnitPrice,
@@ -6433,9 +6415,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
   final Value<String> productId;
   final Value<int> lineNumber;
   final Value<String> productName;
-  final Value<String?> productCode;
-  final Value<String?> company;
-  final Value<String?> category;
+  final Value<String> productCode;
+  final Value<String> company;
+  final Value<String> category;
   final Value<String> quantity;
   final Value<String> pricingMode;
   final Value<String> enteredUnitPrice;
@@ -6488,9 +6470,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     required String productId,
     required int lineNumber,
     required String productName,
-    this.productCode = const Value.absent(),
-    this.company = const Value.absent(),
-    this.category = const Value.absent(),
+    required String productCode,
+    required String company,
+    required String category,
     required String quantity,
     required String pricingMode,
     required String enteredUnitPrice,
@@ -6514,6 +6496,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
         productId = Value(productId),
         lineNumber = Value(lineNumber),
         productName = Value(productName),
+        productCode = Value(productCode),
+        company = Value(company),
+        category = Value(category),
         quantity = Value(quantity),
         pricingMode = Value(pricingMode),
         enteredUnitPrice = Value(enteredUnitPrice),
@@ -6595,9 +6580,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       Value<String>? productId,
       Value<int>? lineNumber,
       Value<String>? productName,
-      Value<String?>? productCode,
-      Value<String?>? company,
-      Value<String?>? category,
+      Value<String>? productCode,
+      Value<String>? company,
+      Value<String>? category,
       Value<String>? quantity,
       Value<String>? pricingMode,
       Value<String>? enteredUnitPrice,
@@ -8428,12 +8413,12 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool localSessionsRefs})>;
 typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String id,
-  Value<String?> company,
-  Value<String?> category,
+  required String company,
+  required String category,
   required String itemName,
-  Value<String?> itemCode,
-  required String buyingPriceExclTax,
-  required String buyingGstRate,
+  required String itemCode,
+  Value<String?> buyingPriceExclTax,
+  Value<String?> buyingGstRate,
   required String defaultSellingPriceExclTax,
   required String defaultGstRate,
   required String quantityOnHand,
@@ -8445,12 +8430,12 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
 });
 typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<String> id,
-  Value<String?> company,
-  Value<String?> category,
+  Value<String> company,
+  Value<String> category,
   Value<String> itemName,
-  Value<String?> itemCode,
-  Value<String> buyingPriceExclTax,
-  Value<String> buyingGstRate,
+  Value<String> itemCode,
+  Value<String?> buyingPriceExclTax,
+  Value<String?> buyingGstRate,
   Value<String> defaultSellingPriceExclTax,
   Value<String> defaultGstRate,
   Value<String> quantityOnHand,
@@ -8771,12 +8756,12 @@ class $$ProductsTableTableManager extends RootTableManager<
               $$ProductsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String?> company = const Value.absent(),
-            Value<String?> category = const Value.absent(),
+            Value<String> company = const Value.absent(),
+            Value<String> category = const Value.absent(),
             Value<String> itemName = const Value.absent(),
-            Value<String?> itemCode = const Value.absent(),
-            Value<String> buyingPriceExclTax = const Value.absent(),
-            Value<String> buyingGstRate = const Value.absent(),
+            Value<String> itemCode = const Value.absent(),
+            Value<String?> buyingPriceExclTax = const Value.absent(),
+            Value<String?> buyingGstRate = const Value.absent(),
             Value<String> defaultSellingPriceExclTax = const Value.absent(),
             Value<String> defaultGstRate = const Value.absent(),
             Value<String> quantityOnHand = const Value.absent(),
@@ -8805,12 +8790,12 @@ class $$ProductsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
-            Value<String?> company = const Value.absent(),
-            Value<String?> category = const Value.absent(),
+            required String company,
+            required String category,
             required String itemName,
-            Value<String?> itemCode = const Value.absent(),
-            required String buyingPriceExclTax,
-            required String buyingGstRate,
+            required String itemCode,
+            Value<String?> buyingPriceExclTax = const Value.absent(),
+            Value<String?> buyingGstRate = const Value.absent(),
             required String defaultSellingPriceExclTax,
             required String defaultGstRate,
             required String quantityOnHand,
@@ -8900,7 +8885,7 @@ typedef $$ProductsTableProcessedTableManager = ProcessedTableManager<
 typedef $$SellersTableCreateCompanionBuilder = SellersCompanion Function({
   required String id,
   required String name,
-  Value<String?> address,
+  required String address,
   Value<String?> state,
   Value<String?> stateCode,
   Value<String?> phone,
@@ -8913,7 +8898,7 @@ typedef $$SellersTableCreateCompanionBuilder = SellersCompanion Function({
 typedef $$SellersTableUpdateCompanionBuilder = SellersCompanion Function({
   Value<String> id,
   Value<String> name,
-  Value<String?> address,
+  Value<String> address,
   Value<String?> state,
   Value<String?> stateCode,
   Value<String?> phone,
@@ -9190,7 +9175,7 @@ class $$SellersTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
-            Value<String?> address = const Value.absent(),
+            Value<String> address = const Value.absent(),
             Value<String?> state = const Value.absent(),
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
@@ -9216,7 +9201,7 @@ class $$SellersTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String name,
-            Value<String?> address = const Value.absent(),
+            required String address,
             Value<String?> state = const Value.absent(),
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
@@ -9302,21 +9287,21 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   required String id,
   required String requestId,
   required String requestHash,
-  required String invoiceNumber,
+  required int invoiceNumber,
   required String sellerId,
   required String sellerName,
-  Value<String?> sellerAddress,
+  required String sellerAddress,
   Value<String?> sellerState,
   Value<String?> sellerStateCode,
   Value<String?> sellerPhone,
   Value<String?> sellerGstin,
-  Value<String?> placeOfSupplyState,
-  Value<String?> placeOfSupplyStateCode,
+  required String placeOfSupplyState,
+  required String placeOfSupplyStateCode,
   required String companyName,
-  Value<String?> companyAddress,
-  Value<String?> companyCity,
-  Value<String?> companyState,
-  Value<String?> companyStateCode,
+  required String companyAddress,
+  required String companyCity,
+  required String companyState,
+  required String companyStateCode,
   Value<String?> companyGstin,
   Value<String?> companyPhone,
   Value<String?> companyEmail,
@@ -9328,7 +9313,7 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   required String invoiceDate,
   required String taxRegime,
   required String status,
-  Value<String?> paymentMode,
+  required String paymentMode,
   required String subtotal,
   required String discountTotal,
   required String taxableTotal,
@@ -9348,21 +9333,21 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String> id,
   Value<String> requestId,
   Value<String> requestHash,
-  Value<String> invoiceNumber,
+  Value<int> invoiceNumber,
   Value<String> sellerId,
   Value<String> sellerName,
-  Value<String?> sellerAddress,
+  Value<String> sellerAddress,
   Value<String?> sellerState,
   Value<String?> sellerStateCode,
   Value<String?> sellerPhone,
   Value<String?> sellerGstin,
-  Value<String?> placeOfSupplyState,
-  Value<String?> placeOfSupplyStateCode,
+  Value<String> placeOfSupplyState,
+  Value<String> placeOfSupplyStateCode,
   Value<String> companyName,
-  Value<String?> companyAddress,
-  Value<String?> companyCity,
-  Value<String?> companyState,
-  Value<String?> companyStateCode,
+  Value<String> companyAddress,
+  Value<String> companyCity,
+  Value<String> companyState,
+  Value<String> companyStateCode,
   Value<String?> companyGstin,
   Value<String?> companyPhone,
   Value<String?> companyEmail,
@@ -9374,7 +9359,7 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String> invoiceDate,
   Value<String> taxRegime,
   Value<String> status,
-  Value<String?> paymentMode,
+  Value<String> paymentMode,
   Value<String> subtotal,
   Value<String> discountTotal,
   Value<String> taxableTotal,
@@ -9505,7 +9490,7 @@ class $$InvoicesTableFilterComposer
   ColumnFilters<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get invoiceNumber => $composableBuilder(
+  ColumnFilters<int> get invoiceNumber => $composableBuilder(
       column: $table.invoiceNumber, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get sellerName => $composableBuilder(
@@ -9770,7 +9755,7 @@ class $$InvoicesTableOrderingComposer
   ColumnOrderings<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get invoiceNumber => $composableBuilder(
+  ColumnOrderings<int> get invoiceNumber => $composableBuilder(
       column: $table.invoiceNumber,
       builder: (column) => ColumnOrderings(column));
 
@@ -9981,7 +9966,7 @@ class $$InvoicesTableAnnotationComposer
   GeneratedColumn<String> get requestHash => $composableBuilder(
       column: $table.requestHash, builder: (column) => column);
 
-  GeneratedColumn<String> get invoiceNumber => $composableBuilder(
+  GeneratedColumn<int> get invoiceNumber => $composableBuilder(
       column: $table.invoiceNumber, builder: (column) => column);
 
   GeneratedColumn<String> get sellerName => $composableBuilder(
@@ -10249,21 +10234,21 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> requestId = const Value.absent(),
             Value<String> requestHash = const Value.absent(),
-            Value<String> invoiceNumber = const Value.absent(),
+            Value<int> invoiceNumber = const Value.absent(),
             Value<String> sellerId = const Value.absent(),
             Value<String> sellerName = const Value.absent(),
-            Value<String?> sellerAddress = const Value.absent(),
+            Value<String> sellerAddress = const Value.absent(),
             Value<String?> sellerState = const Value.absent(),
             Value<String?> sellerStateCode = const Value.absent(),
             Value<String?> sellerPhone = const Value.absent(),
             Value<String?> sellerGstin = const Value.absent(),
-            Value<String?> placeOfSupplyState = const Value.absent(),
-            Value<String?> placeOfSupplyStateCode = const Value.absent(),
+            Value<String> placeOfSupplyState = const Value.absent(),
+            Value<String> placeOfSupplyStateCode = const Value.absent(),
             Value<String> companyName = const Value.absent(),
-            Value<String?> companyAddress = const Value.absent(),
-            Value<String?> companyCity = const Value.absent(),
-            Value<String?> companyState = const Value.absent(),
-            Value<String?> companyStateCode = const Value.absent(),
+            Value<String> companyAddress = const Value.absent(),
+            Value<String> companyCity = const Value.absent(),
+            Value<String> companyState = const Value.absent(),
+            Value<String> companyStateCode = const Value.absent(),
             Value<String?> companyGstin = const Value.absent(),
             Value<String?> companyPhone = const Value.absent(),
             Value<String?> companyEmail = const Value.absent(),
@@ -10275,7 +10260,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String> invoiceDate = const Value.absent(),
             Value<String> taxRegime = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<String?> paymentMode = const Value.absent(),
+            Value<String> paymentMode = const Value.absent(),
             Value<String> subtotal = const Value.absent(),
             Value<String> discountTotal = const Value.absent(),
             Value<String> taxableTotal = const Value.absent(),
@@ -10341,21 +10326,21 @@ class $$InvoicesTableTableManager extends RootTableManager<
             required String id,
             required String requestId,
             required String requestHash,
-            required String invoiceNumber,
+            required int invoiceNumber,
             required String sellerId,
             required String sellerName,
-            Value<String?> sellerAddress = const Value.absent(),
+            required String sellerAddress,
             Value<String?> sellerState = const Value.absent(),
             Value<String?> sellerStateCode = const Value.absent(),
             Value<String?> sellerPhone = const Value.absent(),
             Value<String?> sellerGstin = const Value.absent(),
-            Value<String?> placeOfSupplyState = const Value.absent(),
-            Value<String?> placeOfSupplyStateCode = const Value.absent(),
+            required String placeOfSupplyState,
+            required String placeOfSupplyStateCode,
             required String companyName,
-            Value<String?> companyAddress = const Value.absent(),
-            Value<String?> companyCity = const Value.absent(),
-            Value<String?> companyState = const Value.absent(),
-            Value<String?> companyStateCode = const Value.absent(),
+            required String companyAddress,
+            required String companyCity,
+            required String companyState,
+            required String companyStateCode,
             Value<String?> companyGstin = const Value.absent(),
             Value<String?> companyPhone = const Value.absent(),
             Value<String?> companyEmail = const Value.absent(),
@@ -10367,7 +10352,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             required String invoiceDate,
             required String taxRegime,
             required String status,
-            Value<String?> paymentMode = const Value.absent(),
+            required String paymentMode,
             required String subtotal,
             required String discountTotal,
             required String taxableTotal,
@@ -10564,8 +10549,8 @@ typedef $$StockMovementsTableCreateCompanionBuilder = StockMovementsCompanion
   required String id,
   required String productId,
   Value<String?> invoiceId,
-  required String requestId,
-  required String requestHash,
+  Value<String?> requestId,
+  Value<String?> requestHash,
   required String movementType,
   required String quantityDelta,
   Value<String?> reason,
@@ -10578,8 +10563,8 @@ typedef $$StockMovementsTableUpdateCompanionBuilder = StockMovementsCompanion
   Value<String> id,
   Value<String> productId,
   Value<String?> invoiceId,
-  Value<String> requestId,
-  Value<String> requestHash,
+  Value<String?> requestId,
+  Value<String?> requestHash,
   Value<String> movementType,
   Value<String> quantityDelta,
   Value<String?> reason,
@@ -10942,8 +10927,8 @@ class $$StockMovementsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> productId = const Value.absent(),
             Value<String?> invoiceId = const Value.absent(),
-            Value<String> requestId = const Value.absent(),
-            Value<String> requestHash = const Value.absent(),
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
             Value<String> movementType = const Value.absent(),
             Value<String> quantityDelta = const Value.absent(),
             Value<String?> reason = const Value.absent(),
@@ -10968,8 +10953,8 @@ class $$StockMovementsTableTableManager extends RootTableManager<
             required String id,
             required String productId,
             Value<String?> invoiceId = const Value.absent(),
-            required String requestId,
-            required String requestHash,
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
             required String movementType,
             required String quantityDelta,
             Value<String?> reason = const Value.absent(),
@@ -11074,8 +11059,8 @@ typedef $$SellerTransactionsTableCreateCompanionBuilder
   required String id,
   required String sellerId,
   Value<String?> invoiceId,
-  required String requestId,
-  required String requestHash,
+  Value<String?> requestId,
+  Value<String?> requestHash,
   required String entryType,
   required String amount,
   required String occurredOn,
@@ -11089,8 +11074,8 @@ typedef $$SellerTransactionsTableUpdateCompanionBuilder
   Value<String> id,
   Value<String> sellerId,
   Value<String?> invoiceId,
-  Value<String> requestId,
-  Value<String> requestHash,
+  Value<String?> requestId,
+  Value<String?> requestHash,
   Value<String> entryType,
   Value<String> amount,
   Value<String> occurredOn,
@@ -11462,8 +11447,8 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> sellerId = const Value.absent(),
             Value<String?> invoiceId = const Value.absent(),
-            Value<String> requestId = const Value.absent(),
-            Value<String> requestHash = const Value.absent(),
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
             Value<String> entryType = const Value.absent(),
             Value<String> amount = const Value.absent(),
             Value<String> occurredOn = const Value.absent(),
@@ -11490,8 +11475,8 @@ class $$SellerTransactionsTableTableManager extends RootTableManager<
             required String id,
             required String sellerId,
             Value<String?> invoiceId = const Value.absent(),
-            required String requestId,
-            required String requestHash,
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
             required String entryType,
             required String amount,
             required String occurredOn,
@@ -11599,10 +11584,10 @@ typedef $$CompanyProfilesTableCreateCompanionBuilder = CompanyProfilesCompanion
     Function({
   required String id,
   required String name,
-  Value<String?> address,
-  Value<String?> city,
-  Value<String?> state,
-  Value<String?> stateCode,
+  required String address,
+  required String city,
+  required String state,
+  required String stateCode,
   Value<String?> gstin,
   Value<String?> phone,
   Value<String?> email,
@@ -11620,10 +11605,10 @@ typedef $$CompanyProfilesTableUpdateCompanionBuilder = CompanyProfilesCompanion
     Function({
   Value<String> id,
   Value<String> name,
-  Value<String?> address,
-  Value<String?> city,
-  Value<String?> state,
-  Value<String?> stateCode,
+  Value<String> address,
+  Value<String> city,
+  Value<String> state,
+  Value<String> stateCode,
   Value<String?> gstin,
   Value<String?> phone,
   Value<String?> email,
@@ -11851,10 +11836,10 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
-            Value<String?> address = const Value.absent(),
-            Value<String?> city = const Value.absent(),
-            Value<String?> state = const Value.absent(),
-            Value<String?> stateCode = const Value.absent(),
+            Value<String> address = const Value.absent(),
+            Value<String> city = const Value.absent(),
+            Value<String> state = const Value.absent(),
+            Value<String> stateCode = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> email = const Value.absent(),
@@ -11891,10 +11876,10 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String name,
-            Value<String?> address = const Value.absent(),
-            Value<String?> city = const Value.absent(),
-            Value<String?> state = const Value.absent(),
-            Value<String?> stateCode = const Value.absent(),
+            required String address,
+            required String city,
+            required String state,
+            required String stateCode,
             Value<String?> gstin = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> email = const Value.absent(),
@@ -11957,9 +11942,9 @@ typedef $$InvoiceItemsTableCreateCompanionBuilder = InvoiceItemsCompanion
   required String productId,
   required int lineNumber,
   required String productName,
-  Value<String?> productCode,
-  Value<String?> company,
-  Value<String?> category,
+  required String productCode,
+  required String company,
+  required String category,
   required String quantity,
   required String pricingMode,
   required String enteredUnitPrice,
@@ -11986,9 +11971,9 @@ typedef $$InvoiceItemsTableUpdateCompanionBuilder = InvoiceItemsCompanion
   Value<String> productId,
   Value<int> lineNumber,
   Value<String> productName,
-  Value<String?> productCode,
-  Value<String?> company,
-  Value<String?> category,
+  Value<String> productCode,
+  Value<String> company,
+  Value<String> category,
   Value<String> quantity,
   Value<String> pricingMode,
   Value<String> enteredUnitPrice,
@@ -12440,9 +12425,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             Value<String> productId = const Value.absent(),
             Value<int> lineNumber = const Value.absent(),
             Value<String> productName = const Value.absent(),
-            Value<String?> productCode = const Value.absent(),
-            Value<String?> company = const Value.absent(),
-            Value<String?> category = const Value.absent(),
+            Value<String> productCode = const Value.absent(),
+            Value<String> company = const Value.absent(),
+            Value<String> category = const Value.absent(),
             Value<String> quantity = const Value.absent(),
             Value<String> pricingMode = const Value.absent(),
             Value<String> enteredUnitPrice = const Value.absent(),
@@ -12496,9 +12481,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             required String productId,
             required int lineNumber,
             required String productName,
-            Value<String?> productCode = const Value.absent(),
-            Value<String?> company = const Value.absent(),
-            Value<String?> category = const Value.absent(),
+            required String productCode,
+            required String company,
+            required String category,
             required String quantity,
             required String pricingMode,
             required String enteredUnitPrice,
