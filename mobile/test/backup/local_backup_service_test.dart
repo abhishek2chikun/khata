@@ -134,6 +134,69 @@ void main() {
     expect(products.single.id, 'target-product');
   });
 
+  test('rejects unexpected columns before replacing existing data', () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        final tables = payload['tables'] as Map<String, Object?>;
+        final products = tables['products'] as List<Object?>;
+        final product = products.single as Map<String, Object?>;
+        product['evil_column'] = 'evil';
+      },
+    );
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<InvalidBackupPayloadException>()),
+    );
+
+    final products = await target.select(target.products).get();
+    expect(products.single.id, 'target-product');
+  });
+
+  test('rejects SQL-looking column keys before executing injected SQL',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        final tables = payload['tables'] as Map<String, Object?>;
+        final products = tables['products'] as List<Object?>;
+        final product = products.single as Map<String, Object?>;
+        product['item_name) VALUES (?); DELETE FROM products; --'] = 'evil';
+      },
+    );
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<InvalidBackupPayloadException>()),
+    );
+
+    final products = await target.select(target.products).get();
+    expect(products.single.id, 'target-product');
+  });
+
   test('does not export sessions and clears existing sessions on import',
       () async {
     final source = db.LocalDatabase.memory();
