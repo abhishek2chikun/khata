@@ -21,14 +21,18 @@ abstract class SessionStore {
 }
 
 class SecureSessionStore implements SessionStore {
-  SecureSessionStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
-
-  static const _accessTokenKey = 'auth.access_token';
-  static const _refreshTokenKey = 'auth.refresh_token';
-  static const _tokenTypeKey = 'auth.token_type';
+  SecureSessionStore({
+    FlutterSecureStorage? storage,
+    String keyPrefix = 'auth',
+  })  : _storage = storage ?? const FlutterSecureStorage(),
+        _accessTokenKey = '$keyPrefix.access_token',
+        _refreshTokenKey = '$keyPrefix.refresh_token',
+        _tokenTypeKey = '$keyPrefix.token_type';
 
   final FlutterSecureStorage _storage;
+  final String _accessTokenKey;
+  final String _refreshTokenKey;
+  final String _tokenTypeKey;
 
   @override
   Future<void> clearSession() async {

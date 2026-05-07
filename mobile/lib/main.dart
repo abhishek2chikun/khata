@@ -1,21 +1,21 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'auth/auth_controller.dart';
-import 'auth/auth_service.dart';
-import 'auth/session_store.dart';
-import 'config/api_base_url.dart';
+import 'app/app_dependencies.dart';
+import 'app/app_mode.dart';
+import 'backup/backup_scheduler.dart';
+import 'backup/backup_screen.dart';
+import 'backup/drive_backup_service.dart';
 import 'models/seller.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
 import 'screens/inventory_list_screen.dart';
+import 'screens/local_first_user_setup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
 import 'screens/seller_list_screen.dart';
-import 'services/api_client.dart';
 import 'services/company_profile_service.dart';
 import 'services/invoices_service.dart';
 import 'services/payments_service.dart';
@@ -26,49 +26,47 @@ import 'widgets/app_navigation_drawer.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final baseUri = await resolveApiBaseUri();
-  final authService = HttpAuthService(baseUri: baseUri);
-  final sessionStore = SecureSessionStore();
-  final controller = AuthController(
-    authService: authService,
-    sessionStore: sessionStore,
-  );
-  final apiClient = ApiClient(
-    baseUri: baseUri,
-    httpClient: HttpClient(),
-    authService: authService,
-    sessionStore: sessionStore,
-    onAuthorizationFailed: controller.logout,
-  );
+  final dependencies = await AppDependencies.create();
   runApp(
     BillingApp(
-      controller: controller,
-      productsService: ApiProductsService(apiClient: apiClient),
-      sellersService: ApiSellersService(apiClient: apiClient),
-      companyProfileService: ApiCompanyProfileService(apiClient: apiClient),
-      paymentsService: ApiPaymentsService(apiClient: apiClient),
-      invoicesService: ApiInvoicesService(apiClient: apiClient),
+      dependencies: dependencies,
     ),
   );
 }
 
 class BillingApp extends StatefulWidget {
-  const BillingApp({
+  BillingApp({
     super.key,
-    required this.controller,
-    required this.productsService,
-    required this.sellersService,
-    required this.companyProfileService,
-    required this.paymentsService,
-    required this.invoicesService,
-  });
+    AppDependencies? dependencies,
+    AuthController? controller,
+    ProductsService? productsService,
+    SellersService? sellersService,
+    CompanyProfileService? companyProfileService,
+    PaymentsService? paymentsService,
+    InvoicesService? invoicesService,
+    DriveBackupService? driveBackupService,
+    BackupScheduler? backupScheduler,
+  })  : dependencies = dependencies,
+        controller = controller ?? dependencies!.controller,
+        productsService = productsService ?? dependencies!.productsService,
+        sellersService = sellersService ?? dependencies!.sellersService,
+        companyProfileService =
+            companyProfileService ?? dependencies!.companyProfileService,
+        paymentsService = paymentsService ?? dependencies!.paymentsService,
+        invoicesService = invoicesService ?? dependencies!.invoicesService,
+        driveBackupService =
+            driveBackupService ?? dependencies?.driveBackupService,
+        backupScheduler = backupScheduler ?? dependencies?.backupScheduler;
 
+  final AppDependencies? dependencies;
   final AuthController controller;
   final ProductsService productsService;
   final SellersService sellersService;
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final DriveBackupService? driveBackupService;
+  final BackupScheduler? backupScheduler;
 
   @override
   State<BillingApp> createState() => _BillingAppState();
@@ -76,11 +74,24 @@ class BillingApp extends StatefulWidget {
 
 class _BillingAppState extends State<BillingApp> {
   AppDestination _selectedDestination = AppDestination.inventory;
+  bool _isCheckingLocalUsers = false;
+  bool _needsLocalFirstUserSetup = false;
+  bool _didStartLocalBackupScheduling = false;
 
   @override
   void initState() {
     super.initState();
+    _checkLocalUsers();
     widget.controller.restoreSession();
+  }
+
+  @override
+  void dispose() {
+    final dependencies = widget.dependencies;
+    if (dependencies != null) {
+      Future<void>.microtask(dependencies.dispose);
+    }
+    super.dispose();
   }
 
   @override
@@ -97,13 +108,29 @@ class _BillingAppState extends State<BillingApp> {
   }
 
   Widget _buildBody() {
-    if (widget.controller.isRestoringSession) {
+    if (_isCheckingLocalUsers || widget.controller.isRestoringSession) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
+    final localAuthService = widget.dependencies?.localAuthService;
+    if (!widget.controller.isAuthenticated &&
+        _needsLocalFirstUserSetup &&
+        localAuthService != null) {
+      return LocalFirstUserSetupScreen(
+        authService: localAuthService,
+        onUserCreated: () {
+          setState(() {
+            _needsLocalFirstUserSetup = false;
+          });
+        },
+      );
+    }
+
     if (widget.controller.isAuthenticated) {
+      _startLocalBackupSchedulingOnce();
+
       final drawer = AppNavigationDrawer(
         selected: _selectedDestination,
         onSelect: (destination) {
@@ -112,6 +139,7 @@ class _BillingAppState extends State<BillingApp> {
           });
         },
         onLogout: widget.controller.logout,
+        showLocalBackup: widget.dependencies?.mode == DataMode.local,
       );
 
       switch (_selectedDestination) {
@@ -159,6 +187,12 @@ class _BillingAppState extends State<BillingApp> {
             drawer: drawer,
             companyProfileService: widget.companyProfileService,
           );
+        case AppDestination.backup:
+          return BackupScreen(
+            drawer: drawer,
+            driveBackupService:
+                widget.driveBackupService ?? const GoogleDriveBackupService(),
+          );
       }
     }
 
@@ -180,5 +214,61 @@ class _BillingAppState extends State<BillingApp> {
         ) ??
         false;
     return created;
+  }
+
+  Future<void> _checkLocalUsers() async {
+    final hasLocalUsers = widget.dependencies?.hasLocalUsers;
+    if (hasLocalUsers == null) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingLocalUsers = true;
+    });
+
+    final hasUsers = await hasLocalUsers();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _needsLocalFirstUserSetup = !hasUsers;
+      _isCheckingLocalUsers = false;
+    });
+  }
+
+  void _startLocalBackupSchedulingOnce() {
+    if (_didStartLocalBackupScheduling ||
+        widget.dependencies?.mode != DataMode.local) {
+      return;
+    }
+    _didStartLocalBackupScheduling = true;
+
+    final scheduler = _backupScheduler();
+    Future<void>.microtask(() async {
+      try {
+        await scheduler.registerPlatformSchedule();
+      } on Object {
+        // Backup scheduling must not block opening the local app shell.
+      }
+      try {
+        await scheduler.runCatchUpIfDue();
+      } on Object {
+        // Catch-up failures are recorded by the scheduler and should not block startup.
+      }
+    });
+  }
+
+  BackupScheduler _backupScheduler() {
+    final backupScheduler = widget.backupScheduler;
+    if (backupScheduler != null) {
+      return backupScheduler;
+    }
+
+    final driveBackupService =
+        widget.driveBackupService ?? const GoogleDriveBackupService();
+    return BackupScheduler(
+      settingsLoader: driveBackupService.loadSettings,
+      runBackup: driveBackupService.exportBackup,
+    );
   }
 }
