@@ -43,7 +43,7 @@ void main() {
     expect(storedSeller.isActive, isTrue);
   });
 
-  test('lists active sellers ordered by name and searches case-insensitively',
+  test('lists sellers ordered by name and searches case-insensitively',
       () async {
     final zeta = await sellersService.createSeller(
       _sellerInput(name: 'Zeta Traders', phone: '1111111111'),
@@ -62,12 +62,54 @@ void main() {
     final nameMatches = await sellersService.fetchSellers(search: 'zeta');
     final phoneMatches = await sellersService.fetchSellers(search: '2222');
 
-    expect(sellers.map((seller) => seller.id), <String>[alpha.id, zeta.id]);
+    expect(sellers.map((seller) => seller.id), <String>[
+      alpha.id,
+      inactive.id,
+      zeta.id,
+    ]);
     expect(nameMatches.map((seller) => seller.id), <String>[zeta.id]);
     expect(phoneMatches.map((seller) => seller.id), <String>[alpha.id]);
   });
 
-  test('rejects duplicate sellers by name and phone', () async {
+  test('unfiltered seller list includes inactive sellers seeded through Drift',
+      () async {
+    final active = await sellersService.createSeller(
+      _sellerInput(name: 'Active Stores', phone: '1111111111'),
+    );
+    await _seedSeller(
+      database,
+      id: 'inactive-seller',
+      name: 'Inactive Stores',
+      phone: '2222222222',
+      isActive: false,
+    );
+
+    final sellers = await sellersService.fetchSellers();
+
+    expect(sellers.map((seller) => seller.id), <String>[
+      active.id,
+      'inactive-seller',
+    ]);
+    expect(sellers.map((seller) => seller.isActive), <bool>[true, false]);
+  });
+
+  test('allows duplicate seller names when phone is omitted', () async {
+    final first = await sellersService.createSeller(
+      _sellerInput(phone: null, address: 'First address'),
+    );
+    final second = await sellersService.createSeller(
+      _sellerInput(phone: null, address: 'Second address'),
+    );
+
+    expect(first.name, 'Acme Stores');
+    expect(first.phone, isNull);
+    expect(second.name, 'Acme Stores');
+    expect(second.phone, isNull);
+    expect(await database.select(database.sellers).get(), hasLength(2));
+  });
+
+  test('rejects duplicate sellers by same name and same non-null phone',
+      () async {
     await sellersService.createSeller(_sellerInput());
 
     await expectLater(
@@ -276,7 +318,7 @@ void main() {
 CreateSellerInput _sellerInput({
   String name = 'Acme Stores',
   String address = '1 Market Road',
-  String phone = '9999999999',
+  String? phone = '9999999999',
   String gstin = '27ABCDE1234F1Z5',
   String state = 'Maharashtra',
   String stateCode = '27',
@@ -308,6 +350,26 @@ Future<void> _seedLocalUser(LocalDatabase database) {
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
           displayName: const Value('System'),
+        ),
+      );
+}
+
+Future<void> _seedSeller(
+  LocalDatabase database, {
+  required String id,
+  required String name,
+  required String? phone,
+  required bool isActive,
+}) {
+  return database.into(database.sellers).insert(
+        SellersCompanion.insert(
+          id: id,
+          name: name,
+          address: 'Seeded address',
+          phone: Value(phone),
+          isActive: Value(isActive),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         ),
       );
 }
