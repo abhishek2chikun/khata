@@ -1,6 +1,7 @@
 # Internal Billing and Khata System
 
-Flutter + FastAPI + PostgreSQL internal billing system.
+Flutter + FastAPI + PostgreSQL internal billing system with an optional
+offline-first Flutter local mode backed by Drift/SQLite.
 
 Implementation is tracked in:
 
@@ -123,6 +124,61 @@ If login fails, make sure you already created the bootstrap user with the comman
 
 If you get `{"detail":"Not Found"}` from `/auth/login`, you are hitting the wrong server. Verify the process with `lsof -iTCP:8010 -sTCP:LISTEN -n -P` and restart the FastAPI app from this repo.
 
+## Run In API Mode
+
+API mode is the default Flutter data mode. It uses the FastAPI backend for auth,
+products, sellers, payments, company profile, invoices, and ledger data.
+
+```bash
+(cd mobile && flutter pub get)
+(cd mobile && flutter run -d <device-id>)
+```
+
+You can also make the mode explicit:
+
+```bash
+(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=api)
+```
+
+Pin a specific backend URL when auto-detection is not enough:
+
+```bash
+(cd mobile && flutter run -d <device-id> \
+  --dart-define=DATA_MODE=api \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8010/)
+```
+
+For a USB-connected Android device using `adb reverse`, use:
+
+```bash
+adb reverse tcp:8010 tcp:8010
+(cd mobile && flutter run -d <device-id> \
+  --dart-define=DATA_MODE=api \
+  --dart-define=API_BASE_URL=http://localhost:8010/)
+```
+
+## Run In Local Mode
+
+Local mode runs without the FastAPI backend or PostgreSQL. It stores business
+data in the device-local Drift/SQLite database and uses the same screen/service
+boundaries as API mode.
+
+```bash
+(cd mobile && flutter pub get)
+(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=local)
+```
+
+On a fresh local database, the app shows `Set up local user` before login.
+Create the first local account there, then log in with that username and
+password. After login, local mode exposes the same core flows for products,
+sellers, payments, company profile, invoices, and ledger history without a
+backend process.
+
+The local schema is intentionally backend-aligned for future server migration:
+local tables keep stable IDs, request IDs/request hashes, invoice numbers,
+ledger transactions, stock movements, user references, and decimal values as
+string payloads so exported data can be mapped to the Postgres/API model later.
+
 ## Run The Flutter App
 
 Install Dart and Flutter dependencies from the Flutter project root, then launch the mobile app:
@@ -146,6 +202,41 @@ For a USB-connected Android device using `adb reverse`, use:
 adb reverse tcp:8010 tcp:8010
 (cd mobile && flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:8010/)
 ```
+
+## Local Backup, Restore, And Drive Plumbing
+
+Local mode adds a `Backup & Restore` drawer destination. The backup package is
+an encrypted JSON envelope using AES-256-GCM and PBKDF2-HMAC-SHA256. The
+decrypted payload contains `schema_version`, `backend_compatibility_version`,
+`exported_at`, and table payloads for local users, products, sellers, company
+profiles, invoices, invoice items, stock movements, seller transactions, backup
+settings, and backup events.
+
+Backup/restore behavior:
+
+- `Export backup` asks the configured backup service to create an encrypted
+  backup package.
+- `Import backup` asks the configured backup service to restore an encrypted
+  backup package.
+- Restore validates backup schema version, backend compatibility version, and
+  required tables before replacing local data in a transaction.
+
+Automatic backup behavior:
+
+- Local mode stores backup settings in `backup_settings`.
+- Automatic backups are off by default and default to `00:00` when enabled.
+- `BackupScheduler` can run a catch-up backup on app launch when a scheduled
+  backup was missed, and records failures to `backup_events`.
+- Platform background scheduling is represented by `BackupScheduleAdapter` and
+  currently requires platform task configuration before it can run outside app
+  launch.
+
+Google Drive backup note: the repository currently provides the
+`DriveBackupService` interface, local settings persistence, scheduler plumbing,
+Backup/Restore UI, and a Google Drive service skeleton. Real Google Drive OAuth,
+Drive file selection, and upload/download require external Google Cloud,
+Firebase, app signing, consent screen, and runtime configuration that must not be
+committed to this repository.
 
 ## Run Tests
 
@@ -179,4 +270,10 @@ Run the mobile test suite:
 
 ```bash
 (cd mobile && flutter test test)
+```
+
+For the full expanded mobile suite used by the offline-first local mode plan:
+
+```bash
+(cd mobile && flutter test test -r expanded)
 ```
