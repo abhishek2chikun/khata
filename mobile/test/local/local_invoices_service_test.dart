@@ -193,39 +193,135 @@ void main() {
     expect(transactions.last.notes, 'Cancel invoice 1');
   });
 
-  test('does not write ledger rows for cash invoices', () async {
+  test('repeat cancellation does not duplicate reversal side effects',
+      () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(seller: seller, product: product, quantity: 2),
+      requestId: _uuid(6),
+    );
+    await invoicesService.cancelInvoice(
+      invoiceId: result.invoice.id,
+      reason: 'Customer returned goods',
+    );
+
+    await expectLater(
+      () => invoicesService.cancelInvoice(
+        invoiceId: result.invoice.id,
+        reason: 'Customer returned goods',
+      ),
+      throwsA(_apiError(code: 'INVOICE_ALREADY_CANCELED', statusCode: 409)),
+    );
+
+    expect(await database.select(database.stockMovements).get(), hasLength(2));
+    expect(
+        await database.select(database.sellerTransactions).get(), hasLength(2));
+    expect(
+        (await database.select(database.products).getSingle()).quantityOnHand,
+        '5');
+  });
+
+  test('does not write ledger rows for paid invoices', () async {
     await invoicesService.createInvoice(
       draft: _draft(
         seller: seller,
         product: product,
         quantity: 1,
-        paymentMode: 'CASH',
+        paymentMode: 'PAID',
       ),
-      requestId: _uuid(6),
+      requestId: _uuid(7),
     );
 
     expect(await database.select(database.sellerTransactions).get(), isEmpty);
   });
+
+  test('rejects unsupported payment modes', () async {
+    await expectLater(
+      () => invoicesService.createInvoice(
+        draft: _draft(
+          seller: seller,
+          product: product,
+          quantity: 1,
+          paymentMode: 'CASH',
+        ),
+        requestId: _uuid(8),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
+
+  test('rejects company state and state code mismatch for quote and create',
+      () async {
+    await companyService.upsertCompanyProfile(
+      _companyInput(state: 'Delhi', stateCode: '27'),
+    );
+    final draft = _draft(seller: seller, product: product, quantity: 1);
+
+    await expectLater(
+      () => invoicesService.quoteInvoice(draft),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    await expectLater(
+      () => invoicesService.createInvoice(draft: draft, requestId: _uuid(9)),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
+
+  test('rejects seller state and state code mismatch for quote and create',
+      () async {
+    final mismatchedSeller = await sellersService.createSeller(
+      _sellerInput(
+        name: 'Mismatch Stores',
+        phone: '8888888888',
+        state: 'Delhi',
+        stateCode: '27',
+      ),
+    );
+    final draft = _draft(
+      seller: mismatchedSeller,
+      product: product,
+      quantity: 1,
+    );
+
+    await expectLater(
+      () => invoicesService.quoteInvoice(draft),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    await expectLater(
+      () => invoicesService.createInvoice(draft: draft, requestId: _uuid(10)),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
 }
 
-UpsertCompanyProfileInput _companyInput() {
-  return const UpsertCompanyProfileInput(
+UpsertCompanyProfileInput _companyInput({
+  String state = 'Maharashtra',
+  String stateCode = '27',
+}) {
+  return UpsertCompanyProfileInput(
     name: 'Khata Traders',
     address: '10 Market Road',
     city: 'Mumbai',
-    state: 'Maharashtra',
-    stateCode: '27',
+    state: state,
+    stateCode: stateCode,
   );
 }
 
-CreateSellerInput _sellerInput() {
-  return const CreateSellerInput(
-    name: 'Acme Stores',
+CreateSellerInput _sellerInput({
+  String name = 'Acme Stores',
+  String phone = '9999999999',
+  String state = 'Maharashtra',
+  String stateCode = '27',
+}) {
+  return CreateSellerInput(
+    name: name,
     address: '1 Market Road',
-    phone: '9999999999',
+    phone: phone,
     gstin: '27ABCDE1234F1Z5',
-    state: 'Maharashtra',
-    stateCode: '27',
+    state: state,
+    stateCode: stateCode,
   );
 }
 
