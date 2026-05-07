@@ -12,7 +12,7 @@
 
 ## File Structure
 
-- Modify `mobile/pubspec.yaml`: add Drift, SQLite, build runner, crypto, file picker/share, path provider, background scheduling, and Google sign-in/Drive dependencies.
+- Modify `mobile/pubspec.yaml`: add Drift, SQLite, build runner, crypto, path provider, and encryption dependencies needed by the delivered local storage and backup core. File picker/share, Workmanager-style scheduling, and Google sign-in/Drive packages remain future production integration work behind the interfaces/skeletons added in this branch.
 - Create `mobile/lib/app/app_mode.dart`: parse `DATA_MODE` and expose `DataMode.api` / `DataMode.local`.
 - Create `mobile/lib/app/app_dependencies.dart`: compose auth, product, seller, payment, invoice, company profile, and backup dependencies for API/local modes.
 - Modify `mobile/lib/main.dart`: use the new dependency container instead of constructing API services inline.
