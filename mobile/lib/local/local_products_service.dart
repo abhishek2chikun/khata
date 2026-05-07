@@ -184,8 +184,7 @@ class LocalProductsService implements ProductsService {
                     product.category.equals(category) &
                     product.itemName.equals(itemName) |
                 product.itemCode.equals(itemCode),
-          )
-          ..where((product) => product.isActive.equals(true)))
+          ))
         .get();
     return duplicate.any((product) => product.id != excludeId);
   }

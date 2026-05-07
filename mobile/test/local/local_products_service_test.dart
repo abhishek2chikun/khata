@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:internal_billing_khata_mobile/local/local_database.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
@@ -171,6 +172,66 @@ void main() {
     );
     expect(await database.select(database.products).get(), hasLength(1));
   });
+
+  test('maps inactive duplicate create conflicts to duplicate product error',
+      () async {
+    await _seedInactiveProduct(database);
+
+    await expectLater(
+      () => service.createProduct(_createProductInput(itemCode: 'PEN-2')),
+      throwsA(_duplicateProductError()),
+    );
+    await expectLater(
+      () => service.createProduct(
+        _createProductInput(itemName: 'Black Pen', itemCode: 'PEN-1'),
+      ),
+      throwsA(_duplicateProductError()),
+    );
+  });
+
+  test('maps inactive duplicate update conflicts to duplicate product error',
+      () async {
+    await _seedInactiveProduct(database);
+    final product = await service.createProduct(
+      _createProductInput(
+        company: 'Globex',
+        category: 'Markers',
+        itemName: 'Marker',
+        itemCode: 'MRK-1',
+      ),
+    );
+
+    await expectLater(
+      () => service.updateProduct(
+        id: product.id,
+        input: const UpdateProductInput(
+          company: 'Acme',
+          category: 'Pens',
+          itemName: 'Blue Pen',
+          itemCode: 'MRK-2',
+          defaultSellingPriceExclTax: 10,
+          defaultGstRate: 18,
+          lowStockThreshold: 2,
+        ),
+      ),
+      throwsA(_duplicateProductError()),
+    );
+    await expectLater(
+      () => service.updateProduct(
+        id: product.id,
+        input: const UpdateProductInput(
+          company: 'Globex',
+          category: 'Markers',
+          itemName: 'Marker',
+          itemCode: 'PEN-1',
+          defaultSellingPriceExclTax: 10,
+          defaultGstRate: 18,
+          lowStockThreshold: 2,
+        ),
+      ),
+      throwsA(_duplicateProductError()),
+    );
+  });
 }
 
 CreateProductInput _createProductInput({
@@ -199,4 +260,23 @@ Matcher _duplicateProductError() {
   return isA<ApiError>()
       .having((error) => error.code, 'code', 'DUPLICATE_PRODUCT')
       .having((error) => error.statusCode, 'statusCode', 409);
+}
+
+Future<void> _seedInactiveProduct(LocalDatabase database) {
+  return database.into(database.products).insert(
+        ProductsCompanion.insert(
+          id: 'inactive-product',
+          company: 'Acme',
+          category: 'Pens',
+          itemName: 'Blue Pen',
+          itemCode: 'PEN-1',
+          defaultSellingPriceExclTax: '10',
+          defaultGstRate: '18',
+          quantityOnHand: '0',
+          lowStockThreshold: '2',
+          isActive: const Value(false),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        ),
+      );
 }
