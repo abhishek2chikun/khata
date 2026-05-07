@@ -67,7 +67,6 @@ class LocalSellersService implements SellersService {
   @override
   Future<List<seller_model.Seller>> fetchSellers({String search = ''}) async {
     final query = _database.select(_database.sellers)
-      ..where((seller) => seller.isActive.equals(true))
       ..orderBy([
         (seller) => OrderingTerm.asc(seller.name),
       ]);
@@ -116,13 +115,12 @@ class LocalSellersService implements SellersService {
   }
 
   Future<bool> _hasDuplicate({required String name, String? phone}) async {
+    if (phone == null) {
+      return false;
+    }
     final duplicates = await (_database.select(_database.sellers)
           ..where(
-            (seller) =>
-                seller.name.equals(name) &
-                (phone == null
-                    ? seller.phone.isNull()
-                    : seller.phone.equals(phone)),
+            (seller) => seller.name.equals(name) & seller.phone.equals(phone),
           ))
         .get();
     return duplicates.isNotEmpty;
