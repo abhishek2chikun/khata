@@ -109,14 +109,20 @@ stay compatible with backend DTOs and Postgres migration scripts.
 
 ## Backup and Drive configuration
 
-Local mode exposes `Backup & Restore` in the drawer. The core backup service can
-export/import encrypted packages containing local table payloads. Import rejects
-unsupported schema or backend compatibility versions and missing required tables.
+Local mode exposes `Backup & Restore` in the drawer. The core backup service
+(`LocalBackupService`) can export/import encrypted packages containing local
+table payloads. The current UI is wired to the Drive backup interface; until a
+configured Drive/file implementation is supplied, export/import actions show a
+configuration-required message. Import rejects unsupported schema or backend
+compatibility versions and missing required tables.
 
 Automatic backup settings are stored locally. `BackupScheduler` handles daily
-due/missed-backup decisions and catch-up on app launch. Platform background
-execution is behind `BackupScheduleAdapter`; real background tasks require
-Android/iOS scheduling setup outside the current skeleton.
+due/missed-backup decisions and catch-up checks on app launch. In current repo
+wiring, automatic backup attempts call the Drive backup skeleton and record a
+configuration-required failure until a real Drive/file export implementation is
+provided. Platform background execution is behind `BackupScheduleAdapter`; real
+background tasks require Android/iOS scheduling setup outside the current
+skeleton.
 
 Google Drive integration is currently plumbing only: `DriveBackupService`, local
 settings persistence, scheduler wiring, UI actions, and a Google Drive service
@@ -128,26 +134,26 @@ and production secrets must be configured outside this repository.
 
 ```bash
 # Install dependencies
-(cd /Users/abhishek/python_venv/khata_app/mobile && flutter pub get)
+(cd mobile && flutter pub get)
 
 # Run on Android emulator against the current backend port
-(cd /Users/abhishek/python_venv/khata_app/mobile && \
+(cd mobile && \
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:8010/)
 
 # Run local mode without API/backend
-(cd /Users/abhishek/python_venv/khata_app/mobile && \
+(cd mobile && \
   flutter run -d emulator-5554 --dart-define=DATA_MODE=local)
 
 # Run using adb reverse instead
 adb reverse tcp:8010 tcp:8010
-(cd /Users/abhishek/python_venv/khata_app/mobile && \
+(cd mobile && \
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://localhost:8010/)
 
 # Run mobile tests
-(cd /Users/abhishek/python_venv/khata_app/mobile && flutter test test)
+(cd mobile && flutter test test)
 
 # Run full expanded mobile tests
-(cd /Users/abhishek/python_venv/khata_app/mobile && flutter test test -r expanded)
+(cd mobile && flutter test test -r expanded)
 ```
 
 ## Progress
