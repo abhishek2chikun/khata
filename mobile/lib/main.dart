@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'auth/auth_controller.dart';
 import 'app/app_dependencies.dart';
 import 'app/app_mode.dart';
+import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
 import 'models/seller.dart';
@@ -44,6 +45,7 @@ class BillingApp extends StatefulWidget {
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
     DriveBackupService? driveBackupService,
+    BackupScheduler? backupScheduler,
   })  : dependencies = dependencies,
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
@@ -52,7 +54,8 @@ class BillingApp extends StatefulWidget {
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
         invoicesService = invoicesService ?? dependencies!.invoicesService,
-        driveBackupService = driveBackupService;
+        driveBackupService = driveBackupService,
+        backupScheduler = backupScheduler;
 
   final AppDependencies? dependencies;
   final AuthController controller;
@@ -62,6 +65,7 @@ class BillingApp extends StatefulWidget {
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
   final DriveBackupService? driveBackupService;
+  final BackupScheduler? backupScheduler;
 
   @override
   State<BillingApp> createState() => _BillingAppState();
@@ -71,6 +75,7 @@ class _BillingAppState extends State<BillingApp> {
   AppDestination _selectedDestination = AppDestination.inventory;
   bool _isCheckingLocalUsers = false;
   bool _needsLocalFirstUserSetup = false;
+  bool _didStartLocalBackupScheduling = false;
 
   @override
   void initState() {
@@ -123,6 +128,8 @@ class _BillingAppState extends State<BillingApp> {
     }
 
     if (widget.controller.isAuthenticated) {
+      _startLocalBackupSchedulingOnce();
+
       final drawer = AppNavigationDrawer(
         selected: _selectedDestination,
         onSelect: (destination) {
@@ -226,5 +233,37 @@ class _BillingAppState extends State<BillingApp> {
       _needsLocalFirstUserSetup = !hasUsers;
       _isCheckingLocalUsers = false;
     });
+  }
+
+  void _startLocalBackupSchedulingOnce() {
+    if (_didStartLocalBackupScheduling ||
+        widget.dependencies?.mode != DataMode.local) {
+      return;
+    }
+    _didStartLocalBackupScheduling = true;
+
+    final scheduler = _backupScheduler();
+    Future<void>.microtask(() async {
+      try {
+        await scheduler.registerPlatformSchedule();
+        await scheduler.runCatchUpIfDue();
+      } on Object {
+        // Backup scheduling must not block opening the local app shell.
+      }
+    });
+  }
+
+  BackupScheduler _backupScheduler() {
+    final backupScheduler = widget.backupScheduler;
+    if (backupScheduler != null) {
+      return backupScheduler;
+    }
+
+    final driveBackupService =
+        widget.driveBackupService ?? const GoogleDriveBackupService();
+    return BackupScheduler(
+      settingsLoader: driveBackupService.loadSettings,
+      runBackup: driveBackupService.exportBackup,
+    );
   }
 }

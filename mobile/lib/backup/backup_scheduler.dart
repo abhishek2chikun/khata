@@ -38,15 +38,43 @@ class BackupScheduleSettings {
   final DateTime? lastBackupAt;
 }
 
+abstract class BackupScheduleAdapter {
+  Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime);
+}
+
+class UnsupportedBackupScheduleAdapter implements BackupScheduleAdapter {
+  const UnsupportedBackupScheduleAdapter();
+
+  @override
+  Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime) {
+    throw const BackupSchedulingUnsupportedException(
+      'Background backup scheduling requires platform task configuration.',
+    );
+  }
+}
+
+class BackupSchedulingUnsupportedException implements Exception {
+  const BackupSchedulingUnsupportedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'BackupSchedulingUnsupportedException: $message';
+}
+
 class BackupScheduler {
   BackupScheduler({
     required Future<BackupScheduleSettings> Function() settingsLoader,
     required Future<void> Function() runBackup,
+    BackupScheduleAdapter scheduleAdapter =
+        const UnsupportedBackupScheduleAdapter(),
   })  : _settingsLoader = settingsLoader,
-        _runBackup = runBackup;
+        _runBackup = runBackup,
+        _scheduleAdapter = scheduleAdapter;
 
   final Future<BackupScheduleSettings> Function() _settingsLoader;
   final Future<void> Function() _runBackup;
+  final BackupScheduleAdapter _scheduleAdapter;
 
   static DateTime nextDueBackup({
     required DateTime now,
@@ -96,6 +124,10 @@ class BackupScheduler {
   }
 
   Future<void> registerPlatformSchedule() async {
-    // Platform background registration will be added with real Drive support.
+    final settings = await _settingsLoader();
+    if (!settings.automaticBackupsEnabled) {
+      return;
+    }
+    await _scheduleAdapter.registerDailyBackup(settings.dailyBackupTime);
   }
 }
