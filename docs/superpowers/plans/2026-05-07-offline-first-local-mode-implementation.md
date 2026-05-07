@@ -6,7 +6,7 @@
 
 **Architecture:** Preserve current screen/service boundaries. Add a dependency composition layer that chooses API or local services. Local services use Drift transactions and domain rules ported from the backend while keeping database schema fields compatible with future Postgres migration.
 
-**Tech Stack:** Flutter, Dart, Drift, SQLite, cryptography, file picker/share integrations, Workmanager-style scheduled background tasks, existing ChangeNotifier service interfaces.
+**Tech Stack:** Flutter, Dart, Drift, SQLite, cryptography, backup UI/scheduler and Drive integration interfaces/skeletons, existing ChangeNotifier service interfaces. Production file picker/share integrations, Workmanager-style background scheduling, and Google sign-in/Drive dependencies are external/future integration work rather than delivered dependencies in this branch.
 
 ---
 
