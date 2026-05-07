@@ -108,6 +108,75 @@ void main() {
     expect(storedInvoice.companyStateCode, '27');
   });
 
+  test('accumulates stock reduction for duplicate product lines', () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draftWithItems(
+        seller: seller,
+        items: <InvoiceDraftItem>[
+          InvoiceDraftItem(
+            product: product,
+            quantity: 1.5,
+            pricingMode: 'PRE_TAX',
+            unitPrice: 100,
+            gstRate: 18,
+          ),
+          InvoiceDraftItem(
+            product: product,
+            quantity: 2,
+            pricingMode: 'PRE_TAX',
+            unitPrice: 100,
+            gstRate: 18,
+          ),
+        ],
+      ),
+      requestId: _uuid(12),
+    );
+
+    expect(result.invoice.items, hasLength(2));
+    expect(result.invoice.items.map((item) => item.quantity), <double>[1.5, 2]);
+    expect(
+        (await database.select(database.products).getSingle()).quantityOnHand,
+        '1.5');
+    expect(await database.select(database.invoiceItems).get(), hasLength(2));
+    expect(await database.select(database.stockMovements).get(), hasLength(2));
+  });
+
+  test('cancellation restores combined stock for duplicate product lines',
+      () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draftWithItems(
+        seller: seller,
+        items: <InvoiceDraftItem>[
+          InvoiceDraftItem(
+            product: product,
+            quantity: 1.5,
+            pricingMode: 'PRE_TAX',
+            unitPrice: 100,
+            gstRate: 18,
+          ),
+          InvoiceDraftItem(
+            product: product,
+            quantity: 2,
+            pricingMode: 'PRE_TAX',
+            unitPrice: 100,
+            gstRate: 18,
+          ),
+        ],
+      ),
+      requestId: _uuid(13),
+    );
+
+    await invoicesService.cancelInvoice(
+      invoiceId: result.invoice.id,
+      reason: 'Duplicate-line return',
+    );
+
+    expect(
+        (await database.select(database.products).getSingle()).quantityOnHand,
+        '5');
+    expect(await database.select(database.stockMovements).get(), hasLength(4));
+  });
+
   test('returns idempotent create result and rejects request ID conflicts',
       () async {
     final draft = _draft(seller: seller, product: product, quantity: 1);
@@ -386,7 +455,7 @@ InvoiceDraft _draft({
   double discountPercent = 0,
   String? placeOfSupplyStateCode,
 }) {
-  return InvoiceDraft(
+  return _draftWithItems(
     seller: seller,
     invoiceDate: '2026-01-10',
     paymentMode: paymentMode,
@@ -401,6 +470,22 @@ InvoiceDraft _draft({
         discountPercent: discountPercent,
       ),
     ],
+  );
+}
+
+InvoiceDraft _draftWithItems({
+  required Seller seller,
+  required List<InvoiceDraftItem> items,
+  String invoiceDate = '2026-01-10',
+  String paymentMode = 'CREDIT',
+  String? placeOfSupplyStateCode,
+}) {
+  return InvoiceDraft(
+    seller: seller,
+    invoiceDate: invoiceDate,
+    paymentMode: paymentMode,
+    placeOfSupplyStateCode: placeOfSupplyStateCode,
+    items: items,
   );
 }
 
