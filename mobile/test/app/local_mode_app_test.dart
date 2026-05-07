@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
+import 'package:internal_billing_khata_mobile/app/app_mode.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
-import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
-import 'package:internal_billing_khata_mobile/app/app_mode.dart';
+import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart'
     hide CompanyProfile, Product, Seller;
 import 'package:internal_billing_khata_mobile/main.dart';
@@ -86,6 +87,130 @@ void main() {
 
     expect(disposed, isTrue);
   });
+
+  testWidgets(
+      'local mode runs backup catch-up once after authenticated startup',
+      (tester) async {
+    final scheduler = _FakeBackupScheduler();
+    final dependencies = AppDependencies(
+      mode: DataMode.local,
+      controller: AuthController(
+        authService: _AuthenticatedAuthService(),
+        sessionStore: _AuthenticatedSessionStore(),
+      ),
+      productsService: _FakeProductsService(),
+      sellersService: _FakeSellersService(),
+      companyProfileService: _FakeCompanyProfileService(),
+      paymentsService: _FakePaymentsService(),
+      invoicesService: _FakeInvoicesService(),
+      hasLocalUsers: () async => true,
+    );
+
+    await tester.pumpWidget(
+      BillingApp(
+        dependencies: dependencies,
+        backupScheduler: scheduler,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scheduler.catchUpRuns, 1);
+    expect(scheduler.registerRuns, 1);
+  });
+
+  testWidgets('api mode does not run local backup scheduling', (tester) async {
+    final scheduler = _FakeBackupScheduler();
+    final dependencies = AppDependencies(
+      mode: DataMode.api,
+      controller: AuthController(
+        authService: _AuthenticatedAuthService(),
+        sessionStore: _AuthenticatedSessionStore(),
+      ),
+      productsService: _FakeProductsService(),
+      sellersService: _FakeSellersService(),
+      companyProfileService: _FakeCompanyProfileService(),
+      paymentsService: _FakePaymentsService(),
+      invoicesService: _FakeInvoicesService(),
+    );
+
+    await tester.pumpWidget(
+      BillingApp(
+        dependencies: dependencies,
+        backupScheduler: scheduler,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scheduler.catchUpRuns, 0);
+    expect(scheduler.registerRuns, 0);
+  });
+}
+
+class _FakeBackupScheduler implements BackupScheduler {
+  int catchUpRuns = 0;
+  int registerRuns = 0;
+
+  @override
+  Future<bool> runCatchUpIfDue({DateTime? now}) async {
+    catchUpRuns += 1;
+    return true;
+  }
+
+  @override
+  Future<void> registerPlatformSchedule() async {
+    registerRuns += 1;
+  }
+}
+
+class _AuthenticatedSessionStore implements SessionStore {
+  StoredSession? _session = const StoredSession(
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    tokenType: 'Bearer',
+  );
+
+  @override
+  Future<void> clearSession() async {
+    _session = null;
+  }
+
+  @override
+  Future<StoredSession?> readSession() async => _session;
+
+  @override
+  Future<void> writeSession(StoredSession session) async {
+    _session = session;
+  }
+}
+
+class _AuthenticatedAuthService implements AuthService {
+  @override
+  Future<AuthSessionTokens> login({
+    required String username,
+    required String password,
+  }) async {
+    return _tokens;
+  }
+
+  @override
+  Future<void> logout({required String refreshToken}) async {}
+
+  @override
+  Future<AuthUser> me({required String accessToken}) async {
+    return const AuthUser(
+        id: 'user-1', username: 'owner', displayName: 'Owner');
+  }
+
+  @override
+  Future<AuthSessionTokens> refresh({required String refreshToken}) async {
+    return _tokens;
+  }
+
+  static const _tokens = AuthSessionTokens(
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    tokenType: 'Bearer',
+  );
 }
 
 class _MemorySessionStore implements SessionStore {
@@ -137,9 +262,7 @@ class _FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<List<Product>> fetchProducts({ProductFilter? filter}) {
-    throw UnimplementedError();
-  }
+  Future<List<Product>> fetchProducts({ProductFilter? filter}) async => [];
 
   @override
   Future<Product> updateProduct({

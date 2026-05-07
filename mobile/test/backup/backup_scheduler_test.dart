@@ -97,4 +97,31 @@ void main() {
     expect(didRun, isTrue);
     expect(runs, 1);
   });
+
+  test('registers background scheduling intent with platform adapter',
+      () async {
+    final adapter = _RecordingBackupScheduleAdapter();
+    final scheduler = BackupScheduler(
+      settingsLoader: () async => const BackupScheduleSettings(
+        automaticBackupsEnabled: true,
+        dailyBackupTime: BackupTimeOfDay(hour: 1, minute: 30),
+      ),
+      runBackup: () async {},
+      scheduleAdapter: adapter,
+    );
+
+    await scheduler.registerPlatformSchedule();
+
+    expect(
+        adapter.registeredTimes, [const BackupTimeOfDay(hour: 1, minute: 30)]);
+  });
+}
+
+class _RecordingBackupScheduleAdapter implements BackupScheduleAdapter {
+  final registeredTimes = <BackupTimeOfDay>[];
+
+  @override
+  Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime) async {
+    registeredTimes.add(dailyBackupTime);
+  }
 }
