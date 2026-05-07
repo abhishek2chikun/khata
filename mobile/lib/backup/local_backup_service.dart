@@ -21,7 +21,6 @@ class LocalBackupService {
     'invoice_items',
     'stock_movements',
     'seller_transactions',
-    'local_sessions',
     'backup_settings',
     'backup_events',
   ];
@@ -72,6 +71,14 @@ class LocalBackupService {
         'Unsupported backup schema version ${payload.schemaVersion}',
       );
     }
+    if (payload.backendCompatibilityVersion !=
+        LocalBackupPayload.currentBackendCompatibilityVersion) {
+      throw UnsupportedBackupVersionException(
+        'Unsupported backend compatibility version '
+        '${payload.backendCompatibilityVersion}',
+      );
+    }
+    _validateRequiredTables(payload);
 
     await _database.transaction(() async {
       for (final tableName in _deleteOrder) {
@@ -84,6 +91,16 @@ class LocalBackupService {
         }
       }
     });
+  }
+
+  void _validateRequiredTables(LocalBackupPayload payload) {
+    for (final tableName in _tables) {
+      if (!payload.tables.containsKey(tableName)) {
+        throw InvalidBackupPayloadException(
+          'Backup payload is missing required table $tableName',
+        );
+      }
+    }
   }
 
   Future<void> _insertRow(String tableName, Map<String, Object?> row) {

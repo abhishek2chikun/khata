@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internal_billing_khata_mobile/backup/backup_crypto.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_models.dart';
 import 'package:internal_billing_khata_mobile/backup/local_backup_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
@@ -71,6 +74,114 @@ void main() {
     final products = await target.select(target.products).get();
     expect(products.single.id, 'target-product');
   });
+
+  test('rejects backend compatibility mismatches before replacing data',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        payload['backend_compatibility_version'] = 'future-local-v2';
+      },
+    );
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<UnsupportedBackupVersionException>()),
+    );
+
+    final products = await target.select(target.products).get();
+    expect(products.single.id, 'target-product');
+  });
+
+  test('rejects missing required table payloads before replacing data',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        final tables = payload['tables'] as Map<String, Object?>;
+        tables.remove('invoice_items');
+      },
+    );
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<InvalidBackupPayloadException>()),
+    );
+
+    final products = await target.select(target.products).get();
+    expect(products.single.id, 'target-product');
+  });
+
+  test('does not export sessions and clears existing sessions on import',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedLocalSession(source, id: 'source-session');
+    await _seedRoundTripData(target, productId: 'target-product');
+    await _seedLocalSession(target, id: 'target-session');
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+    final crypto = BackupCrypto();
+    final payload = LocalBackupPayload.decode(
+      await crypto.decrypt(package: package, password: 'backup-password'),
+    );
+
+    expect(payload.tables, isNot(contains('local_sessions')));
+
+    await LocalBackupService(database: target).importEncrypted(
+      package: package,
+      password: 'backup-password',
+    );
+
+    expect(await target.select(target.localSessions).get(), isEmpty);
+    expect((await target.select(target.products).get()).single.id,
+        'source-product');
+  });
+}
+
+Future<LocalBackupPackage> _tamperPayloadPackage({
+  required db.LocalDatabase database,
+  required String password,
+  required void Function(Map<String, Object?> payload) mutate,
+}) async {
+  final service = LocalBackupService(database: database);
+  final crypto = BackupCrypto();
+  final package = await service.exportEncrypted(password: password);
+  final payload = LocalBackupPayload.decode(
+    await crypto.decrypt(package: package, password: password),
+  ).toJson();
+  mutate(payload);
+  return crypto.encrypt(
+    payloadBytes: utf8.encode(jsonEncode(payload)),
+    password: password,
+  );
 }
 
 Future<void> _seedRoundTripData(
@@ -177,6 +288,21 @@ Future<void> _seedRoundTripData(
           sgstAmount: '11.1105',
           igstAmount: '0.0000',
           lineTotal: '145.6710',
+        ),
+      );
+}
+
+Future<void> _seedLocalSession(
+  db.LocalDatabase database, {
+  required String id,
+}) {
+  return database.into(database.localSessions).insert(
+        db.LocalSessionsCompanion.insert(
+          id: id,
+          localUserId: 'local-system-user',
+          sessionTokenHash: 'session-hash-$id',
+          refreshTokenHash: 'refresh-hash-$id',
+          createdAt: '2026-01-02T00:00:00.000Z',
         ),
       );
 }
