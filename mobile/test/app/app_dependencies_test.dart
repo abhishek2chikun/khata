@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
@@ -19,14 +21,22 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
 
 void main() {
+  final testApiBaseUri = Uri.parse('http://example.invalid/');
+
   test('API dependencies preserve api mode label', () async {
-    final dependencies = await AppDependencies.create(mode: DataMode.api);
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.api,
+      apiBaseUri: testApiBaseUri,
+    );
     expect(dependencies.mode, DataMode.api);
     await dependencies.dispose();
   });
 
   test('API dependencies use expected service types', () async {
-    final dependencies = await AppDependencies.create(mode: DataMode.api);
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.api,
+      apiBaseUri: testApiBaseUri,
+    );
 
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<ApiProductsService>());
@@ -35,6 +45,33 @@ void main() {
     expect(dependencies.paymentsService, isA<ApiPaymentsService>());
     expect(dependencies.invoicesService, isA<ApiInvoicesService>());
     await dependencies.dispose();
+  });
+
+  test('API dependencies close created http clients on dispose', () async {
+    HttpClient? authHttpClient;
+    HttpClient? apiHttpClient;
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.api,
+      apiBaseUri: testApiBaseUri,
+      onApiHttpClientsCreated: (authClient, apiClient) {
+        authHttpClient = authClient;
+        apiHttpClient = apiClient;
+      },
+    );
+
+    expect(authHttpClient, isNotNull);
+    expect(apiHttpClient, isNotNull);
+
+    await dependencies.dispose();
+
+    await expectLater(
+      _openUrl(authHttpClient!, testApiBaseUri),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(
+      _openUrl(apiHttpClient!, testApiBaseUri),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('local dependencies throw placeholder error', () {
@@ -51,7 +88,8 @@ void main() {
   });
 
   test('default dependencies resolve to api mode', () async {
-    final dependencies = await AppDependencies.create();
+    final dependencies =
+        await AppDependencies.create(apiBaseUri: testApiBaseUri);
     expect(dependencies.mode, DataMode.api);
     await dependencies.dispose();
   });
@@ -78,6 +116,10 @@ void main() {
 
     expect(disposed, isTrue);
   });
+}
+
+Future<void> _openUrl(HttpClient client, Uri uri) async {
+  await client.getUrl(uri);
 }
 
 class _FakeAuthService implements AuthService {

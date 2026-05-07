@@ -12,6 +12,11 @@ import '../services/products_service.dart';
 import '../services/sellers_service.dart';
 import 'app_mode.dart';
 
+typedef ApiHttpClientsCreated = void Function(
+  HttpClient authHttpClient,
+  HttpClient apiHttpClient,
+);
+
 class AppDependencies {
   AppDependencies({
     required this.mode,
@@ -33,19 +38,35 @@ class AppDependencies {
   final InvoicesService invoicesService;
   final Future<void> Function()? _dispose;
 
-  static Future<AppDependencies> create({DataMode? mode}) async {
+  static Future<AppDependencies> create({
+    DataMode? mode,
+    Uri? apiBaseUri,
+    ApiHttpClientsCreated? onApiHttpClientsCreated,
+  }) async {
     final resolvedMode = mode ?? resolveDataMode();
     switch (resolvedMode) {
       case DataMode.api:
-        return _createApiDependencies();
+        return _createApiDependencies(
+          apiBaseUri: apiBaseUri,
+          onApiHttpClientsCreated: onApiHttpClientsCreated,
+        );
       case DataMode.local:
         throw UnimplementedError('Local data mode is added in a later task');
     }
   }
 
-  static Future<AppDependencies> _createApiDependencies() async {
-    final baseUri = await resolveApiBaseUri();
-    final authService = HttpAuthService(baseUri: baseUri);
+  static Future<AppDependencies> _createApiDependencies({
+    Uri? apiBaseUri,
+    ApiHttpClientsCreated? onApiHttpClientsCreated,
+  }) async {
+    final baseUri = apiBaseUri ?? await resolveApiBaseUri();
+    final authHttpClient = HttpClient();
+    final apiHttpClient = HttpClient();
+    onApiHttpClientsCreated?.call(authHttpClient, apiHttpClient);
+    final authService = HttpAuthService(
+      baseUri: baseUri,
+      httpClient: authHttpClient,
+    );
     final sessionStore = SecureSessionStore();
     final controller = AuthController(
       authService: authService,
@@ -53,7 +74,7 @@ class AppDependencies {
     );
     final apiClient = ApiClient(
       baseUri: baseUri,
-      httpClient: HttpClient(),
+      httpClient: apiHttpClient,
       authService: authService,
       sessionStore: sessionStore,
       onAuthorizationFailed: controller.logout,
@@ -66,6 +87,10 @@ class AppDependencies {
       companyProfileService: ApiCompanyProfileService(apiClient: apiClient),
       paymentsService: ApiPaymentsService(apiClient: apiClient),
       invoicesService: ApiInvoicesService(apiClient: apiClient),
+      dispose: () async {
+        authHttpClient.close(force: true);
+        apiHttpClient.close(force: true);
+      },
     );
   }
 
