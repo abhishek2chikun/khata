@@ -6,7 +6,9 @@ import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
+import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
+import 'package:internal_billing_khata_mobile/local/local_sellers_service.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
@@ -75,12 +77,15 @@ void main() {
     );
   });
 
-  test('local dependencies create local auth and products service', () async {
+  test('local dependencies create local auth and local data services',
+      () async {
     final dependencies = await AppDependencies.create(mode: DataMode.local);
 
     expect(dependencies.mode, DataMode.local);
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<LocalProductsService>());
+    expect(dependencies.sellersService, isA<LocalSellersService>());
+    expect(dependencies.paymentsService, isA<LocalPaymentsService>());
     await dependencies.dispose();
   });
 
