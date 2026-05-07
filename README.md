@@ -214,10 +214,11 @@ settings, and backup events.
 
 Backup/restore behavior:
 
-- `Export backup` asks the configured backup service to create an encrypted
-  backup package.
-- `Import backup` asks the configured backup service to restore an encrypted
-  backup package.
+- The backup core (`LocalBackupService`) can export and import encrypted backup
+  packages for local table data.
+- The current `Backup & Restore` UI is wired to the Drive backup interface. Until
+  a configured Drive/file implementation is supplied, its export/import actions
+  show a configuration-required message instead of writing or reading files.
 - Restore validates backup schema version, backend compatibility version, and
   required tables before replacing local data in a transaction.
 
@@ -225,8 +226,11 @@ Automatic backup behavior:
 
 - Local mode stores backup settings in `backup_settings`.
 - Automatic backups are off by default and default to `00:00` when enabled.
-- `BackupScheduler` can run a catch-up backup on app launch when a scheduled
-  backup was missed, and records failures to `backup_events`.
+- `BackupScheduler` can detect a missed scheduled backup on app launch and records
+  failures to `backup_events`.
+- In the current repository wiring, automatic backup attempts call the Drive
+  backup skeleton and fail with a configuration-required event until a real
+  Drive/file export implementation is provided.
 - Platform background scheduling is represented by `BackupScheduleAdapter` and
   currently requires platform task configuration before it can run outside app
   launch.
