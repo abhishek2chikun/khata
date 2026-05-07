@@ -43,7 +43,9 @@ void main() {
     expect(storedProduct.buyingGstRate, isNull);
   });
 
-  test('lists active products ordered by item name', () async {
+  test(
+      'unfiltered list includes active and inactive products ordered by item name',
+      () async {
     final marker = await service.createProduct(
       _createProductInput(itemName: 'Marker', itemCode: 'MRK-1'),
     );
@@ -56,7 +58,32 @@ void main() {
 
     final products = await service.fetchProducts();
 
-    expect(products.map((product) => product.id), <String>[pen.id]);
+    expect(products.map((product) => product.id), <String>[pen.id, marker.id]);
+    expect(products.map((product) => product.isActive), <bool>[true, false]);
+  });
+
+  test('active filter returns active or inactive products when provided',
+      () async {
+    final inactive = await service.createProduct(
+      _createProductInput(itemName: 'Marker', itemCode: 'MRK-1'),
+    );
+    final active = await service.createProduct(
+      _createProductInput(itemName: 'Blue Pen', itemCode: 'PEN-1'),
+    );
+    await database.customStatement(
+      "UPDATE products SET is_active = 0 WHERE id = '${inactive.id}'",
+    );
+
+    final activeProducts = await service.fetchProducts(
+      filter: const ProductFilter(active: true),
+    );
+    final inactiveProducts = await service.fetchProducts(
+      filter: const ProductFilter(active: false),
+    );
+
+    expect(activeProducts.map((product) => product.id), <String>[active.id]);
+    expect(
+        inactiveProducts.map((product) => product.id), <String>[inactive.id]);
   });
 
   test('searches active products by item name and item code case-insensitively',
@@ -155,6 +182,42 @@ void main() {
     expect(storedProduct.defaultGstRate, '12');
     expect(storedProduct.quantityOnHand, '3.25');
     expect(storedProduct.lowStockThreshold, '4');
+  });
+
+  test('updates inactive products by id without changing quantity on hand',
+      () async {
+    await _seedInactiveProduct(database);
+
+    final updated = await service.updateProduct(
+      id: 'inactive-product',
+      input: const UpdateProductInput(
+        company: 'Acme Updated',
+        category: 'Markers',
+        itemName: 'Permanent Marker',
+        itemCode: 'MRK-1',
+        defaultSellingPriceExclTax: 22.75,
+        defaultGstRate: 12,
+        lowStockThreshold: 4,
+      ),
+    );
+
+    expect(updated.id, 'inactive-product');
+    expect(updated.company, 'Acme Updated');
+    expect(updated.category, 'Markers');
+    expect(updated.itemName, 'Permanent Marker');
+    expect(updated.itemCode, 'MRK-1');
+    expect(updated.defaultSellingPriceExclTax, 22.75);
+    expect(updated.defaultGstRate, 12);
+    expect(updated.quantityOnHand, 0);
+    expect(updated.lowStockThreshold, 4);
+    expect(updated.isActive, isFalse);
+
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.defaultSellingPriceExclTax, '22.75');
+    expect(storedProduct.defaultGstRate, '12');
+    expect(storedProduct.quantityOnHand, '0');
+    expect(storedProduct.lowStockThreshold, '4');
+    expect(storedProduct.isActive, isFalse);
   });
 
   test('rejects duplicate product identity and duplicate item code', () async {
