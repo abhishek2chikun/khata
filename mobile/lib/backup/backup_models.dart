@@ -130,3 +130,12 @@ class BackupDecryptionException implements Exception {
   @override
   String toString() => 'BackupDecryptionException: $message';
 }
+
+class InvalidBackupPayloadException implements Exception {
+  const InvalidBackupPayloadException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'InvalidBackupPayloadException: $message';
+}

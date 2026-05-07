@@ -54,20 +54,18 @@ class BackupCrypto {
     required LocalBackupPackage package,
     required String password,
   }) async {
-    _validatePackage(package);
-    final salt = base64Decode(package.salt);
-    final nonce = base64Decode(package.nonce);
+    final header = _validatePackage(package);
     final secretKey = await _deriveKey(
       password: password,
-      salt: salt,
+      salt: header.salt,
       iterations: package.kdfIterations,
     );
     try {
       return await AesGcm.with256bits().decrypt(
         SecretBox(
-          base64Decode(package.payloadCiphertext),
-          nonce: nonce,
-          mac: Mac(base64Decode(package.mac)),
+          header.ciphertext,
+          nonce: header.nonce,
+          mac: Mac(header.mac),
         ),
         secretKey: secretKey,
       );
@@ -80,7 +78,7 @@ class BackupCrypto {
     }
   }
 
-  void _validatePackage(LocalBackupPackage package) {
+  _ValidatedPackageHeader _validatePackage(LocalBackupPackage package) {
     if (package.version != LocalBackupPackage.currentVersion) {
       throw UnsupportedBackupVersionException(
         'Unsupported backup package version ${package.version}',
@@ -92,6 +90,36 @@ class BackupCrypto {
         'Unsupported backup encryption settings',
       );
     }
+    if (package.kdfIterations != LocalBackupPackage.defaultKdfIterations) {
+      throw const BackupDecryptionException(
+        'Unsupported backup KDF iteration count',
+      );
+    }
+
+    late final List<int> salt;
+    late final List<int> nonce;
+    late final List<int> mac;
+    late final List<int> ciphertext;
+    try {
+      salt = base64Decode(package.salt);
+      nonce = base64Decode(package.nonce);
+      mac = base64Decode(package.mac);
+      ciphertext = base64Decode(package.payloadCiphertext);
+    } on FormatException catch (_) {
+      throw const BackupDecryptionException('Backup package is malformed');
+    }
+    if (salt.length != 16 ||
+        nonce.length != 12 ||
+        mac.length != 16 ||
+        ciphertext.isEmpty) {
+      throw const BackupDecryptionException('Backup package is malformed');
+    }
+    return _ValidatedPackageHeader(
+      salt: salt,
+      nonce: nonce,
+      mac: mac,
+      ciphertext: ciphertext,
+    );
   }
 
   Future<SecretKey> _deriveKey({
@@ -112,4 +140,18 @@ class BackupCrypto {
   List<int> _randomBytes(int length) {
     return List<int>.generate(length, (_) => _random.nextInt(256));
   }
+}
+
+class _ValidatedPackageHeader {
+  const _ValidatedPackageHeader({
+    required this.salt,
+    required this.nonce,
+    required this.mac,
+    required this.ciphertext,
+  });
+
+  final List<int> salt;
+  final List<int> nonce;
+  final List<int> mac;
+  final List<int> ciphertext;
 }
