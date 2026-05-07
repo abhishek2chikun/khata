@@ -65,6 +65,11 @@ class Sellers extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {name, phone},
+      ];
 }
 
 class CompanyProfiles extends Table {
@@ -173,6 +178,11 @@ class SellerTransactions extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {requestId},
+      ];
 }
 
 class InvoiceItems extends Table {

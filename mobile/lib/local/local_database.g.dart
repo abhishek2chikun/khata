@@ -1346,6 +1346,10 @@ class $SellersTable extends Sellers with TableInfo<$SellersTable, Seller> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {name, phone},
+      ];
+  @override
   Seller map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Seller(
@@ -4405,6 +4409,10 @@ class $SellerTransactionsTable extends SellerTransactions
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {requestId},
+      ];
   @override
   SellerTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';

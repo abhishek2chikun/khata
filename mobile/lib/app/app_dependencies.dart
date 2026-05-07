@@ -6,7 +6,9 @@ import '../auth/session_store.dart';
 import '../config/api_base_url.dart';
 import '../local/local_auth_service.dart';
 import '../local/local_database.dart';
+import '../local/local_payments_service.dart';
 import '../local/local_products_service.dart';
+import '../local/local_sellers_service.dart';
 import '../services/api_client.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
@@ -69,9 +71,9 @@ class AppDependencies {
       mode: DataMode.local,
       controller: controller,
       productsService: LocalProductsService(database: database),
-      sellersService: _UnavailableLocalSellersService(),
+      sellersService: LocalSellersService(database: database),
       companyProfileService: _UnavailableLocalCompanyProfileService(),
-      paymentsService: _UnavailableLocalPaymentsService(),
+      paymentsService: LocalPaymentsService(database: database),
       invoicesService: _UnavailableLocalInvoicesService(),
       dispose: database.close,
     );
@@ -121,24 +123,10 @@ class AppDependencies {
   }
 }
 
-class _UnavailableLocalSellersService implements SellersService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'Local sellers service is added in a later task',
-      );
-}
-
 class _UnavailableLocalCompanyProfileService implements CompanyProfileService {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
         'Local company profile service is added in a later task',
-      );
-}
-
-class _UnavailableLocalPaymentsService implements PaymentsService {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'Local payments service is added in a later task',
       );
 }
 
