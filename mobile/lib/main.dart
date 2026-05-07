@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'auth/auth_controller.dart';
-import 'auth/auth_service.dart';
-import 'auth/session_store.dart';
-import 'config/api_base_url.dart';
+import 'app/app_dependencies.dart';
 import 'models/seller.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
@@ -15,7 +11,6 @@ import 'screens/login_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
 import 'screens/seller_list_screen.dart';
-import 'services/api_client.dart';
 import 'services/company_profile_service.dart';
 import 'services/invoices_service.dart';
 import 'services/payments_service.dart';
@@ -26,28 +21,15 @@ import 'widgets/app_navigation_drawer.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final baseUri = await resolveApiBaseUri();
-  final authService = HttpAuthService(baseUri: baseUri);
-  final sessionStore = SecureSessionStore();
-  final controller = AuthController(
-    authService: authService,
-    sessionStore: sessionStore,
-  );
-  final apiClient = ApiClient(
-    baseUri: baseUri,
-    httpClient: HttpClient(),
-    authService: authService,
-    sessionStore: sessionStore,
-    onAuthorizationFailed: controller.logout,
-  );
+  final dependencies = await AppDependencies.create();
   runApp(
     BillingApp(
-      controller: controller,
-      productsService: ApiProductsService(apiClient: apiClient),
-      sellersService: ApiSellersService(apiClient: apiClient),
-      companyProfileService: ApiCompanyProfileService(apiClient: apiClient),
-      paymentsService: ApiPaymentsService(apiClient: apiClient),
-      invoicesService: ApiInvoicesService(apiClient: apiClient),
+      controller: dependencies.controller,
+      productsService: dependencies.productsService,
+      sellersService: dependencies.sellersService,
+      companyProfileService: dependencies.companyProfileService,
+      paymentsService: dependencies.paymentsService,
+      invoicesService: dependencies.invoicesService,
     ),
   );
 }
