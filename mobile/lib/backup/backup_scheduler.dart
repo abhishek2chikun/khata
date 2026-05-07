@@ -10,6 +10,17 @@ class BackupTimeOfDay {
     return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
+  static BackupTimeOfDay parse(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) {
+      return const BackupTimeOfDay(hour: 0, minute: 0);
+    }
+    return BackupTimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 0,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+  }
+
   String format24Hour() {
     return '${hour.toString().padLeft(2, '0')}:'
         '${minute.toString().padLeft(2, '0')}';
@@ -42,6 +53,17 @@ abstract class BackupScheduleAdapter {
   Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime);
 }
 
+abstract class BackupEventRecorder {
+  Future<void> recordBackupFailure(String message);
+}
+
+class NoopBackupEventRecorder implements BackupEventRecorder {
+  const NoopBackupEventRecorder();
+
+  @override
+  Future<void> recordBackupFailure(String message) async {}
+}
+
 class UnsupportedBackupScheduleAdapter implements BackupScheduleAdapter {
   const UnsupportedBackupScheduleAdapter();
 
@@ -68,13 +90,16 @@ class BackupScheduler {
     required Future<void> Function() runBackup,
     BackupScheduleAdapter scheduleAdapter =
         const UnsupportedBackupScheduleAdapter(),
+    BackupEventRecorder eventRecorder = const NoopBackupEventRecorder(),
   })  : _settingsLoader = settingsLoader,
         _runBackup = runBackup,
-        _scheduleAdapter = scheduleAdapter;
+        _scheduleAdapter = scheduleAdapter,
+        _eventRecorder = eventRecorder;
 
   final Future<BackupScheduleSettings> Function() _settingsLoader;
   final Future<void> Function() _runBackup;
   final BackupScheduleAdapter _scheduleAdapter;
+  final BackupEventRecorder _eventRecorder;
 
   static DateTime nextDueBackup({
     required DateTime now,
@@ -119,7 +144,12 @@ class BackupScheduler {
     if (!isBackupDue(now: now ?? DateTime.now(), settings: settings)) {
       return false;
     }
-    await _runBackup();
+    try {
+      await _runBackup();
+    } on Object catch (error) {
+      await _eventRecorder.recordBackupFailure(error.toString());
+      rethrow;
+    }
     return true;
   }
 

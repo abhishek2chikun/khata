@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
+import '../backup/backup_scheduler.dart';
+import '../backup/drive_backup_service.dart';
 import '../config/api_base_url.dart';
 import '../local/local_auth_service.dart';
 import '../local/local_company_profile_service.dart';
@@ -37,6 +39,8 @@ class AppDependencies {
     required this.invoicesService,
     this.localAuthService,
     this.hasLocalUsers,
+    this.driveBackupService,
+    this.backupScheduler,
     Future<void> Function()? dispose,
   }) : _dispose = dispose;
 
@@ -49,6 +53,8 @@ class AppDependencies {
   final InvoicesService invoicesService;
   final LocalAuthService? localAuthService;
   final Future<bool> Function()? hasLocalUsers;
+  final DriveBackupService? driveBackupService;
+  final BackupScheduler? backupScheduler;
   final Future<void> Function()? _dispose;
 
   static Future<AppDependencies> create({
@@ -79,6 +85,7 @@ class AppDependencies {
   }) async {
     final localDatabase = database ?? LocalDatabase();
     final authService = LocalAuthService(database: localDatabase);
+    final backupService = LocalDriveBackupService(database: localDatabase);
     final controller = AuthController(
       authService: authService,
       sessionStore: sessionStore ?? SecureSessionStore(),
@@ -93,6 +100,12 @@ class AppDependencies {
       paymentsService: LocalPaymentsService(database: localDatabase),
       invoicesService: LocalInvoicesService(database: localDatabase),
       localAuthService: authService,
+      driveBackupService: backupService,
+      backupScheduler: BackupScheduler(
+        settingsLoader: backupService.loadSettings,
+        runBackup: backupService.exportBackup,
+        eventRecorder: LocalBackupEventRecorder(database: localDatabase),
+      ),
       hasLocalUsers: () async {
         final user = await localDatabase
             .select(localDatabase.localUsers)

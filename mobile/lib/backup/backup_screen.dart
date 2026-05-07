@@ -19,9 +19,18 @@ class BackupScreen extends StatefulWidget {
 
 class _BackupScreenState extends State<BackupScreen> {
   BackupScheduleSettings? _settings;
+  final _hourController = TextEditingController();
+  final _minuteController = TextEditingController();
   String? _message;
   bool _isLoading = true;
   bool _isBusy = false;
+
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _minuteController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -56,6 +65,51 @@ class _BackupScreenState extends State<BackupScreen> {
                             'Daily backup time: '
                             '${settings.dailyBackupTime.format24Hour()}',
                           ),
+                          const SizedBox(height: 12),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Automatic backups'),
+                            value: settings.automaticBackupsEnabled,
+                            onChanged: (value) {
+                              setState(() {
+                                _settings = BackupScheduleSettings(
+                                  automaticBackupsEnabled: value,
+                                  dailyBackupTime: settings.dailyBackupTime,
+                                  lastBackupAt: settings.lastBackupAt,
+                                );
+                              });
+                            },
+                          ),
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: TextField(
+                                  controller: _hourController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Daily backup hour',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _minuteController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Daily backup minute',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: _isBusy ? null : _saveSchedule,
+                            child: const Text('Save backup schedule'),
+                          ),
                         ],
                       ),
                     ),
@@ -89,8 +143,46 @@ class _BackupScreenState extends State<BackupScreen> {
     }
     setState(() {
       _settings = settings;
+      _hourController.text = settings.dailyBackupTime.hour.toString();
+      _minuteController.text = settings.dailyBackupTime.minute.toString();
       _isLoading = false;
     });
+  }
+
+  Future<void> _saveSchedule() async {
+    final current = _settings;
+    if (current == null) {
+      return;
+    }
+    final next = BackupScheduleSettings(
+      automaticBackupsEnabled: current.automaticBackupsEnabled,
+      dailyBackupTime: BackupTimeOfDay(
+        hour: int.tryParse(_hourController.text) ?? 0,
+        minute: int.tryParse(_minuteController.text) ?? 0,
+      ),
+      lastBackupAt: current.lastBackupAt,
+    );
+
+    setState(() {
+      _isBusy = true;
+      _message = null;
+    });
+    try {
+      await widget.driveBackupService.saveSettings(next);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _settings = next;
+        _message = 'Backup schedule saved.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBusy = false;
+        });
+      }
+    }
   }
 
   Future<void> _exportBackup() async {

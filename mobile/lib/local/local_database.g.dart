@@ -7569,6 +7569,14 @@ class $BackupSettingsTable extends BackupSettings
           defaultConstraints: GeneratedColumn.constraintIsAlways(
               'CHECK ("automatic_backups_enabled" IN (0, 1))'),
           defaultValue: const Constant(false));
+  static const VerificationMeta _dailyBackupTimeMeta =
+      const VerificationMeta('dailyBackupTime');
+  @override
+  late final GeneratedColumn<String> dailyBackupTime = GeneratedColumn<String>(
+      'daily_backup_time', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('00:00'));
   static const VerificationMeta _lastBackupAtMeta =
       const VerificationMeta('lastBackupAt');
   @override
@@ -7582,8 +7590,14 @@ class $BackupSettingsTable extends BackupSettings
       'updated_at', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, backupDirectory, automaticBackupsEnabled, lastBackupAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        backupDirectory,
+        automaticBackupsEnabled,
+        dailyBackupTime,
+        lastBackupAt,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -7611,6 +7625,12 @@ class $BackupSettingsTable extends BackupSettings
           automaticBackupsEnabled.isAcceptableOrUnknown(
               data['automatic_backups_enabled']!,
               _automaticBackupsEnabledMeta));
+    }
+    if (data.containsKey('daily_backup_time')) {
+      context.handle(
+          _dailyBackupTimeMeta,
+          dailyBackupTime.isAcceptableOrUnknown(
+              data['daily_backup_time']!, _dailyBackupTimeMeta));
     }
     if (data.containsKey('last_backup_at')) {
       context.handle(
@@ -7640,6 +7660,8 @@ class $BackupSettingsTable extends BackupSettings
       automaticBackupsEnabled: attachedDatabase.typeMapping.read(
           DriftSqlType.bool,
           data['${effectivePrefix}automatic_backups_enabled'])!,
+      dailyBackupTime: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}daily_backup_time'])!,
       lastBackupAt: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}last_backup_at']),
       updatedAt: attachedDatabase.typeMapping
@@ -7657,12 +7679,14 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
   final String id;
   final String? backupDirectory;
   final bool automaticBackupsEnabled;
+  final String dailyBackupTime;
   final String? lastBackupAt;
   final String updatedAt;
   const BackupSetting(
       {required this.id,
       this.backupDirectory,
       required this.automaticBackupsEnabled,
+      required this.dailyBackupTime,
       this.lastBackupAt,
       required this.updatedAt});
   @override
@@ -7673,6 +7697,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
       map['backup_directory'] = Variable<String>(backupDirectory);
     }
     map['automatic_backups_enabled'] = Variable<bool>(automaticBackupsEnabled);
+    map['daily_backup_time'] = Variable<String>(dailyBackupTime);
     if (!nullToAbsent || lastBackupAt != null) {
       map['last_backup_at'] = Variable<String>(lastBackupAt);
     }
@@ -7687,6 +7712,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
           ? const Value.absent()
           : Value(backupDirectory),
       automaticBackupsEnabled: Value(automaticBackupsEnabled),
+      dailyBackupTime: Value(dailyBackupTime),
       lastBackupAt: lastBackupAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastBackupAt),
@@ -7702,6 +7728,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
       backupDirectory: serializer.fromJson<String?>(json['backupDirectory']),
       automaticBackupsEnabled:
           serializer.fromJson<bool>(json['automaticBackupsEnabled']),
+      dailyBackupTime: serializer.fromJson<String>(json['dailyBackupTime']),
       lastBackupAt: serializer.fromJson<String?>(json['lastBackupAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
     );
@@ -7714,6 +7741,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
       'backupDirectory': serializer.toJson<String?>(backupDirectory),
       'automaticBackupsEnabled':
           serializer.toJson<bool>(automaticBackupsEnabled),
+      'dailyBackupTime': serializer.toJson<String>(dailyBackupTime),
       'lastBackupAt': serializer.toJson<String?>(lastBackupAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
     };
@@ -7723,6 +7751,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
           {String? id,
           Value<String?> backupDirectory = const Value.absent(),
           bool? automaticBackupsEnabled,
+          String? dailyBackupTime,
           Value<String?> lastBackupAt = const Value.absent(),
           String? updatedAt}) =>
       BackupSetting(
@@ -7732,6 +7761,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
             : this.backupDirectory,
         automaticBackupsEnabled:
             automaticBackupsEnabled ?? this.automaticBackupsEnabled,
+        dailyBackupTime: dailyBackupTime ?? this.dailyBackupTime,
         lastBackupAt:
             lastBackupAt.present ? lastBackupAt.value : this.lastBackupAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -7745,6 +7775,9 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
       automaticBackupsEnabled: data.automaticBackupsEnabled.present
           ? data.automaticBackupsEnabled.value
           : this.automaticBackupsEnabled,
+      dailyBackupTime: data.dailyBackupTime.present
+          ? data.dailyBackupTime.value
+          : this.dailyBackupTime,
       lastBackupAt: data.lastBackupAt.present
           ? data.lastBackupAt.value
           : this.lastBackupAt,
@@ -7758,6 +7791,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
           ..write('id: $id, ')
           ..write('backupDirectory: $backupDirectory, ')
           ..write('automaticBackupsEnabled: $automaticBackupsEnabled, ')
+          ..write('dailyBackupTime: $dailyBackupTime, ')
           ..write('lastBackupAt: $lastBackupAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -7765,8 +7799,8 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, backupDirectory, automaticBackupsEnabled, lastBackupAt, updatedAt);
+  int get hashCode => Object.hash(id, backupDirectory, automaticBackupsEnabled,
+      dailyBackupTime, lastBackupAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7774,6 +7808,7 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
           other.id == this.id &&
           other.backupDirectory == this.backupDirectory &&
           other.automaticBackupsEnabled == this.automaticBackupsEnabled &&
+          other.dailyBackupTime == this.dailyBackupTime &&
           other.lastBackupAt == this.lastBackupAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -7782,6 +7817,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
   final Value<String> id;
   final Value<String?> backupDirectory;
   final Value<bool> automaticBackupsEnabled;
+  final Value<String> dailyBackupTime;
   final Value<String?> lastBackupAt;
   final Value<String> updatedAt;
   final Value<int> rowid;
@@ -7789,6 +7825,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
     this.id = const Value.absent(),
     this.backupDirectory = const Value.absent(),
     this.automaticBackupsEnabled = const Value.absent(),
+    this.dailyBackupTime = const Value.absent(),
     this.lastBackupAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -7797,6 +7834,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
     required String id,
     this.backupDirectory = const Value.absent(),
     this.automaticBackupsEnabled = const Value.absent(),
+    this.dailyBackupTime = const Value.absent(),
     this.lastBackupAt = const Value.absent(),
     required String updatedAt,
     this.rowid = const Value.absent(),
@@ -7806,6 +7844,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
     Expression<String>? id,
     Expression<String>? backupDirectory,
     Expression<bool>? automaticBackupsEnabled,
+    Expression<String>? dailyBackupTime,
     Expression<String>? lastBackupAt,
     Expression<String>? updatedAt,
     Expression<int>? rowid,
@@ -7815,6 +7854,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
       if (backupDirectory != null) 'backup_directory': backupDirectory,
       if (automaticBackupsEnabled != null)
         'automatic_backups_enabled': automaticBackupsEnabled,
+      if (dailyBackupTime != null) 'daily_backup_time': dailyBackupTime,
       if (lastBackupAt != null) 'last_backup_at': lastBackupAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -7825,6 +7865,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
       {Value<String>? id,
       Value<String?>? backupDirectory,
       Value<bool>? automaticBackupsEnabled,
+      Value<String>? dailyBackupTime,
       Value<String?>? lastBackupAt,
       Value<String>? updatedAt,
       Value<int>? rowid}) {
@@ -7833,6 +7874,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
       backupDirectory: backupDirectory ?? this.backupDirectory,
       automaticBackupsEnabled:
           automaticBackupsEnabled ?? this.automaticBackupsEnabled,
+      dailyBackupTime: dailyBackupTime ?? this.dailyBackupTime,
       lastBackupAt: lastBackupAt ?? this.lastBackupAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -7852,6 +7894,9 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
       map['automatic_backups_enabled'] =
           Variable<bool>(automaticBackupsEnabled.value);
     }
+    if (dailyBackupTime.present) {
+      map['daily_backup_time'] = Variable<String>(dailyBackupTime.value);
+    }
     if (lastBackupAt.present) {
       map['last_backup_at'] = Variable<String>(lastBackupAt.value);
     }
@@ -7870,6 +7915,7 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
           ..write('id: $id, ')
           ..write('backupDirectory: $backupDirectory, ')
           ..write('automaticBackupsEnabled: $automaticBackupsEnabled, ')
+          ..write('dailyBackupTime: $dailyBackupTime, ')
           ..write('lastBackupAt: $lastBackupAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -13227,6 +13273,7 @@ typedef $$BackupSettingsTableCreateCompanionBuilder = BackupSettingsCompanion
   required String id,
   Value<String?> backupDirectory,
   Value<bool> automaticBackupsEnabled,
+  Value<String> dailyBackupTime,
   Value<String?> lastBackupAt,
   required String updatedAt,
   Value<int> rowid,
@@ -13236,6 +13283,7 @@ typedef $$BackupSettingsTableUpdateCompanionBuilder = BackupSettingsCompanion
   Value<String> id,
   Value<String?> backupDirectory,
   Value<bool> automaticBackupsEnabled,
+  Value<String> dailyBackupTime,
   Value<String?> lastBackupAt,
   Value<String> updatedAt,
   Value<int> rowid,
@@ -13259,6 +13307,10 @@ class $$BackupSettingsTableFilterComposer
 
   ColumnFilters<bool> get automaticBackupsEnabled => $composableBuilder(
       column: $table.automaticBackupsEnabled,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get dailyBackupTime => $composableBuilder(
+      column: $table.dailyBackupTime,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get lastBackupAt => $composableBuilder(
@@ -13288,6 +13340,10 @@ class $$BackupSettingsTableOrderingComposer
       column: $table.automaticBackupsEnabled,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get dailyBackupTime => $composableBuilder(
+      column: $table.dailyBackupTime,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get lastBackupAt => $composableBuilder(
       column: $table.lastBackupAt,
       builder: (column) => ColumnOrderings(column));
@@ -13313,6 +13369,9 @@ class $$BackupSettingsTableAnnotationComposer
 
   GeneratedColumn<bool> get automaticBackupsEnabled => $composableBuilder(
       column: $table.automaticBackupsEnabled, builder: (column) => column);
+
+  GeneratedColumn<String> get dailyBackupTime => $composableBuilder(
+      column: $table.dailyBackupTime, builder: (column) => column);
 
   GeneratedColumn<String> get lastBackupAt => $composableBuilder(
       column: $table.lastBackupAt, builder: (column) => column);
@@ -13351,6 +13410,7 @@ class $$BackupSettingsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String?> backupDirectory = const Value.absent(),
             Value<bool> automaticBackupsEnabled = const Value.absent(),
+            Value<String> dailyBackupTime = const Value.absent(),
             Value<String?> lastBackupAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -13359,6 +13419,7 @@ class $$BackupSettingsTableTableManager extends RootTableManager<
             id: id,
             backupDirectory: backupDirectory,
             automaticBackupsEnabled: automaticBackupsEnabled,
+            dailyBackupTime: dailyBackupTime,
             lastBackupAt: lastBackupAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -13367,6 +13428,7 @@ class $$BackupSettingsTableTableManager extends RootTableManager<
             required String id,
             Value<String?> backupDirectory = const Value.absent(),
             Value<bool> automaticBackupsEnabled = const Value.absent(),
+            Value<String> dailyBackupTime = const Value.absent(),
             Value<String?> lastBackupAt = const Value.absent(),
             required String updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -13375,6 +13437,7 @@ class $$BackupSettingsTableTableManager extends RootTableManager<
             id: id,
             backupDirectory: backupDirectory,
             automaticBackupsEnabled: automaticBackupsEnabled,
+            dailyBackupTime: dailyBackupTime,
             lastBackupAt: lastBackupAt,
             updatedAt: updatedAt,
             rowid: rowid,
