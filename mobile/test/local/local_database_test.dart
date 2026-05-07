@@ -8,97 +8,113 @@ void main() {
     addTearDown(database.close);
 
     expect(database.schemaVersion, 1);
-    expect(database.allTables.map((table) => table.actualTableName), containsAll(<String>[
-      'local_users',
-      'products',
-      'stock_movements',
-      'sellers',
-      'seller_transactions',
-      'company_profiles',
-      'invoices',
-      'invoice_items',
-      'local_sessions',
-      'backup_events',
-      'backup_settings',
-    ]));
+    expect(
+        database.allTables.map((table) => table.actualTableName),
+        containsAll(<String>[
+          'local_users',
+          'products',
+          'stock_movements',
+          'sellers',
+          'seller_transactions',
+          'company_profiles',
+          'invoices',
+          'invoice_items',
+          'local_sessions',
+          'backup_events',
+          'backup_settings',
+        ]));
   });
 
   test('business tables expose backend-compatible columns', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(_columnNames(database, 'products'), containsAll(<String>[
-      'company',
-      'category',
-      'item_name',
-      'item_code',
-      'buying_price_excl_tax',
-      'buying_gst_rate',
-      'default_selling_price_excl_tax',
-      'default_gst_rate',
-      'quantity_on_hand',
-      'low_stock_threshold',
-      'is_active',
-    ]));
-    expect(_columnNames(database, 'sellers'), containsAll(<String>[
-      'state',
-      'state_code',
-      'is_active',
-    ]));
-    expect(_columnNames(database, 'company_profiles'), containsAll(<String>[
-      'city',
-      'state',
-      'state_code',
-      'email',
-      'bank_name',
-      'bank_account',
-      'bank_ifsc',
-      'bank_branch',
-      'jurisdiction',
-      'is_active',
-    ]));
-    expect(_columnNames(database, 'invoices'), containsAll(<String>[
-      'request_id',
-      'request_hash',
-      'seller_name',
-      'seller_state_code',
-      'company_bank_ifsc',
-      'tax_regime',
-      'discount_total',
-      'taxable_total',
-      'cancel_request_id',
-      'canceled_by_user_id',
-      'canceled_at',
-    ]));
-    expect(_columnNames(database, 'invoice_items'), containsAll(<String>[
-      'line_number',
-      'product_name',
-      'product_code',
-      'pricing_mode',
-      'entered_unit_price',
-      'unit_price_excl_tax',
-      'unit_price_incl_tax',
-      'cgst_rate',
-      'sgst_rate',
-      'igst_rate',
-      'discount_percent',
-      'discount_amount',
-      'taxable_amount',
-      'gst_amount',
-      'cgst_amount',
-      'sgst_amount',
-      'igst_amount',
-    ]));
+    expect(
+        _columnNames(database, 'products'),
+        containsAll(<String>[
+          'company',
+          'category',
+          'item_name',
+          'item_code',
+          'buying_price_excl_tax',
+          'buying_gst_rate',
+          'default_selling_price_excl_tax',
+          'default_gst_rate',
+          'quantity_on_hand',
+          'low_stock_threshold',
+          'is_active',
+        ]));
+    expect(
+        _columnNames(database, 'sellers'),
+        containsAll(<String>[
+          'state',
+          'state_code',
+          'is_active',
+        ]));
+    expect(
+        _columnNames(database, 'company_profiles'),
+        containsAll(<String>[
+          'city',
+          'state',
+          'state_code',
+          'email',
+          'bank_name',
+          'bank_account',
+          'bank_ifsc',
+          'bank_branch',
+          'jurisdiction',
+          'is_active',
+        ]));
+    expect(
+        _columnNames(database, 'invoices'),
+        containsAll(<String>[
+          'request_id',
+          'request_hash',
+          'seller_name',
+          'seller_state_code',
+          'company_bank_ifsc',
+          'tax_regime',
+          'discount_total',
+          'taxable_total',
+          'cancel_request_id',
+          'canceled_by_user_id',
+          'canceled_at',
+        ]));
+    expect(
+        _columnNames(database, 'invoice_items'),
+        containsAll(<String>[
+          'line_number',
+          'product_name',
+          'product_code',
+          'pricing_mode',
+          'entered_unit_price',
+          'unit_price_excl_tax',
+          'unit_price_incl_tax',
+          'cgst_rate',
+          'sgst_rate',
+          'igst_rate',
+          'discount_percent',
+          'discount_amount',
+          'taxable_amount',
+          'gst_amount',
+          'cgst_amount',
+          'sgst_amount',
+          'igst_amount',
+        ]));
   });
 
-  test('backup settings stores automatic backup flag as bool', () async {
+  test('backup settings stores automatic backup flag and daily time', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.backupSettings.automaticBackupsEnabled, isA<GeneratedColumn<bool>>());
+    expect(database.backupSettings.automaticBackupsEnabled,
+        isA<GeneratedColumn<bool>>());
+    expect(database.backupSettings.dailyBackupTime,
+        isA<GeneratedColumn<String>>());
   });
 
-  test('business table nullability and column types match backend models', () async {
+  test('business table nullability and column types match backend models',
+      () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
@@ -122,7 +138,8 @@ void main() {
     _expectRequired(database, 'invoices', 'company_state');
     _expectRequired(database, 'invoices', 'company_state_code');
     _expectRequired(database, 'invoices', 'payment_mode');
-    expect(_column(database, 'invoices', 'invoice_number'), isA<GeneratedColumn<int>>());
+    expect(_column(database, 'invoices', 'invoice_number'),
+        isA<GeneratedColumn<int>>());
 
     _expectNullable(database, 'stock_movements', 'request_id');
     _expectNullable(database, 'stock_movements', 'request_hash');
@@ -196,29 +213,39 @@ void main() {
         )
         """,
       ),
-      throwsA(predicate((Object error) => error.toString().contains('FOREIGN KEY constraint failed'))),
+      throwsA(predicate((Object error) =>
+          error.toString().contains('FOREIGN KEY constraint failed'))),
     );
   });
 }
 
 Set<String> _columnNames(LocalDatabase database, String tableName) {
-  final table = database.allTables.singleWhere((table) => table.actualTableName == tableName);
+  final table = database.allTables
+      .singleWhere((table) => table.actualTableName == tableName);
   return table.$columns.map((column) => column.$name).toSet();
 }
 
-GeneratedColumn<Object> _column(LocalDatabase database, String tableName, String columnName) {
-  final table = database.allTables.singleWhere((table) => table.actualTableName == tableName);
+GeneratedColumn<Object> _column(
+    LocalDatabase database, String tableName, String columnName) {
+  final table = database.allTables
+      .singleWhere((table) => table.actualTableName == tableName);
   return table.$columns.singleWhere((column) => column.$name == columnName);
 }
 
-void _expectRequired(LocalDatabase database, String tableName, String columnName) {
+void _expectRequired(
+    LocalDatabase database, String tableName, String columnName) {
   final column = _column(database, tableName, columnName);
-  expect(column.$nullable, isFalse, reason: '$tableName.$columnName should be NOT NULL');
-  expect(column.requiredDuringInsert, isTrue, reason: '$tableName.$columnName should require insert values');
+  expect(column.$nullable, isFalse,
+      reason: '$tableName.$columnName should be NOT NULL');
+  expect(column.requiredDuringInsert, isTrue,
+      reason: '$tableName.$columnName should require insert values');
 }
 
-void _expectNullable(LocalDatabase database, String tableName, String columnName) {
+void _expectNullable(
+    LocalDatabase database, String tableName, String columnName) {
   final column = _column(database, tableName, columnName);
-  expect(column.$nullable, isTrue, reason: '$tableName.$columnName should allow null');
-  expect(column.requiredDuringInsert, isFalse, reason: '$tableName.$columnName should not require insert values');
+  expect(column.$nullable, isTrue,
+      reason: '$tableName.$columnName should allow null');
+  expect(column.requiredDuringInsert, isFalse,
+      reason: '$tableName.$columnName should not require insert values');
 }
