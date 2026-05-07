@@ -103,6 +103,7 @@ class LocalInvoicesService implements InvoicesService {
             ),
           );
 
+      final stockQuantitiesByProductId = <String, double>{};
       for (final line in prepared.lines) {
         await _database.into(_database.invoiceItems).insert(
               InvoiceItemsCompanion.insert(
@@ -145,12 +146,23 @@ class LocalInvoicesService implements InvoicesService {
                 createdAt: now,
               ),
             );
+        stockQuantitiesByProductId.update(
+          line.product.id,
+          (quantity) => quantity + line.item.quantity,
+          ifAbsent: () => line.item.quantity,
+        );
+      }
+
+      for (final entry in stockQuantitiesByProductId.entries) {
+        final product = prepared.lines
+            .firstWhere((line) => line.product.id == entry.key)
+            .product;
         await (_database.update(_database.products)
-              ..where((product) => product.id.equals(line.product.id)))
+              ..where((product) => product.id.equals(entry.key)))
             .write(
           ProductsCompanion(
             quantityOnHand: Value(_normalizeDecimal(
-              double.parse(line.product.quantityOnHand) - line.item.quantity,
+              double.parse(product.quantityOnHand) - entry.value,
             )),
             updatedAt: Value(now),
           ),
