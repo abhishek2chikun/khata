@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart';
+
 import '../auth/auth_controller.dart';
 import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
@@ -33,6 +35,8 @@ class AppDependencies {
     required this.companyProfileService,
     required this.paymentsService,
     required this.invoicesService,
+    this.localAuthService,
+    this.hasLocalUsers,
     Future<void> Function()? dispose,
   }) : _dispose = dispose;
 
@@ -43,11 +47,15 @@ class AppDependencies {
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final LocalAuthService? localAuthService;
+  final Future<bool> Function()? hasLocalUsers;
   final Future<void> Function()? _dispose;
 
   static Future<AppDependencies> create({
     DataMode? mode,
     Uri? apiBaseUri,
+    LocalDatabase? localDatabase,
+    SessionStore? sessionStore,
     ApiHttpClientsCreated? onApiHttpClientsCreated,
   }) async {
     final resolvedMode = mode ?? resolveDataMode();
@@ -58,26 +66,40 @@ class AppDependencies {
           onApiHttpClientsCreated: onApiHttpClientsCreated,
         );
       case DataMode.local:
-        return _createLocalDependencies();
+        return _createLocalDependencies(
+          database: localDatabase,
+          sessionStore: sessionStore,
+        );
     }
   }
 
-  static Future<AppDependencies> _createLocalDependencies() async {
-    final database = LocalDatabase();
-    final authService = LocalAuthService(database: database);
+  static Future<AppDependencies> _createLocalDependencies({
+    LocalDatabase? database,
+    SessionStore? sessionStore,
+  }) async {
+    final localDatabase = database ?? LocalDatabase();
+    final authService = LocalAuthService(database: localDatabase);
     final controller = AuthController(
       authService: authService,
-      sessionStore: SecureSessionStore(),
+      sessionStore: sessionStore ?? SecureSessionStore(),
     );
     return AppDependencies(
       mode: DataMode.local,
       controller: controller,
-      productsService: LocalProductsService(database: database),
-      sellersService: LocalSellersService(database: database),
-      companyProfileService: LocalCompanyProfileService(database: database),
-      paymentsService: LocalPaymentsService(database: database),
-      invoicesService: LocalInvoicesService(database: database),
-      dispose: database.close,
+      productsService: LocalProductsService(database: localDatabase),
+      sellersService: LocalSellersService(database: localDatabase),
+      companyProfileService:
+          LocalCompanyProfileService(database: localDatabase),
+      paymentsService: LocalPaymentsService(database: localDatabase),
+      invoicesService: LocalInvoicesService(database: localDatabase),
+      localAuthService: authService,
+      hasLocalUsers: () async {
+        final user = await localDatabase
+            .select(localDatabase.localUsers)
+            .getSingleOrNull();
+        return user != null;
+      },
+      dispose: localDatabase.close,
     );
   }
 

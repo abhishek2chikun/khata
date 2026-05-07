@@ -7,6 +7,7 @@ import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
 import 'screens/inventory_list_screen.dart';
+import 'screens/local_first_user_setup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
@@ -24,12 +25,7 @@ Future<void> main() async {
   final dependencies = await AppDependencies.create();
   runApp(
     BillingApp(
-      controller: dependencies.controller,
-      productsService: dependencies.productsService,
-      sellersService: dependencies.sellersService,
-      companyProfileService: dependencies.companyProfileService,
-      paymentsService: dependencies.paymentsService,
-      invoicesService: dependencies.invoicesService,
+      dependencies: dependencies,
     ),
   );
 }
@@ -37,14 +33,23 @@ Future<void> main() async {
 class BillingApp extends StatefulWidget {
   const BillingApp({
     super.key,
-    required this.controller,
-    required this.productsService,
-    required this.sellersService,
-    required this.companyProfileService,
-    required this.paymentsService,
-    required this.invoicesService,
-  });
+    AppDependencies? dependencies,
+    AuthController? controller,
+    ProductsService? productsService,
+    SellersService? sellersService,
+    CompanyProfileService? companyProfileService,
+    PaymentsService? paymentsService,
+    InvoicesService? invoicesService,
+  })  : dependencies = dependencies,
+        controller = controller ?? dependencies!.controller,
+        productsService = productsService ?? dependencies!.productsService,
+        sellersService = sellersService ?? dependencies!.sellersService,
+        companyProfileService =
+            companyProfileService ?? dependencies!.companyProfileService,
+        paymentsService = paymentsService ?? dependencies!.paymentsService,
+        invoicesService = invoicesService ?? dependencies!.invoicesService;
 
+  final AppDependencies? dependencies;
   final AuthController controller;
   final ProductsService productsService;
   final SellersService sellersService;
@@ -58,10 +63,13 @@ class BillingApp extends StatefulWidget {
 
 class _BillingAppState extends State<BillingApp> {
   AppDestination _selectedDestination = AppDestination.inventory;
+  bool _isCheckingLocalUsers = false;
+  bool _needsLocalFirstUserSetup = false;
 
   @override
   void initState() {
     super.initState();
+    _checkLocalUsers();
     widget.controller.restoreSession();
   }
 
@@ -79,9 +87,23 @@ class _BillingAppState extends State<BillingApp> {
   }
 
   Widget _buildBody() {
-    if (widget.controller.isRestoringSession) {
+    if (_isCheckingLocalUsers || widget.controller.isRestoringSession) {
       return const Center(
         child: CircularProgressIndicator(),
+      );
+    }
+
+    final localAuthService = widget.dependencies?.localAuthService;
+    if (!widget.controller.isAuthenticated &&
+        _needsLocalFirstUserSetup &&
+        localAuthService != null) {
+      return LocalFirstUserSetupScreen(
+        authService: localAuthService,
+        onUserCreated: () {
+          setState(() {
+            _needsLocalFirstUserSetup = false;
+          });
+        },
       );
     }
 
@@ -162,5 +184,25 @@ class _BillingAppState extends State<BillingApp> {
         ) ??
         false;
     return created;
+  }
+
+  Future<void> _checkLocalUsers() async {
+    final hasLocalUsers = widget.dependencies?.hasLocalUsers;
+    if (hasLocalUsers == null) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingLocalUsers = true;
+    });
+
+    final hasUsers = await hasLocalUsers();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _needsLocalFirstUserSetup = !hasUsers;
+      _isCheckingLocalUsers = false;
+    });
   }
 }
