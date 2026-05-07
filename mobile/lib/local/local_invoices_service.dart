@@ -291,6 +291,7 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   Future<_PreparedInvoice> _prepareInvoice(InvoiceDraft draft) async {
+    _validatePaymentMode(draft.paymentMode);
     final draftSeller = draft.seller;
     if (draftSeller == null) {
       throw const ApiError(
@@ -325,6 +326,18 @@ class LocalInvoicesService implements InvoicesService {
         code: 'VALIDATION_ERROR',
         message: 'Complete company profile state metadata before invoicing',
         statusCode: 400,
+      );
+    }
+    _validateStateMetadata(
+      state: company.state,
+      stateCode: company.stateCode,
+      message: 'Company profile state and state_code do not match',
+    );
+    if (seller.state != null && seller.stateCode != null) {
+      _validateStateMetadata(
+        state: seller.state!,
+        stateCode: seller.stateCode!,
+        message: 'Seller state and state_code do not match',
       );
     }
 
@@ -585,6 +598,32 @@ class LocalInvoicesService implements InvoicesService {
         );
   }
 
+  void _validatePaymentMode(String paymentMode) {
+    if (paymentMode == 'CREDIT' || paymentMode == 'PAID') {
+      return;
+    }
+    throw const ApiError(
+      code: 'VALIDATION_ERROR',
+      message: 'payment_mode must be CREDIT or PAID',
+      statusCode: 400,
+    );
+  }
+
+  void _validateStateMetadata({
+    required String state,
+    required String stateCode,
+    required String message,
+  }) {
+    final canonicalState = _stateName(stateCode);
+    if (state.trim().toLowerCase() != canonicalState.toLowerCase()) {
+      throw ApiError(
+        code: 'VALIDATION_ERROR',
+        message: message,
+        statusCode: 400,
+      );
+    }
+  }
+
   String _resolvePlaceOfSupplyStateCode(Seller seller, String? provided) {
     if (provided != null && provided.trim().isNotEmpty) {
       return _normalizeStateCode(provided);
@@ -654,11 +693,46 @@ class LocalInvoicesService implements InvoicesService {
 
   String _stateName(String stateCode) {
     final states = <String, String>{
-      '27': 'Maharashtra',
-      '29': 'Karnataka',
-      '33': 'Tamil Nadu',
+      '01': 'Jammu and Kashmir',
+      '02': 'Himachal Pradesh',
+      '03': 'Punjab',
+      '04': 'Chandigarh',
+      '05': 'Uttarakhand',
+      '06': 'Haryana',
       '07': 'Delhi',
+      '08': 'Rajasthan',
+      '09': 'Uttar Pradesh',
+      '10': 'Bihar',
+      '11': 'Sikkim',
+      '12': 'Arunachal Pradesh',
+      '13': 'Nagaland',
+      '14': 'Manipur',
+      '15': 'Mizoram',
+      '16': 'Tripura',
+      '17': 'Meghalaya',
+      '18': 'Assam',
+      '19': 'West Bengal',
+      '20': 'Jharkhand',
+      '21': 'Odisha',
+      '22': 'Chhattisgarh',
+      '23': 'Madhya Pradesh',
       '24': 'Gujarat',
+      '25': 'Daman and Diu',
+      '26': 'Dadra and Nagar Haveli and Daman and Diu',
+      '27': 'Maharashtra',
+      '28': 'Andhra Pradesh (Old)',
+      '29': 'Karnataka',
+      '30': 'Goa',
+      '31': 'Lakshadweep',
+      '32': 'Kerala',
+      '33': 'Tamil Nadu',
+      '34': 'Puducherry',
+      '35': 'Andaman and Nicobar Islands',
+      '36': 'Telangana',
+      '37': 'Andhra Pradesh',
+      '38': 'Ladakh',
+      '97': 'Other Territory',
+      '99': 'Centre Jurisdiction',
     };
     final normalized = _normalizeStateCode(stateCode);
     final state = states[normalized];
