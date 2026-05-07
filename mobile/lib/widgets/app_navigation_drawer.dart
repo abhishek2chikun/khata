@@ -4,7 +4,8 @@ enum AppDestination {
   inventory('Inventory', Icons.inventory_2_outlined),
   sellers('Sellers', Icons.people_outline),
   invoices('Invoices', Icons.receipt_long_outlined),
-  companyProfile('Company profile', Icons.business_outlined);
+  companyProfile('Company profile', Icons.business_outlined),
+  backup('Backup & Restore', Icons.backup_outlined);
 
   const AppDestination(this.label, this.icon);
 
@@ -18,11 +19,13 @@ class AppNavigationDrawer extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.onLogout,
+    this.showLocalBackup = false,
   });
 
   final AppDestination selected;
   final ValueChanged<AppDestination> onSelect;
   final Future<void> Function() onLogout;
+  final bool showLocalBackup;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +42,7 @@ class AppNavigationDrawer extends StatelessWidget {
                 ),
               ),
             ),
-            ...AppDestination.values.map(
+            ..._destinations.map(
               (destination) => ListTile(
                 leading: Icon(destination.icon),
                 title: Text(destination.label),
@@ -63,5 +66,14 @@ class AppNavigationDrawer extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<AppDestination> get _destinations {
+    if (showLocalBackup) {
+      return AppDestination.values;
+    }
+    return AppDestination.values
+        .where((destination) => destination != AppDestination.backup)
+        .toList();
   }
 }

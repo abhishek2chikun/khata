@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'auth/auth_controller.dart';
 import 'app/app_dependencies.dart';
+import 'app/app_mode.dart';
+import 'backup/backup_screen.dart';
+import 'backup/drive_backup_service.dart';
 import 'models/seller.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
@@ -31,7 +34,7 @@ Future<void> main() async {
 }
 
 class BillingApp extends StatefulWidget {
-  const BillingApp({
+  BillingApp({
     super.key,
     AppDependencies? dependencies,
     AuthController? controller,
@@ -40,6 +43,7 @@ class BillingApp extends StatefulWidget {
     CompanyProfileService? companyProfileService,
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
+    DriveBackupService? driveBackupService,
   })  : dependencies = dependencies,
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
@@ -47,7 +51,8 @@ class BillingApp extends StatefulWidget {
         companyProfileService =
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
-        invoicesService = invoicesService ?? dependencies!.invoicesService;
+        invoicesService = invoicesService ?? dependencies!.invoicesService,
+        driveBackupService = driveBackupService;
 
   final AppDependencies? dependencies;
   final AuthController controller;
@@ -56,6 +61,7 @@ class BillingApp extends StatefulWidget {
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final DriveBackupService? driveBackupService;
 
   @override
   State<BillingApp> createState() => _BillingAppState();
@@ -125,6 +131,7 @@ class _BillingAppState extends State<BillingApp> {
           });
         },
         onLogout: widget.controller.logout,
+        showLocalBackup: widget.dependencies?.mode == DataMode.local,
       );
 
       switch (_selectedDestination) {
@@ -171,6 +178,12 @@ class _BillingAppState extends State<BillingApp> {
           return CompanyProfileScreen(
             drawer: drawer,
             companyProfileService: widget.companyProfileService,
+          );
+        case AppDestination.backup:
+          return BackupScreen(
+            drawer: drawer,
+            driveBackupService:
+                widget.driveBackupService ?? const GoogleDriveBackupService(),
           );
       }
     }
