@@ -62,8 +62,10 @@ class LocalProductsService implements ProductsService {
   @override
   Future<List<product_model.Product>> fetchProducts(
       {ProductFilter? filter}) async {
-    final query = _database.select(_database.products)
-      ..where((product) => product.isActive.equals(filter?.active ?? true));
+    final query = _database.select(_database.products);
+    if (filter?.active case final active?) {
+      query.where((product) => product.isActive.equals(active));
+    }
     if (filter?.company case final company? when company.isNotEmpty) {
       query.where((product) => product.company.equals(company));
     }
@@ -97,8 +99,7 @@ class LocalProductsService implements ProductsService {
     required UpdateProductInput input,
   }) async {
     final existing = await (_database.select(_database.products)
-          ..where((product) => product.id.equals(id))
-          ..where((product) => product.isActive.equals(true)))
+          ..where((product) => product.id.equals(id)))
         .getSingleOrNull();
     if (existing == null) {
       throw const ApiError(
@@ -118,8 +119,7 @@ class LocalProductsService implements ProductsService {
 
     try {
       await (_database.update(_database.products)
-            ..where((product) => product.id.equals(id))
-            ..where((product) => product.isActive.equals(true)))
+            ..where((product) => product.id.equals(id)))
           .write(
         ProductsCompanion(
           company: Value(input.company),
