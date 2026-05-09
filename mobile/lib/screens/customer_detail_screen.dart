@@ -157,12 +157,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       key: const Key('ledgerDateFilterField'),
                       controller: _ledgerDateController,
                       enabled: !_isLoading,
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Ledger date',
                         border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_today),
                       ),
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _loadCustomer(),
+                      onTap: _openLedgerDatePicker,
                     ),
                     const SizedBox(height: 12),
                     if (ledger!.transactions.isEmpty)
@@ -250,6 +251,35 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
+  Future<void> _openLedgerDatePicker() async {
+    final currentDate = _parseLedgerDate() ?? DateTime.now();
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: currentDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (selectedDate == null || !mounted) {
+      return;
+    }
+    _ledgerDateController.text = _dateString(selectedDate);
+    await _loadCustomer();
+  }
+
+  DateTime? _parseLedgerDate() {
+    final parts = _ledgerDateController.text.split('-');
+    if (parts.length != 3) {
+      return null;
+    }
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) {
+      return null;
+    }
+    return DateTime(year, month, day);
+  }
+
   Future<void> _openRecordCollection(Customer customer) async {
     final shouldRefresh = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
@@ -319,5 +349,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       return '';
     }
     return value.substring(0, 16).replaceFirst('T', ' ');
+  }
+
+  String _dateString(DateTime value) {
+    return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
   }
 }

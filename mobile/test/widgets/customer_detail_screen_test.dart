@@ -158,7 +158,7 @@ void main() {
     expect(customersService.requestedLedgerDates, <String?>[today]);
   });
 
-  testWidgets('customer detail refreshes ledger when date filter changes',
+  testWidgets('customer detail uses date picker to refresh ledger date',
       (tester) async {
     final customersService = FakeCustomersService(
       ledgers: <CustomerLedger>[
@@ -202,19 +202,32 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-
-    await tester.enterText(
-      find.byKey(const Key('ledgerDateFilterField')),
-      '2026-04-18',
+    final now = DateTime.now();
+    final today = _dateString(now);
+    final selectedDate = _dateString(
+      DateTime(now.year, now.month, now.day == 1 ? 1 : now.day - 1),
     );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    final selectedDay = int.parse(selectedDate.substring(8, 10)).toString();
+
+    await tester.tap(find.byKey(const Key('ledgerDateFilterField')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsOneWidget);
+
+    await tester.tap(find.text(selectedDay).last);
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
     expect(customersService.requestedLedgerDates, <String?>[
       today,
-      '2026-04-18',
+      selectedDate,
     ]);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('ledgerDateFilterField')))
+          .controller
+          ?.text,
+      selectedDate,
+    );
     expect(find.text('Selected date row'), findsOneWidget);
   });
 
@@ -516,6 +529,10 @@ const _customer = Customer(
   isActive: true,
   pendingBalance: 500,
 );
+
+String _dateString(DateTime value) {
+  return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+}
 
 class FakeCustomersService implements CustomersService {
   FakeCustomersService({required this.ledgers, this.error});
