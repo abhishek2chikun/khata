@@ -30,21 +30,6 @@ void main() {
     });
 
     test('requires canonical numeric JSON fields', () {
-      final payload = <String, dynamic>{
-        'id': 'p1',
-        'company_name': 'Acme',
-        'category': 'Pens',
-        'item_name': 'Blue Pen',
-        'item_number': 'PEN-1',
-        'buying_price': '8',
-        'selling_price': '10',
-        'unit': null,
-        'gst_rate': '18',
-        'quantity_on_hand': '5',
-        'low_stock_threshold': '2',
-        'is_active': true,
-      };
-
       for (final key in <String>[
         'buying_price',
         'selling_price',
@@ -53,11 +38,37 @@ void main() {
         'low_stock_threshold',
       ]) {
         expect(
-          () => Product.fromJson(<String, dynamic>{...payload}..remove(key)),
+          () => Product.fromJson(_productJson()..remove(key)),
           throwsA(isA<FormatException>()),
           reason: '$key should be required',
         );
       }
+    });
+
+    test('requires canonical non-numeric JSON fields', () {
+      for (final key in <String>[
+        'id',
+        'company_name',
+        'category',
+        'item_name',
+        'item_number',
+        'is_active',
+      ]) {
+        expect(
+          () => Product.fromJson(_productJson()..remove(key)),
+          throwsA(isA<FormatException>()),
+          reason: '$key should be required',
+        );
+      }
+    });
+
+    test('preserves nullable buyer id from canonical JSON', () {
+      final product = Product.fromJson(
+        _productJson(buyerId: '11111111-1111-4111-8111-111111111111'),
+      );
+
+      expect(product.buyerId, '11111111-1111-4111-8111-111111111111');
+      expect(Product.fromJson(_productJson(buyerId: null)).buyerId, null);
     });
 
     test('rejects invalid canonical numeric JSON fields', () {
@@ -200,6 +211,24 @@ void main() {
       expect(httpClient.lastQueryParameters['category'], 'Pens');
     });
   });
+}
+
+Map<String, dynamic> _productJson({Object? buyerId = null}) {
+  return <String, dynamic>{
+    'id': 'p1',
+    'company_name': 'Acme',
+    'category': 'Pens',
+    'item_name': 'Blue Pen',
+    'item_number': 'PEN-1',
+    'buyer_id': buyerId,
+    'buying_price': '8',
+    'selling_price': '10',
+    'unit': null,
+    'gst_rate': '18',
+    'quantity_on_hand': '5',
+    'low_stock_threshold': '2',
+    'is_active': true,
+  };
 }
 
 class FakeAuthService implements AuthService {
