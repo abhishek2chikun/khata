@@ -49,7 +49,7 @@ Server authentication keeps `app_users` and `user_sessions` as backend auth tabl
 | `category` | `TEXT` | `TEXT` | Yes | Product category used for filtering and uniqueness. |
 | `buyer_id` | `UUID NULL REFERENCES buyers(id)` | `TEXT NULL REFERENCES buyers(id)` | No | Nullable during migration and for products created before buyer records exist. |
 | `company_name` | `TEXT` | `TEXT` | Yes | Replaces current `company`. Mirrors `buyers.name` when `buyer_id` is set. |
-| `buying_price` | `NUMERIC(14,2)` | Decimal string | Yes | Price paid to buyer/supplier, inclusive of GST unless a future task changes the contract. |
+| `buying_price` | `NUMERIC(14,2)` | Decimal string | Yes | Price paid to buyer/supplier, inclusive of GST. Legacy pre-tax buying prices are converted during migration. |
 | `selling_price` | `NUMERIC(14,2)` | Decimal string | Yes | Default customer invoice price per unit, inclusive of GST. |
 | `unit` | `TEXT NULL` | `TEXT NULL` | No | Unit label such as `pcs`, `box`, or `kg`. |
 | `gst_rate` | `NUMERIC(5,2)` | Decimal string | Yes | Default GST percentage for invoice lines. |
@@ -61,8 +61,8 @@ Server authentication keeps `app_users` and `user_sessions` as backend auth tabl
 
 ### Product Constraints
 
-- `item_number` is unique.
-- `(company_name, item_name, category)` is unique for active and archived rows unless a migration task explicitly chooses a stricter database constraint for all rows.
+- `item_number` is globally unique across active and archived rows.
+- `(company_name, item_name, category)` is globally unique across active and archived rows. Reactivation or renaming is the supported path when an archived product identity needs to be reused.
 - `buyer_id` and `company_name` must agree when `buyer_id` is present: `company_name` is copied from the linked buyer name at product save time.
 - Product edit does not directly rewrite `quantity_on_hand`. Stock changes use `stock_movements`, invoice creation, or invoice cancellation.
 
@@ -176,6 +176,13 @@ Receivable balance formula:
 
 `sum(OPENING_BALANCE + INVOICE_DEBIT + COLLECTION_CANCEL_REVERSAL + BALANCE_INCREASE_ADJUSTMENT) - sum(COLLECTION_RECEIVED + INVOICE_CANCEL_REVERSAL + BALANCE_DECREASE_ADJUSTMENT)`.
 
+### Customer Ledger Timestamps
+
+- Invoice-created `INVOICE_DEBIT` rows use the parent invoice `invoice_datetime` as `occurred_at`.
+- Immediate `COLLECTION_RECEIVED` rows created for `TOTAL_PAID` or `PARTIAL_PAID` invoices use the same `invoice_datetime` as `occurred_at` unless the UI explicitly captures a different collection datetime at invoice creation.
+- `INVOICE_CANCEL_REVERSAL` and `COLLECTION_CANCEL_REVERSAL` rows use the invoice `canceled_at` timestamp as `occurred_at`.
+- Manual `COLLECTION_RECEIVED`, `OPENING_BALANCE`, `BALANCE_INCREASE_ADJUSTMENT`, and `BALANCE_DECREASE_ADJUSTMENT` rows use the user-entered datetime as `occurred_at`; the UI default is the current device/server time at form open.
+
 ## Invoices
 
 ### Payment States
@@ -189,6 +196,18 @@ Receivable balance formula:
 | `PARTIAL_PAID` | Greater than `0.00` and less than `grand_total` | Create one `INVOICE_DEBIT` for the full invoice total and one `COLLECTION_RECEIVED` for the paid amount. |
 
 Invoices store `paid_amount` as a decimal. For `CREDIT`, it is `0.00`. For `TOTAL_PAID`, it equals `grand_total`. For `PARTIAL_PAID`, it is the exact collected amount at invoice creation.
+
+### Cancellation Ledger Side Effects
+
+Cancellation writes positive-magnitude ledger rows whose direction is determined by `entry_type`.
+
+| Original payment state | Cancellation rows | Net customer-balance effect |
+| --- | --- | --- |
+| `CREDIT` | One `INVOICE_CANCEL_REVERSAL` with `amount = grand_total`, `invoice_id` set, and `occurred_at = canceled_at`. | Decreases receivable by `grand_total`, exactly reversing the original `INVOICE_DEBIT`. |
+| `TOTAL_PAID` | One `INVOICE_CANCEL_REVERSAL` with `amount = grand_total` and one `COLLECTION_CANCEL_REVERSAL` with `amount = grand_total`; both rows set `invoice_id` and `occurred_at = canceled_at`. | The reversal debit decreases receivable by `grand_total`; the collection reversal increases receivable by `grand_total`; net balance change is `0.00`, restoring the customer's pre-invoice balance while preserving audit rows. |
+| `PARTIAL_PAID` | One `INVOICE_CANCEL_REVERSAL` with `amount = grand_total` and one `COLLECTION_CANCEL_REVERSAL` with `amount = paid_amount`; both rows set `invoice_id` and `occurred_at = canceled_at`. | The reversal debit decreases receivable by `grand_total`; the collection reversal increases receivable by `paid_amount`; net balance change is `paid_amount - grand_total`, exactly reversing the invoice's original net receivable increase. |
+
+Cancellation rows are inserted in the same transaction as invoice status changes and stock restoration. Repeated cancellation requests with the same cancel request identity return the existing canceled invoice and do not add duplicate ledger rows.
 
 ### Header Fields
 
@@ -253,6 +272,34 @@ Movement types:
 - Existing invoice item `product_code` becomes `item_number` and existing invoice item `company` becomes `company_name`.
 
 Migration scripts must preserve IDs, ledger rows, invoice rows, invoice item order, timestamps, request IDs, request hashes, and cancellation metadata.
+
+### Product Field Migration
+
+| Current field | Canonical field | Migration rule |
+| --- | --- | --- |
+| `company` | `company_name`, `buyer_id` | Copy `company` into `company_name`. Match an existing buyer by exact `buyers.name = company_name`; create one active buyer with that name when none exists; store the matched or created buyer ID in `buyer_id`. |
+| `item_code` | `item_number` | Copy the normalized legacy value directly and enforce global uniqueness across active and archived products. |
+| `item_name` | `item_name` | Copy directly. |
+| `category` | `category` | Copy directly. |
+| `buying_price_excl_tax` | `buying_price` | Treat the legacy value as pre-tax data. Convert to inclusive price using `buying_gst_rate` when present: `round_money(buying_price_excl_tax * (1 + buying_gst_rate / 100))`. When `buying_gst_rate` is null, copy the legacy value into `buying_price` and record the migrated row as having unknown buying GST in the migration report. |
+| `default_selling_price_excl_tax` | `selling_price` | Treat the legacy value as pre-tax data and convert to the new inclusive default: `round_money(default_selling_price_excl_tax * (1 + default_gst_rate / 100))`. The canonical product row does not keep pricing-mode metadata; invoice item snapshots created before migration retain their original normalized tax fields. |
+| `default_gst_rate` | `gst_rate` | Copy directly as the default invoice-line GST rate. |
+| `quantity_on_hand` | `quantity_on_hand` | Copy directly with 3-decimal normalization. |
+| `low_stock_threshold` | `low_stock_threshold` | Copy directly with 3-decimal normalization. |
+| `is_active` | `is_active` | Copy directly. |
+
+### Seller Transaction Entry-Type Migration
+
+| Current `seller_transactions.entry_type` | Canonical `customer_transactions.entry_type` | Migration rule |
+| --- | --- | --- |
+| `CREDIT_SALE` | `INVOICE_DEBIT` | Copy amount as a positive magnitude, keep `invoice_id`, and use the migrated invoice `invoice_datetime` as `occurred_at` when the invoice exists; otherwise preserve the old transaction business date/time. |
+| `PAYMENT` | `COLLECTION_RECEIVED` | Copy amount as a positive magnitude. Use the old transaction business date/time as `occurred_at`. |
+| `OPENING_BALANCE` | `OPENING_BALANCE` | Same meaning under the customer ledger; copy amount as a positive magnitude and preserve one-opening-balance-per-customer behavior. |
+| `BALANCE_INCREASE_ADJUSTMENT` | `BALANCE_INCREASE_ADJUSTMENT` | Same meaning under the customer ledger; copy amount as a positive magnitude. |
+| `BALANCE_DECREASE_ADJUSTMENT` | `BALANCE_DECREASE_ADJUSTMENT` | Same meaning under the customer ledger; copy amount as a positive magnitude. |
+| `INVOICE_CANCEL_REVERSAL` | `INVOICE_CANCEL_REVERSAL` and, where required, `COLLECTION_CANCEL_REVERSAL` | For legacy credit invoices, copy as `INVOICE_CANCEL_REVERSAL`. For migrated `TOTAL_PAID` and `PARTIAL_PAID` invoices, create cancellation rows according to the cancellation side-effect table so the invoice debit and any immediate collection are both reversed with auditable rows. |
+
+Old `seller_id` references become `customer_id`. Old `occurred_on` date values are converted to `occurred_at` using the start of that local business day when no more precise timestamp exists.
 
 ## Compatibility Policy
 
