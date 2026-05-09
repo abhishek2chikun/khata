@@ -6,6 +6,7 @@ Create Date: 2026-05-09 00:00:00
 """
 
 from collections.abc import Sequence
+from decimal import Decimal, ROUND_HALF_UP
 
 from alembic import op
 import sqlalchemy as sa
@@ -16,6 +17,16 @@ down_revision: str | None = "0004_invoice"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
+MONEY_QUANT = Decimal("0.01")
+
+
+def to_inclusive_money(value: Decimal | None, gst_rate: Decimal | None) -> Decimal:
+    """Convert legacy pre-tax money to V2 inclusive money with safe fallback."""
+    if value is None:
+        return Decimal("0.00")
+    tax_rate = Decimal("0.00") if gst_rate is None else Decimal(gst_rate)
+    return (Decimal(value) * (Decimal("1.00") + (tax_rate / Decimal("100.00")))).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+
 
 def upgrade() -> None:
     op.drop_constraint("uq_products_company_category_item_name", "products", type_="unique")
@@ -23,21 +34,25 @@ def upgrade() -> None:
 
     op.alter_column("products", "item_code", new_column_name="item_number", existing_type=sa.String(length=255), existing_nullable=False)
     op.alter_column("products", "company", new_column_name="company_name", existing_type=sa.String(length=255), existing_nullable=False)
+    # buyer_id remains nullable until the Buyer task introduces buyers and backfills
+    # by matching products.company_name to buyers.name.
     op.add_column("products", sa.Column("buyer_id", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column("products", sa.Column("buying_price", sa.Numeric(14, 2), nullable=True))
     op.add_column("products", sa.Column("selling_price", sa.Numeric(14, 2), nullable=True))
     op.add_column("products", sa.Column("unit", sa.String(length=50), nullable=True))
     op.add_column("products", sa.Column("gst_rate", sa.Numeric(5, 2), nullable=True))
 
-    # Legacy selling prices were stored pre-tax. Product V2 stores inclusive defaults.
+    # Legacy product prices were stored pre-tax. Product V2 stores inclusive defaults.
+    # Null legacy buying prices fall back to 0.00 so buying_price can be made NOT NULL;
+    # null GST rates are treated as 0.00, preserving the legacy numeric value.
     op.execute(
         sa.text(
             """
             UPDATE products
             SET
-                buying_price = buying_price_excl_tax,
-                selling_price = ROUND(default_selling_price_excl_tax * (1 + (default_gst_rate / 100)), 2),
-                gst_rate = default_gst_rate
+                buying_price = ROUND(COALESCE(buying_price_excl_tax, 0.00) * (1 + (COALESCE(buying_gst_rate, 0.00) / 100)), 2),
+                selling_price = ROUND(COALESCE(default_selling_price_excl_tax, 0.00) * (1 + (COALESCE(default_gst_rate, 0.00) / 100)), 2),
+                gst_rate = COALESCE(default_gst_rate, 0.00)
             """
         )
     )
