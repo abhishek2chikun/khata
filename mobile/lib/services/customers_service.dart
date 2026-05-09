@@ -38,7 +38,8 @@ abstract class CustomersService {
 
   Future<Customer> createCustomer(CreateCustomerInput input);
 
-  Future<CustomerLedger> fetchCustomerLedger(String customerId);
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate});
 }
 
 class ApiCustomersService implements CustomersService {
@@ -53,9 +54,13 @@ class ApiCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) async {
-    final response = await _apiClient.get('/customers/$customerId/ledger');
-    return CustomerLedger.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) async {
+    final query = onDate == null ? '' : '?on_date=$onDate';
+    final response =
+        await _apiClient.get('/customers/$customerId/ledger$query');
+    return CustomerLedger.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   @override

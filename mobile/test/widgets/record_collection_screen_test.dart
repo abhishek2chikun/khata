@@ -22,9 +22,12 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('collectionAmountField')), '125.50');
-    await tester.enterText(find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('collectionNotesField')), 'Cash');
+    await tester.enterText(
+        find.byKey(const Key('collectionAmountField')), '125.50');
+    await tester.enterText(
+        find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('collectionNotesField')), 'Cash');
 
     await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
@@ -45,7 +48,8 @@ void main() {
     );
   });
 
-  testWidgets('record collection shows error banner on failure', (tester) async {
+  testWidgets('record collection shows error banner on failure',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: RecordCollectionScreen(
@@ -57,15 +61,18 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('collectionAmountField')), '125.50');
-    await tester.enterText(find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('collectionAmountField')), '125.50');
+    await tester.enterText(
+        find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to record collection'), findsOneWidget);
   });
 
-  testWidgets('record collection requires a valid amount before calling api', (tester) async {
+  testWidgets('record collection requires a valid amount before calling api',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
@@ -77,8 +84,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('collectionAmountField')), 'abc');
-    await tester.enterText(find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('collectionAmountField')), 'abc');
+    await tester.enterText(
+        find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
 
@@ -86,7 +95,8 @@ void main() {
     expect(service.recordedCollections, isEmpty);
   });
 
-  testWidgets('record collection requires occurred on before calling api', (tester) async {
+  testWidgets('record collection requires occurred on before calling api',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
@@ -98,7 +108,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('collectionAmountField')), '125.50');
+    await tester.enterText(
+        find.byKey(const Key('collectionAmountField')), '125.50');
+    await tester.enterText(
+        find.byKey(const Key('collectionOccurredOnField')), '');
     await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
 
@@ -123,7 +136,8 @@ class FakePaymentsService implements PaymentsService {
   FakePaymentsService({this.error});
 
   final ApiError? error;
-  final List<RecordCollectionInput> recordedCollections = <RecordCollectionInput>[];
+  final List<RecordCollectionInput> recordedCollections =
+      <RecordCollectionInput>[];
 
   @override
   Future<void> addBalanceAdjustment({

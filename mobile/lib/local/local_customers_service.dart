@@ -9,12 +9,14 @@ import '../services/customers_service.dart';
 import 'local_database.dart';
 
 class LocalCustomersService implements CustomersService {
-  LocalCustomersService({required LocalDatabase database}) : _database = database;
+  LocalCustomersService({required LocalDatabase database})
+      : _database = database;
 
   final LocalDatabase _database;
 
   @override
-  Future<customer_model.Customer> createCustomer(CreateCustomerInput input) async {
+  Future<customer_model.Customer> createCustomer(
+      CreateCustomerInput input) async {
     await _throwIfDuplicate(name: input.name, phone: input.phone);
 
     final now = DateTime.now().toUtc().toIso8601String();
@@ -47,16 +49,23 @@ class LocalCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) async {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) async {
     final customer = await _getCustomer(customerId);
-    final transactions = await (_database.select(_database.customerTransactions)
-          ..where((transaction) => transaction.customerId.equals(customerId))
-          ..orderBy([
-            (transaction) => OrderingTerm.asc(transaction.occurredOn),
-            (transaction) => OrderingTerm.asc(transaction.createdAt),
-          ]))
-        .get();
-    final pendingBalance = _pendingBalance(transactions);
+    final transactionQuery = _database.select(_database.customerTransactions)
+      ..where((transaction) => transaction.customerId.equals(customerId))
+      ..orderBy([
+        (transaction) => OrderingTerm.asc(transaction.occurredOn),
+        (transaction) => OrderingTerm.asc(transaction.createdAt),
+        (transaction) => OrderingTerm.asc(transaction.id),
+      ]);
+    final allTransactions = await transactionQuery.get();
+    final transactions = onDate == null
+        ? allTransactions
+        : allTransactions
+            .where((transaction) => transaction.occurredOn == onDate)
+            .toList();
+    final pendingBalance = _pendingBalance(allTransactions);
     return CustomerLedger(
       customer: _toCustomer(customer, pendingBalance: pendingBalance),
       transactions: transactions.map(_toLedgerTransaction).toList(),
@@ -65,7 +74,8 @@ class LocalCustomersService implements CustomersService {
   }
 
   @override
-  Future<List<customer_model.Customer>> fetchCustomers({String search = ''}) async {
+  Future<List<customer_model.Customer>> fetchCustomers(
+      {String search = ''}) async {
     final query = _database.select(_database.customers)
       ..orderBy([
         (customer) => OrderingTerm.asc(customer.name),
@@ -120,7 +130,8 @@ class LocalCustomersService implements CustomersService {
     }
     final duplicates = await (_database.select(_database.customers)
           ..where(
-            (customer) => customer.name.equals(name) & customer.phone.equals(phone),
+            (customer) =>
+                customer.name.equals(name) & customer.phone.equals(phone),
           ))
         .get();
     return duplicates.isNotEmpty;
@@ -173,12 +184,14 @@ class LocalCustomersService implements CustomersService {
     );
   }
 
-  CustomerLedgerTransaction _toLedgerTransaction(CustomerTransaction transaction) {
+  CustomerLedgerTransaction _toLedgerTransaction(
+      CustomerTransaction transaction) {
     return CustomerLedgerTransaction(
       id: transaction.id,
       entryType: transaction.entryType,
       amount: double.parse(transaction.amount),
       occurredOn: transaction.occurredOn,
+      createdAt: transaction.createdAt,
       notes: transaction.notes,
     );
   }

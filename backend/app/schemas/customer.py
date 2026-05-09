@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -88,6 +88,7 @@ class CustomerTransactionResponse(BaseModel):
     entry_type: str
     amount: Decimal
     occurred_on: date
+    created_at: datetime
     notes: str | None
 
 

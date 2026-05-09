@@ -105,18 +105,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -400));
+    await tester.drag(
+        find.byType(SingleChildScrollView), const Offset(0, -400));
     await tester.pumpAndSettle();
 
     expect(find.text('Customer khata'), findsOneWidget);
-    expect(find.text('Record collection'), findsOneWidget);
-    expect(find.text('Khata timeline'), findsOneWidget);
+    expect(find.text('Collect money'), findsOneWidget);
+    expect(find.text('Ledger history'), findsOneWidget);
     expect(find.textContaining('Seller'), findsNothing);
   });
 }
 
 class _FakeCustomersService implements CustomersService {
-  _FakeCustomersService({this.customers = const <Customer>[], this.ledgers = const <CustomerLedger>[]});
+  _FakeCustomersService(
+      {this.customers = const <Customer>[],
+      this.ledgers = const <CustomerLedger>[]});
 
   final List<Customer> customers;
   final List<CustomerLedger> ledgers;
@@ -127,18 +130,24 @@ class _FakeCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) async => ledgers.single;
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+          {String? onDate}) async =>
+      ledgers.single;
 
   @override
-  Future<List<Customer>> fetchCustomers({String search = ''}) async => customers;
+  Future<List<Customer>> fetchCustomers({String search = ''}) async =>
+      customers;
 }
 
 class _FakePaymentsService implements PaymentsService {
   @override
-  Future<void> addBalanceAdjustment({required String customerId, required BalanceAdjustmentInput input}) async {}
+  Future<void> addBalanceAdjustment(
+      {required String customerId,
+      required BalanceAdjustmentInput input}) async {}
 
   @override
-  Future<void> addOpeningBalance({required String customerId, required OpeningBalanceInput input}) async {}
+  Future<void> addOpeningBalance(
+      {required String customerId, required OpeningBalanceInput input}) async {}
 
   @override
   Future<void> recordCollection(RecordCollectionInput input) async {}

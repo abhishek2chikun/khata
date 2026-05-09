@@ -69,18 +69,38 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (customer != null) ...<Widget>[
-                    Text(customer.name, style: Theme.of(context).textTheme.headlineSmall),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(customer.name,
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Balance receivable',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            Text(
+                              customer.pendingBalance.toStringAsFixed(2),
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     const SizedBox(height: 8),
                     Text(customer.address),
-                    if (customer.phone != null && customer.phone!.isNotEmpty) Text('Phone: ${customer.phone}'),
-                    if (customer.gstin != null && customer.gstin!.isNotEmpty) Text('GSTIN: ${customer.gstin}'),
+                    if (customer.phone != null && customer.phone!.isNotEmpty)
+                      Text('Phone: ${customer.phone}'),
+                    if (customer.gstin != null && customer.gstin!.isNotEmpty)
+                      Text('GSTIN: ${customer.gstin}'),
                     if (customer.state != null && customer.state!.isNotEmpty)
-                      Text('State: ${customer.state} (${customer.stateCode ?? ''})'),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Pending balance: ${customer.pendingBalance.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                      Text(
+                          'State: ${customer.state} (${customer.stateCode ?? ''})'),
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
@@ -89,7 +109,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         FilledButton(
                           key: const Key('recordCollectionActionButton'),
                           onPressed: () => _openRecordCollection(customer),
-                          child: const Text('Record collection'),
+                          child: const Text('Collect money'),
                         ),
                         FilledButton.tonal(
                           key: const Key('openingBalanceActionButton'),
@@ -98,27 +118,39 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         ),
                         FilledButton.tonal(
                           key: const Key('balanceAdjustmentActionButton'),
-                          onPressed: () => _openBalanceAdjustment(customer),
-                          child: const Text('Balance adjustment'),
+                          onPressed: () =>
+                              _openBalanceAdjustment(customer, 'INCREASE'),
+                          child: const Text('Increase balance'),
+                        ),
+                        FilledButton.tonal(
+                          key: const Key('decreaseBalanceActionButton'),
+                          onPressed: () =>
+                              _openBalanceAdjustment(customer, 'DECREASE'),
+                          child: const Text('Decrease balance'),
                         ),
                         OutlinedButton(
                           key: const Key('createInvoiceActionButton'),
-                          onPressed: customer.isActive ? () => _openCreateInvoice(customer) : null,
+                          onPressed: customer.isActive
+                              ? () => _openCreateInvoice(customer)
+                              : null,
                           child: const Text('Create invoice'),
                         ),
                         if (!customer.isActive)
-                          const Text('Create invoice unavailable for archived customers'),
+                          const Text(
+                              'Create invoice unavailable for archived customers'),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text('Khata timeline', style: Theme.of(context).textTheme.titleLarge),
+                    Text('Ledger history',
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
                     if (ledger!.transactions.isEmpty)
                       const Text('No ledger transactions yet')
                     else
                       ...ledger.transactions.map(_buildTransactionTile),
                     const SizedBox(height: 24),
-                    Text('Invoice history', style: Theme.of(context).textTheme.titleLarge),
+                    Text('Invoice history',
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
                     if (ledger.invoices.isEmpty)
                       const Text('No invoices yet')
@@ -135,9 +167,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     return Card(
       child: ListTile(
         title: Text(transaction.entryType),
-        subtitle: Text(transaction.notes ?? transaction.occurredOn),
+        subtitle: _buildTransactionSubtitle(transaction),
         trailing: Text(transaction.amount.toStringAsFixed(2)),
       ),
+    );
+  }
+
+  Widget _buildTransactionSubtitle(CustomerLedgerTransaction transaction) {
+    final timestamp = _formatCreatedAt(transaction.createdAt);
+    final note = transaction.notes;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(timestamp.isEmpty ? transaction.occurredOn : timestamp),
+        if (note != null && note.isNotEmpty) Text(note),
+      ],
     );
   }
 
@@ -145,7 +189,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     return Card(
       child: ListTile(
         title: Text(invoice.invoiceNumber),
-        subtitle: Text('${invoice.invoiceDate} • ${invoice.paymentMode} • ${invoice.status}'),
+        subtitle: Text(
+            '${invoice.invoiceDate} • ${invoice.paymentMode} • ${invoice.status}'),
         trailing: Text(invoice.grandTotal.toStringAsFixed(2)),
       ),
     );
@@ -158,7 +203,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     });
 
     try {
-      final ledger = await widget.customersService.fetchCustomerLedger(widget.customerId);
+      final ledger =
+          await widget.customersService.fetchCustomerLedger(widget.customerId);
       if (!mounted) {
         return;
       }
@@ -211,12 +257,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
-  Future<void> _openBalanceAdjustment(Customer customer) async {
+  Future<void> _openBalanceAdjustment(
+      Customer customer, String direction) async {
     final shouldRefresh = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => BalanceAdjustmentScreen(
               paymentsService: widget.paymentsService,
               customer: customer,
+              initialDirection: direction,
             ),
           ),
         ) ??
@@ -241,5 +289,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       return 'Unable to reach the server';
     }
     return 'Unable to load customer detail';
+  }
+
+  String _formatCreatedAt(String value) {
+    if (value.length < 16) {
+      return '';
+    }
+    return value.substring(0, 16).replaceFirst('T', ' ');
   }
 }

@@ -34,7 +34,9 @@ void main() {
   });
 
   test('local schema uses customer tables not seller tables', () async {
-    final tables = await database.customSelect("SELECT name FROM sqlite_master WHERE type = 'table'").get();
+    final tables = await database
+        .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .get();
     final names = tables.map((row) => row.read<String>('name')).toSet();
 
     expect(names, contains('customers'));
@@ -43,7 +45,9 @@ void main() {
     expect(names, isNot(contains('seller_transactions')));
   });
 
-  test('customer khata ledger preserves balance math and deterministic ordering', () async {
+  test(
+      'customer khata ledger preserves balance math and deterministic ordering',
+      () async {
     final customer = await customersService.createCustomer(
       const CreateCustomerInput(
         name: 'Acme Stores',
@@ -90,6 +94,83 @@ void main() {
       <String>['OPENING_BALANCE', 'COLLECTION', 'BALANCE_INCREASE_ADJUSTMENT'],
     );
     expect(ledger.transactions[1].notes, 'Cash received');
+    expect(
+        ledger.transactions
+            .every((transaction) => transaction.createdAt.isNotEmpty),
+        isTrue);
+  });
+
+  test('same-day local collections keep stable creation-time ordering',
+      () async {
+    final customer = await customersService.createCustomer(
+      const CreateCustomerInput(name: 'Acme Stores', address: '1 Market Road'),
+    );
+
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
+        requestId: _uuid(4),
+        customerId: customer.id,
+        amount: 20,
+        occurredOn: '2026-01-02',
+        notes: 'First collection',
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
+        requestId: _uuid(5),
+        customerId: customer.id,
+        amount: 30,
+        occurredOn: '2026-01-02',
+        notes: 'Second collection',
+      ),
+    );
+
+    final ledger = await customersService.fetchCustomerLedger(customer.id);
+
+    expect(
+      ledger.transactions.map((transaction) => transaction.notes),
+      <String?>['First collection', 'Second collection'],
+    );
+    expect(
+      ledger.transactions.map((transaction) => transaction.createdAt).toSet(),
+      hasLength(2),
+    );
+  });
+
+  test('local customer ledger filters transactions by occurred date', () async {
+    final customer = await customersService.createCustomer(
+      const CreateCustomerInput(name: 'Acme Stores', address: '1 Market Road'),
+    );
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
+        requestId: _uuid(6),
+        customerId: customer.id,
+        amount: 20,
+        occurredOn: '2026-01-02',
+        notes: 'Selected date',
+      ),
+    );
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
+        requestId: _uuid(7),
+        customerId: customer.id,
+        amount: 30,
+        occurredOn: '2026-01-03',
+        notes: 'Other date',
+      ),
+    );
+
+    final ledger = await customersService.fetchCustomerLedger(
+      customer.id,
+      onDate: '2026-01-02',
+    );
+
+    expect(ledger.customer.pendingBalance, -50);
+    expect(
+      ledger.transactions.map((transaction) => transaction.notes),
+      <String?>['Selected date'],
+    );
   });
 }
 

@@ -19,8 +19,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '300');
-    await tester.enterText(find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '300');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
 
@@ -43,22 +45,26 @@ void main() {
       MaterialApp(
         home: OpeningBalanceScreen(
           paymentsService: FakePaymentsService(
-            openingBalanceError: const ApiError(message: 'Unable to save opening balance'),
+            openingBalanceError:
+                const ApiError(message: 'Unable to save opening balance'),
           ),
           customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '300');
-    await tester.enterText(find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '300');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to save opening balance'), findsOneWidget);
   });
 
-  testWidgets('opening balance requires valid amount and occurred on', (tester) async {
+  testWidgets('opening balance requires valid amount and occurred on',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
@@ -70,20 +76,25 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
     expect(find.text('Enter a valid amount'), findsOneWidget);
     expect(service.openingBalances, isEmpty);
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '250');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '250');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
     expect(find.text('Occurred on is required'), findsOneWidget);
     expect(service.openingBalances, isEmpty);
   });
 
-  testWidgets('balance adjustment submits generated request id', (tester) async {
+  testWidgets('balance adjustment submits generated request id',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
@@ -99,9 +110,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Decrease').last);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '75');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '75');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')),
+        '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
 
@@ -121,27 +136,33 @@ void main() {
     );
   });
 
-  testWidgets('balance adjustment shows error banner on failure', (tester) async {
+  testWidgets('balance adjustment shows error banner on failure',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: BalanceAdjustmentScreen(
           paymentsService: FakePaymentsService(
-            adjustmentError: const ApiError(message: 'Unable to save adjustment'),
+            adjustmentError:
+                const ApiError(message: 'Unable to save adjustment'),
           ),
           customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '75');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '75');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')),
+        '2026-04-20');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to save adjustment'), findsOneWidget);
   });
 
-  testWidgets('balance adjustment requires valid amount and occurred on', (tester) async {
+  testWidgets('balance adjustment requires valid amount and occurred on',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
@@ -153,13 +174,17 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), 'oops');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), 'oops');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
     expect(find.text('Enter a valid amount'), findsOneWidget);
     expect(service.adjustments, isEmpty);
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')), '');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
     expect(find.text('Occurred on is required'), findsOneWidget);
@@ -200,7 +225,8 @@ class FakePaymentsService implements PaymentsService {
     if (adjustmentError != null) {
       throw adjustmentError!;
     }
-    adjustments.add(_BalanceAdjustmentCall(customerId: customerId, input: input));
+    adjustments
+        .add(_BalanceAdjustmentCall(customerId: customerId, input: input));
   }
 
   @override
@@ -211,7 +237,8 @@ class FakePaymentsService implements PaymentsService {
     if (openingBalanceError != null) {
       throw openingBalanceError!;
     }
-    openingBalances.add(_OpeningBalanceCall(customerId: customerId, input: input));
+    openingBalances
+        .add(_OpeningBalanceCall(customerId: customerId, input: input));
   }
 
   @override
