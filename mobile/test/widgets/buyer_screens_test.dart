@@ -94,14 +94,14 @@ void main() {
                   BuyerLedgerTransaction(
                     id: 'txn-1',
                     entryType: 'PURCHASE_AMOUNT',
-                    amount: 600,
+                    amount: '600.00',
                     occurredAt: '2026-04-20T10:30:00.000Z',
                     notes: 'Purchase bill',
                   ),
                   BuyerLedgerTransaction(
                     id: 'txn-2',
                     entryType: 'PAYMENT_MADE',
-                    amount: 100,
+                    amount: '100.00',
                     occurredAt: '2026-04-21T10:30:00.000Z',
                     notes: 'UPI',
                   ),
@@ -133,7 +133,7 @@ void main() {
             BuyerLedgerTransaction(
               id: 'txn-3',
               entryType: 'PURCHASE_AMOUNT',
-              amount: 200,
+              amount: '200.00',
               occurredAt: '2026-04-20T10:30:00.000Z',
               notes: 'Purchase',
             ),
@@ -145,7 +145,7 @@ void main() {
             BuyerLedgerTransaction(
               id: 'txn-4',
               entryType: 'PAYMENT_MADE',
-              amount: 100,
+              amount: '100.00',
               occurredAt: '2026-04-21T10:30:00.000Z',
               notes: 'Paid',
             ),
@@ -157,7 +157,7 @@ void main() {
             BuyerLedgerTransaction(
               id: 'txn-5',
               entryType: 'PAYABLE_INCREASE_ADJUSTMENT',
-              amount: 50,
+              amount: '50.00',
               occurredAt: '2026-04-22T10:30:00.000Z',
               notes: 'Correction',
             ),
@@ -177,7 +177,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Purchase Amount'), findsWidgets);
     await tester.enterText(
-        find.byKey(const Key('buyerLedgerAmountField')), '200');
+        find.byKey(const Key('buyerLedgerAmountField')), '200.10');
     await tester.enterText(
       find.byKey(const Key('buyerLedgerOccurredAtField')),
       '2026-04-20T10:30:00.000Z',
@@ -216,10 +216,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.purchaseAmounts, hasLength(1));
+    expect(service.purchaseAmounts.single.amount, '200.10');
     expect(service.paymentsMade, hasLength(1));
     expect(service.adjustments, hasLength(1));
     expect(service.fetchBuyerLedgerCount, 4);
     expect(find.textContaining('Pending Payable: 650.00'), findsOneWidget);
+  });
+
+  testWidgets('buyer ledger form rejects invalid money with clear error',
+      (tester) async {
+    final service = FakeBuyersService(
+      ledgers: <BuyerLedger>[
+        BuyerLedger(
+            buyer: _buyer, transactions: const <BuyerLedgerTransaction>[]),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerDetailScreen(buyerId: 'buyer-1', buyersService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('purchaseAmountActionButton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('buyerLedgerAmountField')), '1.234');
+    await tester.tap(find.byKey(const Key('submitBuyerLedgerEntryButton')));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.text('Amount must be greater than zero with at most 2 decimals'),
+        findsOneWidget);
+    expect(service.purchaseAmounts, isEmpty);
   });
 }
 

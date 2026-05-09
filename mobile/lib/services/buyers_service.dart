@@ -4,6 +4,7 @@ import 'dart:math';
 import '../models/buyer.dart';
 import '../models/buyer_ledger.dart';
 import 'api_client.dart';
+import 'money_validator.dart';
 
 class CreateBuyerInput {
   const CreateBuyerInput({
@@ -43,14 +44,14 @@ class BuyerLedgerEntryInput {
   });
 
   final String requestId;
-  final double amount;
+  final String amount;
   final String occurredAt;
   final String? notes;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'request_id': requestId,
-      'amount': amount,
+      'amount': validateMoneyAmount(amount),
       'occurred_at': occurredAt,
       'notes': notes,
     };

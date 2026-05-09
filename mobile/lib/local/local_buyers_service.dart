@@ -7,6 +7,7 @@ import '../models/api_error.dart';
 import '../models/buyer.dart' as buyer_model;
 import '../models/buyer_ledger.dart';
 import '../services/buyers_service.dart';
+import '../services/money_validator.dart';
 import 'local_database.dart';
 import 'local_sellers_service.dart';
 
@@ -177,7 +178,7 @@ class LocalBuyersService implements BuyersService {
     required String buyerId,
     required String requestId,
     required String entryType,
-    required double amount,
+    required String amount,
     required String occurredAt,
     required String? notes,
     required Map<String, dynamic> payload,
@@ -185,7 +186,7 @@ class LocalBuyersService implements BuyersService {
     await _ensureActiveBuyer(buyerId);
     _validateRequestId(requestId);
     _validateOccurredAt(occurredAt);
-    _validatePositiveAmount(amount);
+    final normalizedAmount = validateMoneyAmount(amount);
 
     final requestHash = _entryHash(<String, dynamic>{
       'buyer_id': buyerId,
@@ -218,7 +219,7 @@ class LocalBuyersService implements BuyersService {
                 entryType == 'OPENING_PAYABLE' ? buyerId : null,
               ),
               entryType: entryType,
-              amount: _normalizeDecimal(amount),
+              amount: normalizedAmount,
               occurredAt: occurredAt,
               notes: Value(notes),
               createdByUserId: _systemUserId,
@@ -344,7 +345,7 @@ class LocalBuyersService implements BuyersService {
     return BuyerLedgerTransaction(
       id: transaction.id,
       entryType: transaction.entryType,
-      amount: double.parse(transaction.amount),
+      amount: transaction.amount,
       occurredAt: transaction.occurredAt,
       notes: transaction.notes,
     );
@@ -373,16 +374,6 @@ class LocalBuyersService implements BuyersService {
         );
   }
 
-  void _validatePositiveAmount(double amount) {
-    if (!amount.isFinite || amount <= 0) {
-      throw const ApiError(
-        code: 'VALIDATION_ERROR',
-        message: 'amount must be greater than zero',
-        statusCode: 422,
-      );
-    }
-  }
-
   void _validateRequestId(String requestId) {
     final uuidPattern = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
@@ -398,7 +389,7 @@ class LocalBuyersService implements BuyersService {
 
   void _validateOccurredAt(String value) {
     final parsed = DateTime.tryParse(value);
-    if (parsed == null || !value.endsWith('Z')) {
+    if (parsed == null || !_hasTimezone(value)) {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
         message: 'occurred_at must include timezone information',
@@ -407,22 +398,16 @@ class LocalBuyersService implements BuyersService {
     }
   }
 
+  bool _hasTimezone(String value) {
+    return value.endsWith('Z') || RegExp(r'[+-]\d{2}:\d{2}$').hasMatch(value);
+  }
+
   String _entryHash(Map<String, dynamic> payload) {
     final sorted = Map<String, dynamic>.fromEntries(
       payload.entries.toList()
         ..sort((left, right) => left.key.compareTo(right.key)),
     );
     return sha256.convert(utf8.encode(jsonEncode(sorted))).toString();
-  }
-
-  String _normalizeDecimal(double value) {
-    if (!value.isFinite) {
-      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
-    }
-    if (value == value.truncateToDouble()) {
-      return value.toInt().toString();
-    }
-    return value.toString();
   }
 
   ApiError _duplicateBuyerError() {

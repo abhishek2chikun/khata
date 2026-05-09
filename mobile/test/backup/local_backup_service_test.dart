@@ -29,7 +29,9 @@ void main() {
     );
 
     expect(package.version, LocalBackupPackage.currentVersion);
-    expect(payload.schemaVersion, 2);
+    expect(payload.schemaVersion, 3);
+    expect(payload.tables, contains('buyers'));
+    expect(payload.tables, contains('buyer_transactions'));
     expect(package.payloadCiphertext, isNot(contains('product-0001')));
     expect(package.payloadCiphertext, isNot(contains('123.4500')));
 
@@ -42,6 +44,9 @@ void main() {
     final sellers = await target.select(target.sellers).get();
     final invoices = await target.select(target.invoices).get();
     final items = await target.select(target.invoiceItems).get();
+    final buyers = await target.select(target.buyers).get();
+    final buyerTransactions =
+        await target.select(target.buyerTransactions).get();
 
     expect(products.single.id, 'product-0001');
     expect(products.single.itemNumber, 'PEN-product-0001');
@@ -56,6 +61,37 @@ void main() {
     expect(invoices.single.grandTotal, '145.6710');
     expect(items.single.id, 'invoice-item-0001');
     expect(items.single.quantity, '1.250');
+    expect(buyers.single.id, 'buyer-0001');
+    expect(buyerTransactions.single.buyerId, 'buyer-0001');
+    expect(buyerTransactions.single.amount, '123.45');
+  });
+
+  test('import clears and restores buyer ledger tables before local users',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+
+    await LocalBackupService(database: target).importEncrypted(
+      package: package,
+      password: 'backup-password',
+    );
+
+    final buyers = await target.select(target.buyers).get();
+    final buyerTransactions =
+        await target.select(target.buyerTransactions).get();
+    expect(buyers.map((buyer) => buyer.id), <String>['buyer-0001']);
+    expect(buyerTransactions.map((transaction) => transaction.id),
+        <String>['buyer-transaction-0001']);
+    expect((await target.select(target.localUsers).get()).single.username,
+        'system-source-product');
   });
 
   test('rejects unsupported schema versions before replacing existing data',
@@ -128,7 +164,7 @@ void main() {
       password: 'backup-password',
       mutate: (payload) {
         final tables = payload['tables'] as Map<String, Object?>;
-        tables.remove('invoice_items');
+        tables.remove('buyer_transactions');
       },
     );
 
@@ -301,6 +337,33 @@ Future<void> _seedRoundTripData(
           gstin: const Value('27ABCDE1234F1Z5'),
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
+        ),
+      );
+  await database.into(database.buyers).insert(
+        db.BuyersCompanion.insert(
+          id: 'buyer-0001',
+          name: 'Global Suppliers $productId',
+          address: '9 Wholesale Market',
+          state: const Value('Maharashtra'),
+          stateCode: const Value('27'),
+          phone: Value('8888$productId'),
+          gstin: const Value('27ABCDE1234F1Z5'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        ),
+      );
+  await database.into(database.buyerTransactions).insert(
+        db.BuyerTransactionsCompanion.insert(
+          id: 'buyer-transaction-0001',
+          buyerId: 'buyer-0001',
+          requestId: Value('buyer-request-$productId'),
+          requestHash: const Value('buyer-request-hash'),
+          entryType: 'PURCHASE_AMOUNT',
+          amount: '123.45',
+          occurredAt: '2026-01-02T10:30:00+05:30',
+          notes: const Value('Purchase bill'),
+          createdByUserId: 'local-system-user',
+          createdAt: '2026-01-02T05:00:00.000Z',
         ),
       );
   await database.into(database.invoices).insert(

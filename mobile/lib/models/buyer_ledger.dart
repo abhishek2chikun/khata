@@ -32,7 +32,7 @@ class BuyerLedgerTransaction {
 
   final String id;
   final String entryType;
-  final double amount;
+  final String amount;
   final String occurredAt;
   final String? notes;
 
@@ -40,16 +40,9 @@ class BuyerLedgerTransaction {
     return BuyerLedgerTransaction(
       id: json['id'].toString(),
       entryType: json['entry_type'] as String? ?? '',
-      amount: _toDouble(json['amount']),
+      amount: json['amount']?.toString() ?? '0',
       occurredAt: json['occurred_at'] as String? ?? '',
       notes: json['notes'] as String?,
     );
   }
-}
-
-double _toDouble(Object? value) {
-  if (value is num) {
-    return value.toDouble();
-  }
-  return double.tryParse(value?.toString() ?? '') ?? 0;
 }

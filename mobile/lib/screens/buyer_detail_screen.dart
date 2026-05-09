@@ -6,6 +6,7 @@ import '../models/api_error.dart';
 import '../models/buyer.dart';
 import '../models/buyer_ledger.dart';
 import '../services/buyers_service.dart';
+import '../services/money_validator.dart';
 import '../widgets/error_banner.dart';
 
 class BuyerDetailScreen extends StatefulWidget {
@@ -143,7 +144,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
       child: ListTile(
         title: Text(transaction.entryType),
         subtitle: Text(transaction.notes ?? transaction.occurredAt),
-        trailing: Text(transaction.amount.toStringAsFixed(2)),
+        trailing: Text(transaction.amount),
       ),
     );
   }
@@ -368,11 +369,13 @@ class _BuyerLedgerEntryScreenState extends State<_BuyerLedgerEntryScreen> {
   }
 
   Future<void> _submit() async {
-    final amount = double.tryParse(_amountController.text.trim());
+    final amount = _amountController.text.trim();
     final occurredAt = _occurredAtController.text.trim();
-    if (amount == null || amount <= 0) {
+    try {
+      validateMoneyAmount(amount);
+    } on ApiError catch (error) {
       setState(() {
-        _errorMessage = 'Enter a valid amount';
+        _errorMessage = error.message;
       });
       return;
     }
