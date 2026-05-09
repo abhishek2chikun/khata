@@ -16,8 +16,8 @@ def create_product(current_user: CurrentUserResponse = Depends(get_current_user)
 
 
 @router.get("", response_model=list[ProductResponse])
-def list_products(company: str | None = None, category: str | None = None, search: str | None = None, active: bool | None = None, low_stock_only: bool | None = None, _: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> list[ProductResponse]:
-    return [ProductResponse.model_validate(product) for product in product_service.list_products(session, company, category, search, active, low_stock_only)]
+def list_products(company_name: str | None = None, category: str | None = None, search: str | None = None, active: bool | None = None, low_stock_only: bool | None = None, _: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> list[ProductResponse]:
+    return [ProductResponse.model_validate(product) for product in product_service.list_products(session, company_name, category, search, active, low_stock_only)]
 
 
 @router.get("/{product_id}", response_model=ProductResponse)

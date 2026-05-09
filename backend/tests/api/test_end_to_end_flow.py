@@ -32,12 +32,13 @@ def _seller_payload() -> dict:
 
 def _product_payload() -> dict:
     return {
-        "company": "Camlin",
+        "company_name": "Camlin",
         "category": "Pens",
         "item_name": "Blue Pen",
-        "item_code": "PEN-001",
-        "default_selling_price_excl_tax": "100.00",
-        "default_gst_rate": "18.00",
+        "item_number": "PEN-001",
+        "buying_price": "80.00",
+        "selling_price": "118.00",
+        "gst_rate": "18.00",
         "quantity_on_hand": "5.000",
         "low_stock_threshold": "2.000",
     }
