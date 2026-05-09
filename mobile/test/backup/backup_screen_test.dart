@@ -9,6 +9,8 @@ import 'package:internal_billing_khata_mobile/backup/backup_screen.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_backup_service.dart';
 import 'package:internal_billing_khata_mobile/main.dart';
+import 'package:internal_billing_khata_mobile/models/buyer.dart';
+import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
@@ -18,6 +20,7 @@ import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/seller.dart';
 import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
+import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
@@ -90,6 +93,7 @@ void main() {
       ),
       productsService: _FakeProductsService(),
       sellersService: _FakeSellersService(),
+      buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
@@ -123,6 +127,7 @@ void main() {
       ),
       productsService: _FakeProductsService(),
       sellersService: _FakeSellersService(),
+      buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
@@ -251,6 +256,55 @@ class _FakeCompanyProfileService implements CompanyProfileService {
 
   @override
   Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeBuyersService implements BuyersService {
+  @override
+  Future<void> addOpeningPayable({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPayableAdjustment({
+    required String buyerId,
+    required BuyerPayableAdjustmentInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPaymentMade({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPurchaseAmount({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Buyer> createBuyer(CreateBuyerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Buyer>> fetchBuyers({String search = ''}) {
     throw UnimplementedError();
   }
 }

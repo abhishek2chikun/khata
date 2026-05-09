@@ -9,6 +9,7 @@ import '../backup/backup_scheduler.dart';
 import '../backup/drive_backup_service.dart';
 import '../config/api_base_url.dart';
 import '../local/local_auth_service.dart';
+import '../local/local_buyers_service.dart';
 import '../local/local_company_profile_service.dart';
 import '../local/local_database.dart';
 import '../local/local_invoices_service.dart';
@@ -16,6 +17,7 @@ import '../local/local_payments_service.dart';
 import '../local/local_products_service.dart';
 import '../local/local_sellers_service.dart';
 import '../services/api_client.dart';
+import '../services/buyers_service.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
 import '../services/payments_service.dart';
@@ -34,6 +36,7 @@ class AppDependencies {
     required this.controller,
     required this.productsService,
     required this.sellersService,
+    required this.buyersService,
     required this.companyProfileService,
     required this.paymentsService,
     required this.invoicesService,
@@ -48,6 +51,7 @@ class AppDependencies {
   final AuthController controller;
   final ProductsService productsService;
   final SellersService sellersService;
+  final BuyersService buyersService;
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
@@ -95,6 +99,7 @@ class AppDependencies {
       controller: controller,
       productsService: LocalProductsService(database: localDatabase),
       sellersService: LocalSellersService(database: localDatabase),
+      buyersService: LocalBuyersService(database: localDatabase),
       companyProfileService:
           LocalCompanyProfileService(database: localDatabase),
       paymentsService: LocalPaymentsService(database: localDatabase),
@@ -145,6 +150,7 @@ class AppDependencies {
       controller: controller,
       productsService: ApiProductsService(apiClient: apiClient),
       sellersService: ApiSellersService(apiClient: apiClient),
+      buyersService: ApiBuyersService(apiClient: apiClient),
       companyProfileService: ApiCompanyProfileService(apiClient: apiClient),
       paymentsService: ApiPaymentsService(apiClient: apiClient),
       invoicesService: ApiInvoicesService(apiClient: apiClient),

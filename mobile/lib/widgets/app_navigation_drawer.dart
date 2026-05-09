@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 enum AppDestination {
   inventory('Inventory', Icons.inventory_2_outlined),
   sellers('Sellers', Icons.people_outline),
+  buyers('Buyers', Icons.storefront_outlined),
   invoices('Invoices', Icons.receipt_long_outlined),
   companyProfile('Company profile', Icons.business_outlined),
   backup('Backup & Restore', Icons.backup_outlined);

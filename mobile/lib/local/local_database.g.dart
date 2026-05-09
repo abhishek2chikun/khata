@@ -4895,6 +4895,1100 @@ class SellerTransactionsCompanion extends UpdateCompanion<SellerTransaction> {
   }
 }
 
+class $BuyersTable extends Buyers with TableInfo<$BuyersTable, Buyer> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BuyersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _addressMeta =
+      const VerificationMeta('address');
+  @override
+  late final GeneratedColumn<String> address = GeneratedColumn<String>(
+      'address', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+      'state', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _stateCodeMeta =
+      const VerificationMeta('stateCode');
+  @override
+  late final GeneratedColumn<String> stateCode = GeneratedColumn<String>(
+      'state_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+      'phone', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _gstinMeta = const VerificationMeta('gstin');
+  @override
+  late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
+      'gstin', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        name,
+        address,
+        state,
+        stateCode,
+        phone,
+        gstin,
+        isActive,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'buyers';
+  @override
+  VerificationContext validateIntegrity(Insertable<Buyer> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('address')) {
+      context.handle(_addressMeta,
+          address.isAcceptableOrUnknown(data['address']!, _addressMeta));
+    } else if (isInserting) {
+      context.missing(_addressMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    }
+    if (data.containsKey('state_code')) {
+      context.handle(_stateCodeMeta,
+          stateCode.isAcceptableOrUnknown(data['state_code']!, _stateCodeMeta));
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+          _phoneMeta, phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta));
+    }
+    if (data.containsKey('gstin')) {
+      context.handle(
+          _gstinMeta, gstin.isAcceptableOrUnknown(data['gstin']!, _gstinMeta));
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {name, phone},
+      ];
+  @override
+  Buyer map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Buyer(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      address: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}address'])!,
+      state: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state']),
+      stateCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state_code']),
+      phone: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}phone']),
+      gstin: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}gstin']),
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $BuyersTable createAlias(String alias) {
+    return $BuyersTable(attachedDatabase, alias);
+  }
+}
+
+class Buyer extends DataClass implements Insertable<Buyer> {
+  final String id;
+  final String name;
+  final String address;
+  final String? state;
+  final String? stateCode;
+  final String? phone;
+  final String? gstin;
+  final bool isActive;
+  final String createdAt;
+  final String updatedAt;
+  const Buyer(
+      {required this.id,
+      required this.name,
+      required this.address,
+      this.state,
+      this.stateCode,
+      this.phone,
+      this.gstin,
+      required this.isActive,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['address'] = Variable<String>(address);
+    if (!nullToAbsent || state != null) {
+      map['state'] = Variable<String>(state);
+    }
+    if (!nullToAbsent || stateCode != null) {
+      map['state_code'] = Variable<String>(stateCode);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    if (!nullToAbsent || gstin != null) {
+      map['gstin'] = Variable<String>(gstin);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  BuyersCompanion toCompanion(bool nullToAbsent) {
+    return BuyersCompanion(
+      id: Value(id),
+      name: Value(name),
+      address: Value(address),
+      state:
+          state == null && nullToAbsent ? const Value.absent() : Value(state),
+      stateCode: stateCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateCode),
+      phone:
+          phone == null && nullToAbsent ? const Value.absent() : Value(phone),
+      gstin:
+          gstin == null && nullToAbsent ? const Value.absent() : Value(gstin),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Buyer.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Buyer(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      address: serializer.fromJson<String>(json['address']),
+      state: serializer.fromJson<String?>(json['state']),
+      stateCode: serializer.fromJson<String?>(json['stateCode']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      gstin: serializer.fromJson<String?>(json['gstin']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'address': serializer.toJson<String>(address),
+      'state': serializer.toJson<String?>(state),
+      'stateCode': serializer.toJson<String?>(stateCode),
+      'phone': serializer.toJson<String?>(phone),
+      'gstin': serializer.toJson<String?>(gstin),
+      'isActive': serializer.toJson<bool>(isActive),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  Buyer copyWith(
+          {String? id,
+          String? name,
+          String? address,
+          Value<String?> state = const Value.absent(),
+          Value<String?> stateCode = const Value.absent(),
+          Value<String?> phone = const Value.absent(),
+          Value<String?> gstin = const Value.absent(),
+          bool? isActive,
+          String? createdAt,
+          String? updatedAt}) =>
+      Buyer(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        address: address ?? this.address,
+        state: state.present ? state.value : this.state,
+        stateCode: stateCode.present ? stateCode.value : this.stateCode,
+        phone: phone.present ? phone.value : this.phone,
+        gstin: gstin.present ? gstin.value : this.gstin,
+        isActive: isActive ?? this.isActive,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  Buyer copyWithCompanion(BuyersCompanion data) {
+    return Buyer(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      address: data.address.present ? data.address.value : this.address,
+      state: data.state.present ? data.state.value : this.state,
+      stateCode: data.stateCode.present ? data.stateCode.value : this.stateCode,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      gstin: data.gstin.present ? data.gstin.value : this.gstin,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Buyer(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('address: $address, ')
+          ..write('state: $state, ')
+          ..write('stateCode: $stateCode, ')
+          ..write('phone: $phone, ')
+          ..write('gstin: $gstin, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, address, state, stateCode, phone,
+      gstin, isActive, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Buyer &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.address == this.address &&
+          other.state == this.state &&
+          other.stateCode == this.stateCode &&
+          other.phone == this.phone &&
+          other.gstin == this.gstin &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class BuyersCompanion extends UpdateCompanion<Buyer> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> address;
+  final Value<String?> state;
+  final Value<String?> stateCode;
+  final Value<String?> phone;
+  final Value<String?> gstin;
+  final Value<bool> isActive;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const BuyersCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.address = const Value.absent(),
+    this.state = const Value.absent(),
+    this.stateCode = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.gstin = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BuyersCompanion.insert({
+    required String id,
+    required String name,
+    required String address,
+    this.state = const Value.absent(),
+    this.stateCode = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.gstin = const Value.absent(),
+    this.isActive = const Value.absent(),
+    required String createdAt,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name),
+        address = Value(address),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<Buyer> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? address,
+    Expression<String>? state,
+    Expression<String>? stateCode,
+    Expression<String>? phone,
+    Expression<String>? gstin,
+    Expression<bool>? isActive,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (address != null) 'address': address,
+      if (state != null) 'state': state,
+      if (stateCode != null) 'state_code': stateCode,
+      if (phone != null) 'phone': phone,
+      if (gstin != null) 'gstin': gstin,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BuyersCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? name,
+      Value<String>? address,
+      Value<String?>? state,
+      Value<String?>? stateCode,
+      Value<String?>? phone,
+      Value<String?>? gstin,
+      Value<bool>? isActive,
+      Value<String>? createdAt,
+      Value<String>? updatedAt,
+      Value<int>? rowid}) {
+    return BuyersCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      state: state ?? this.state,
+      stateCode: stateCode ?? this.stateCode,
+      phone: phone ?? this.phone,
+      gstin: gstin ?? this.gstin,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (address.present) {
+      map['address'] = Variable<String>(address.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (stateCode.present) {
+      map['state_code'] = Variable<String>(stateCode.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (gstin.present) {
+      map['gstin'] = Variable<String>(gstin.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BuyersCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('address: $address, ')
+          ..write('state: $state, ')
+          ..write('stateCode: $stateCode, ')
+          ..write('phone: $phone, ')
+          ..write('gstin: $gstin, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BuyerTransactionsTable extends BuyerTransactions
+    with TableInfo<$BuyerTransactionsTable, BuyerTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BuyerTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _buyerIdMeta =
+      const VerificationMeta('buyerId');
+  @override
+  late final GeneratedColumn<String> buyerId = GeneratedColumn<String>(
+      'buyer_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES buyers (id)'));
+  static const VerificationMeta _requestIdMeta =
+      const VerificationMeta('requestId');
+  @override
+  late final GeneratedColumn<String> requestId = GeneratedColumn<String>(
+      'request_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _requestHashMeta =
+      const VerificationMeta('requestHash');
+  @override
+  late final GeneratedColumn<String> requestHash = GeneratedColumn<String>(
+      'request_hash', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _openingPayableBuyerIdMeta =
+      const VerificationMeta('openingPayableBuyerId');
+  @override
+  late final GeneratedColumn<String> openingPayableBuyerId =
+      GeneratedColumn<String>('opening_payable_buyer_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _entryTypeMeta =
+      const VerificationMeta('entryType');
+  @override
+  late final GeneratedColumn<String> entryType = GeneratedColumn<String>(
+      'entry_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<String> amount = GeneratedColumn<String>(
+      'amount', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _occurredAtMeta =
+      const VerificationMeta('occurredAt');
+  @override
+  late final GeneratedColumn<String> occurredAt = GeneratedColumn<String>(
+      'occurred_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdByUserIdMeta =
+      const VerificationMeta('createdByUserId');
+  @override
+  late final GeneratedColumn<String> createdByUserId = GeneratedColumn<String>(
+      'created_by_user_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        buyerId,
+        requestId,
+        requestHash,
+        openingPayableBuyerId,
+        entryType,
+        amount,
+        occurredAt,
+        notes,
+        createdByUserId,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'buyer_transactions';
+  @override
+  VerificationContext validateIntegrity(Insertable<BuyerTransaction> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('buyer_id')) {
+      context.handle(_buyerIdMeta,
+          buyerId.isAcceptableOrUnknown(data['buyer_id']!, _buyerIdMeta));
+    } else if (isInserting) {
+      context.missing(_buyerIdMeta);
+    }
+    if (data.containsKey('request_id')) {
+      context.handle(_requestIdMeta,
+          requestId.isAcceptableOrUnknown(data['request_id']!, _requestIdMeta));
+    }
+    if (data.containsKey('request_hash')) {
+      context.handle(
+          _requestHashMeta,
+          requestHash.isAcceptableOrUnknown(
+              data['request_hash']!, _requestHashMeta));
+    }
+    if (data.containsKey('opening_payable_buyer_id')) {
+      context.handle(
+          _openingPayableBuyerIdMeta,
+          openingPayableBuyerId.isAcceptableOrUnknown(
+              data['opening_payable_buyer_id']!, _openingPayableBuyerIdMeta));
+    }
+    if (data.containsKey('entry_type')) {
+      context.handle(_entryTypeMeta,
+          entryType.isAcceptableOrUnknown(data['entry_type']!, _entryTypeMeta));
+    } else if (isInserting) {
+      context.missing(_entryTypeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+          _occurredAtMeta,
+          occurredAt.isAcceptableOrUnknown(
+              data['occurred_at']!, _occurredAtMeta));
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('created_by_user_id')) {
+      context.handle(
+          _createdByUserIdMeta,
+          createdByUserId.isAcceptableOrUnknown(
+              data['created_by_user_id']!, _createdByUserIdMeta));
+    } else if (isInserting) {
+      context.missing(_createdByUserIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {requestId},
+        {openingPayableBuyerId},
+      ];
+  @override
+  BuyerTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BuyerTransaction(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      buyerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buyer_id'])!,
+      requestId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}request_id']),
+      requestHash: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}request_hash']),
+      openingPayableBuyerId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}opening_payable_buyer_id']),
+      entryType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entry_type'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}amount'])!,
+      occurredAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}occurred_at'])!,
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      createdByUserId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}created_by_user_id'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $BuyerTransactionsTable createAlias(String alias) {
+    return $BuyerTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class BuyerTransaction extends DataClass
+    implements Insertable<BuyerTransaction> {
+  final String id;
+  final String buyerId;
+  final String? requestId;
+  final String? requestHash;
+  final String? openingPayableBuyerId;
+  final String entryType;
+  final String amount;
+  final String occurredAt;
+  final String? notes;
+  final String createdByUserId;
+  final String createdAt;
+  const BuyerTransaction(
+      {required this.id,
+      required this.buyerId,
+      this.requestId,
+      this.requestHash,
+      this.openingPayableBuyerId,
+      required this.entryType,
+      required this.amount,
+      required this.occurredAt,
+      this.notes,
+      required this.createdByUserId,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['buyer_id'] = Variable<String>(buyerId);
+    if (!nullToAbsent || requestId != null) {
+      map['request_id'] = Variable<String>(requestId);
+    }
+    if (!nullToAbsent || requestHash != null) {
+      map['request_hash'] = Variable<String>(requestHash);
+    }
+    if (!nullToAbsent || openingPayableBuyerId != null) {
+      map['opening_payable_buyer_id'] = Variable<String>(openingPayableBuyerId);
+    }
+    map['entry_type'] = Variable<String>(entryType);
+    map['amount'] = Variable<String>(amount);
+    map['occurred_at'] = Variable<String>(occurredAt);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_by_user_id'] = Variable<String>(createdByUserId);
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  BuyerTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return BuyerTransactionsCompanion(
+      id: Value(id),
+      buyerId: Value(buyerId),
+      requestId: requestId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestId),
+      requestHash: requestHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestHash),
+      openingPayableBuyerId: openingPayableBuyerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(openingPayableBuyerId),
+      entryType: Value(entryType),
+      amount: Value(amount),
+      occurredAt: Value(occurredAt),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      createdByUserId: Value(createdByUserId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory BuyerTransaction.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BuyerTransaction(
+      id: serializer.fromJson<String>(json['id']),
+      buyerId: serializer.fromJson<String>(json['buyerId']),
+      requestId: serializer.fromJson<String?>(json['requestId']),
+      requestHash: serializer.fromJson<String?>(json['requestHash']),
+      openingPayableBuyerId:
+          serializer.fromJson<String?>(json['openingPayableBuyerId']),
+      entryType: serializer.fromJson<String>(json['entryType']),
+      amount: serializer.fromJson<String>(json['amount']),
+      occurredAt: serializer.fromJson<String>(json['occurredAt']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdByUserId: serializer.fromJson<String>(json['createdByUserId']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'buyerId': serializer.toJson<String>(buyerId),
+      'requestId': serializer.toJson<String?>(requestId),
+      'requestHash': serializer.toJson<String?>(requestHash),
+      'openingPayableBuyerId':
+          serializer.toJson<String?>(openingPayableBuyerId),
+      'entryType': serializer.toJson<String>(entryType),
+      'amount': serializer.toJson<String>(amount),
+      'occurredAt': serializer.toJson<String>(occurredAt),
+      'notes': serializer.toJson<String?>(notes),
+      'createdByUserId': serializer.toJson<String>(createdByUserId),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  BuyerTransaction copyWith(
+          {String? id,
+          String? buyerId,
+          Value<String?> requestId = const Value.absent(),
+          Value<String?> requestHash = const Value.absent(),
+          Value<String?> openingPayableBuyerId = const Value.absent(),
+          String? entryType,
+          String? amount,
+          String? occurredAt,
+          Value<String?> notes = const Value.absent(),
+          String? createdByUserId,
+          String? createdAt}) =>
+      BuyerTransaction(
+        id: id ?? this.id,
+        buyerId: buyerId ?? this.buyerId,
+        requestId: requestId.present ? requestId.value : this.requestId,
+        requestHash: requestHash.present ? requestHash.value : this.requestHash,
+        openingPayableBuyerId: openingPayableBuyerId.present
+            ? openingPayableBuyerId.value
+            : this.openingPayableBuyerId,
+        entryType: entryType ?? this.entryType,
+        amount: amount ?? this.amount,
+        occurredAt: occurredAt ?? this.occurredAt,
+        notes: notes.present ? notes.value : this.notes,
+        createdByUserId: createdByUserId ?? this.createdByUserId,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  BuyerTransaction copyWithCompanion(BuyerTransactionsCompanion data) {
+    return BuyerTransaction(
+      id: data.id.present ? data.id.value : this.id,
+      buyerId: data.buyerId.present ? data.buyerId.value : this.buyerId,
+      requestId: data.requestId.present ? data.requestId.value : this.requestId,
+      requestHash:
+          data.requestHash.present ? data.requestHash.value : this.requestHash,
+      openingPayableBuyerId: data.openingPayableBuyerId.present
+          ? data.openingPayableBuyerId.value
+          : this.openingPayableBuyerId,
+      entryType: data.entryType.present ? data.entryType.value : this.entryType,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      occurredAt:
+          data.occurredAt.present ? data.occurredAt.value : this.occurredAt,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdByUserId: data.createdByUserId.present
+          ? data.createdByUserId.value
+          : this.createdByUserId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BuyerTransaction(')
+          ..write('id: $id, ')
+          ..write('buyerId: $buyerId, ')
+          ..write('requestId: $requestId, ')
+          ..write('requestHash: $requestHash, ')
+          ..write('openingPayableBuyerId: $openingPayableBuyerId, ')
+          ..write('entryType: $entryType, ')
+          ..write('amount: $amount, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('notes: $notes, ')
+          ..write('createdByUserId: $createdByUserId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      buyerId,
+      requestId,
+      requestHash,
+      openingPayableBuyerId,
+      entryType,
+      amount,
+      occurredAt,
+      notes,
+      createdByUserId,
+      createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BuyerTransaction &&
+          other.id == this.id &&
+          other.buyerId == this.buyerId &&
+          other.requestId == this.requestId &&
+          other.requestHash == this.requestHash &&
+          other.openingPayableBuyerId == this.openingPayableBuyerId &&
+          other.entryType == this.entryType &&
+          other.amount == this.amount &&
+          other.occurredAt == this.occurredAt &&
+          other.notes == this.notes &&
+          other.createdByUserId == this.createdByUserId &&
+          other.createdAt == this.createdAt);
+}
+
+class BuyerTransactionsCompanion extends UpdateCompanion<BuyerTransaction> {
+  final Value<String> id;
+  final Value<String> buyerId;
+  final Value<String?> requestId;
+  final Value<String?> requestHash;
+  final Value<String?> openingPayableBuyerId;
+  final Value<String> entryType;
+  final Value<String> amount;
+  final Value<String> occurredAt;
+  final Value<String?> notes;
+  final Value<String> createdByUserId;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const BuyerTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.buyerId = const Value.absent(),
+    this.requestId = const Value.absent(),
+    this.requestHash = const Value.absent(),
+    this.openingPayableBuyerId = const Value.absent(),
+    this.entryType = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdByUserId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BuyerTransactionsCompanion.insert({
+    required String id,
+    required String buyerId,
+    this.requestId = const Value.absent(),
+    this.requestHash = const Value.absent(),
+    this.openingPayableBuyerId = const Value.absent(),
+    required String entryType,
+    required String amount,
+    required String occurredAt,
+    this.notes = const Value.absent(),
+    required String createdByUserId,
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        buyerId = Value(buyerId),
+        entryType = Value(entryType),
+        amount = Value(amount),
+        occurredAt = Value(occurredAt),
+        createdByUserId = Value(createdByUserId),
+        createdAt = Value(createdAt);
+  static Insertable<BuyerTransaction> custom({
+    Expression<String>? id,
+    Expression<String>? buyerId,
+    Expression<String>? requestId,
+    Expression<String>? requestHash,
+    Expression<String>? openingPayableBuyerId,
+    Expression<String>? entryType,
+    Expression<String>? amount,
+    Expression<String>? occurredAt,
+    Expression<String>? notes,
+    Expression<String>? createdByUserId,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (buyerId != null) 'buyer_id': buyerId,
+      if (requestId != null) 'request_id': requestId,
+      if (requestHash != null) 'request_hash': requestHash,
+      if (openingPayableBuyerId != null)
+        'opening_payable_buyer_id': openingPayableBuyerId,
+      if (entryType != null) 'entry_type': entryType,
+      if (amount != null) 'amount': amount,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (notes != null) 'notes': notes,
+      if (createdByUserId != null) 'created_by_user_id': createdByUserId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BuyerTransactionsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? buyerId,
+      Value<String?>? requestId,
+      Value<String?>? requestHash,
+      Value<String?>? openingPayableBuyerId,
+      Value<String>? entryType,
+      Value<String>? amount,
+      Value<String>? occurredAt,
+      Value<String?>? notes,
+      Value<String>? createdByUserId,
+      Value<String>? createdAt,
+      Value<int>? rowid}) {
+    return BuyerTransactionsCompanion(
+      id: id ?? this.id,
+      buyerId: buyerId ?? this.buyerId,
+      requestId: requestId ?? this.requestId,
+      requestHash: requestHash ?? this.requestHash,
+      openingPayableBuyerId:
+          openingPayableBuyerId ?? this.openingPayableBuyerId,
+      entryType: entryType ?? this.entryType,
+      amount: amount ?? this.amount,
+      occurredAt: occurredAt ?? this.occurredAt,
+      notes: notes ?? this.notes,
+      createdByUserId: createdByUserId ?? this.createdByUserId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (buyerId.present) {
+      map['buyer_id'] = Variable<String>(buyerId.value);
+    }
+    if (requestId.present) {
+      map['request_id'] = Variable<String>(requestId.value);
+    }
+    if (requestHash.present) {
+      map['request_hash'] = Variable<String>(requestHash.value);
+    }
+    if (openingPayableBuyerId.present) {
+      map['opening_payable_buyer_id'] =
+          Variable<String>(openingPayableBuyerId.value);
+    }
+    if (entryType.present) {
+      map['entry_type'] = Variable<String>(entryType.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<String>(amount.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<String>(occurredAt.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdByUserId.present) {
+      map['created_by_user_id'] = Variable<String>(createdByUserId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BuyerTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('buyerId: $buyerId, ')
+          ..write('requestId: $requestId, ')
+          ..write('requestHash: $requestHash, ')
+          ..write('openingPayableBuyerId: $openingPayableBuyerId, ')
+          ..write('entryType: $entryType, ')
+          ..write('amount: $amount, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('notes: $notes, ')
+          ..write('createdByUserId: $createdByUserId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CompanyProfilesTable extends CompanyProfiles
     with TableInfo<$CompanyProfilesTable, CompanyProfile> {
   @override
@@ -7952,6 +9046,9 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $StockMovementsTable stockMovements = $StockMovementsTable(this);
   late final $SellerTransactionsTable sellerTransactions =
       $SellerTransactionsTable(this);
+  late final $BuyersTable buyers = $BuyersTable(this);
+  late final $BuyerTransactionsTable buyerTransactions =
+      $BuyerTransactionsTable(this);
   late final $CompanyProfilesTable companyProfiles =
       $CompanyProfilesTable(this);
   late final $InvoiceItemsTable invoiceItems = $InvoiceItemsTable(this);
@@ -7969,6 +9066,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
         invoices,
         stockMovements,
         sellerTransactions,
+        buyers,
+        buyerTransactions,
         companyProfiles,
         invoiceItems,
         localSessions,
@@ -8066,6 +9165,24 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_sellerTransactionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$BuyerTransactionsTable, List<BuyerTransaction>>
+      _buyerTransactionsRefsTable(_$LocalDatabase db) =>
+          MultiTypedResultKey.fromTable(db.buyerTransactions,
+              aliasName: $_aliasNameGenerator(
+                  db.localUsers.id, db.buyerTransactions.createdByUserId));
+
+  $$BuyerTransactionsTableProcessedTableManager get buyerTransactionsRefs {
+    final manager = $$BuyerTransactionsTableTableManager(
+            $_db, $_db.buyerTransactions)
+        .filter(
+            (f) => f.createdByUserId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_buyerTransactionsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -8199,6 +9316,27 @@ class $$LocalUsersTableFilterComposer
             $$SellerTransactionsTableFilterComposer(
               $db: $db,
               $table: $db.sellerTransactions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> buyerTransactionsRefs(
+      Expression<bool> Function($$BuyerTransactionsTableFilterComposer f) f) {
+    final $$BuyerTransactionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.buyerTransactions,
+        getReferencedColumn: (t) => t.createdByUserId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BuyerTransactionsTableFilterComposer(
+              $db: $db,
+              $table: $db.buyerTransactions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -8389,6 +9527,28 @@ class $$LocalUsersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> buyerTransactionsRefs<T extends Object>(
+      Expression<T> Function($$BuyerTransactionsTableAnnotationComposer a) f) {
+    final $$BuyerTransactionsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.buyerTransactions,
+            getReferencedColumn: (t) => t.createdByUserId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$BuyerTransactionsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.buyerTransactions,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+
   Expression<T> localSessionsRefs<T extends Object>(
       Expression<T> Function($$LocalSessionsTableAnnotationComposer a) f) {
     final $$LocalSessionsTableAnnotationComposer composer = $composerBuilder(
@@ -8427,6 +9587,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool canceledInvoices,
         bool stockMovementsRefs,
         bool sellerTransactionsRefs,
+        bool buyerTransactionsRefs,
         bool localSessionsRefs})> {
   $$LocalUsersTableTableManager(_$LocalDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
@@ -8497,6 +9658,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               canceledInvoices = false,
               stockMovementsRefs = false,
               sellerTransactionsRefs = false,
+              buyerTransactionsRefs = false,
               localSessionsRefs = false}) {
             return PrefetchHooks(
               db: db,
@@ -8505,6 +9667,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (canceledInvoices) db.invoices,
                 if (stockMovementsRefs) db.stockMovements,
                 if (sellerTransactionsRefs) db.sellerTransactions,
+                if (buyerTransactionsRefs) db.buyerTransactions,
                 if (localSessionsRefs) db.localSessions
               ],
               addJoins: null,
@@ -8562,6 +9725,19 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.createdByUserId == item.id),
                         typedResults: items),
+                  if (buyerTransactionsRefs)
+                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
+                            BuyerTransaction>(
+                        currentTable: table,
+                        referencedTable: $$LocalUsersTableReferences
+                            ._buyerTransactionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalUsersTableReferences(db, table, p0)
+                                .buyerTransactionsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.createdByUserId == item.id),
+                        typedResults: items),
                   if (localSessionsRefs)
                     await $_getPrefetchedData<LocalUser, $LocalUsersTable,
                             LocalSession>(
@@ -8598,6 +9774,7 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool canceledInvoices,
         bool stockMovementsRefs,
         bool sellerTransactionsRefs,
+        bool buyerTransactionsRefs,
         bool localSessionsRefs})>;
 typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String id,
@@ -11794,6 +12971,784 @@ typedef $$SellerTransactionsTableProcessedTableManager = ProcessedTableManager<
     SellerTransaction,
     PrefetchHooks Function(
         {bool sellerId, bool invoiceId, bool createdByUserId})>;
+typedef $$BuyersTableCreateCompanionBuilder = BuyersCompanion Function({
+  required String id,
+  required String name,
+  required String address,
+  Value<String?> state,
+  Value<String?> stateCode,
+  Value<String?> phone,
+  Value<String?> gstin,
+  Value<bool> isActive,
+  required String createdAt,
+  required String updatedAt,
+  Value<int> rowid,
+});
+typedef $$BuyersTableUpdateCompanionBuilder = BuyersCompanion Function({
+  Value<String> id,
+  Value<String> name,
+  Value<String> address,
+  Value<String?> state,
+  Value<String?> stateCode,
+  Value<String?> phone,
+  Value<String?> gstin,
+  Value<bool> isActive,
+  Value<String> createdAt,
+  Value<String> updatedAt,
+  Value<int> rowid,
+});
+
+final class $$BuyersTableReferences
+    extends BaseReferences<_$LocalDatabase, $BuyersTable, Buyer> {
+  $$BuyersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$BuyerTransactionsTable, List<BuyerTransaction>>
+      _buyerTransactionsRefsTable(_$LocalDatabase db) =>
+          MultiTypedResultKey.fromTable(db.buyerTransactions,
+              aliasName: $_aliasNameGenerator(
+                  db.buyers.id, db.buyerTransactions.buyerId));
+
+  $$BuyerTransactionsTableProcessedTableManager get buyerTransactionsRefs {
+    final manager =
+        $$BuyerTransactionsTableTableManager($_db, $_db.buyerTransactions)
+            .filter((f) => f.buyerId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_buyerTransactionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$BuyersTableFilterComposer
+    extends Composer<_$LocalDatabase, $BuyersTable> {
+  $$BuyersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get address => $composableBuilder(
+      column: $table.address, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get state => $composableBuilder(
+      column: $table.state, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get stateCode => $composableBuilder(
+      column: $table.stateCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get phone => $composableBuilder(
+      column: $table.phone, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get gstin => $composableBuilder(
+      column: $table.gstin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> buyerTransactionsRefs(
+      Expression<bool> Function($$BuyerTransactionsTableFilterComposer f) f) {
+    final $$BuyerTransactionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.buyerTransactions,
+        getReferencedColumn: (t) => t.buyerId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BuyerTransactionsTableFilterComposer(
+              $db: $db,
+              $table: $db.buyerTransactions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+}
+
+class $$BuyersTableOrderingComposer
+    extends Composer<_$LocalDatabase, $BuyersTable> {
+  $$BuyersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get address => $composableBuilder(
+      column: $table.address, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get state => $composableBuilder(
+      column: $table.state, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get stateCode => $composableBuilder(
+      column: $table.stateCode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+      column: $table.phone, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get gstin => $composableBuilder(
+      column: $table.gstin, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$BuyersTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $BuyersTable> {
+  $$BuyersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get address =>
+      $composableBuilder(column: $table.address, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<String> get stateCode =>
+      $composableBuilder(column: $table.stateCode, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<String> get gstin =>
+      $composableBuilder(column: $table.gstin, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> buyerTransactionsRefs<T extends Object>(
+      Expression<T> Function($$BuyerTransactionsTableAnnotationComposer a) f) {
+    final $$BuyerTransactionsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.buyerTransactions,
+            getReferencedColumn: (t) => t.buyerId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$BuyerTransactionsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.buyerTransactions,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+}
+
+class $$BuyersTableTableManager extends RootTableManager<
+    _$LocalDatabase,
+    $BuyersTable,
+    Buyer,
+    $$BuyersTableFilterComposer,
+    $$BuyersTableOrderingComposer,
+    $$BuyersTableAnnotationComposer,
+    $$BuyersTableCreateCompanionBuilder,
+    $$BuyersTableUpdateCompanionBuilder,
+    (Buyer, $$BuyersTableReferences),
+    Buyer,
+    PrefetchHooks Function({bool buyerTransactionsRefs})> {
+  $$BuyersTableTableManager(_$LocalDatabase db, $BuyersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BuyersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BuyersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BuyersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> address = const Value.absent(),
+            Value<String?> state = const Value.absent(),
+            Value<String?> stateCode = const Value.absent(),
+            Value<String?> phone = const Value.absent(),
+            Value<String?> gstin = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            Value<String> createdAt = const Value.absent(),
+            Value<String> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BuyersCompanion(
+            id: id,
+            name: name,
+            address: address,
+            state: state,
+            stateCode: stateCode,
+            phone: phone,
+            gstin: gstin,
+            isActive: isActive,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String name,
+            required String address,
+            Value<String?> state = const Value.absent(),
+            Value<String?> stateCode = const Value.absent(),
+            Value<String?> phone = const Value.absent(),
+            Value<String?> gstin = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            required String createdAt,
+            required String updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BuyersCompanion.insert(
+            id: id,
+            name: name,
+            address: address,
+            state: state,
+            stateCode: stateCode,
+            phone: phone,
+            gstin: gstin,
+            isActive: isActive,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$BuyersTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({buyerTransactionsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (buyerTransactionsRefs) db.buyerTransactions
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (buyerTransactionsRefs)
+                    await $_getPrefetchedData<Buyer, $BuyersTable,
+                            BuyerTransaction>(
+                        currentTable: table,
+                        referencedTable: $$BuyersTableReferences
+                            ._buyerTransactionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$BuyersTableReferences(db, table, p0)
+                                .buyerTransactionsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.buyerId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$BuyersTableProcessedTableManager = ProcessedTableManager<
+    _$LocalDatabase,
+    $BuyersTable,
+    Buyer,
+    $$BuyersTableFilterComposer,
+    $$BuyersTableOrderingComposer,
+    $$BuyersTableAnnotationComposer,
+    $$BuyersTableCreateCompanionBuilder,
+    $$BuyersTableUpdateCompanionBuilder,
+    (Buyer, $$BuyersTableReferences),
+    Buyer,
+    PrefetchHooks Function({bool buyerTransactionsRefs})>;
+typedef $$BuyerTransactionsTableCreateCompanionBuilder
+    = BuyerTransactionsCompanion Function({
+  required String id,
+  required String buyerId,
+  Value<String?> requestId,
+  Value<String?> requestHash,
+  Value<String?> openingPayableBuyerId,
+  required String entryType,
+  required String amount,
+  required String occurredAt,
+  Value<String?> notes,
+  required String createdByUserId,
+  required String createdAt,
+  Value<int> rowid,
+});
+typedef $$BuyerTransactionsTableUpdateCompanionBuilder
+    = BuyerTransactionsCompanion Function({
+  Value<String> id,
+  Value<String> buyerId,
+  Value<String?> requestId,
+  Value<String?> requestHash,
+  Value<String?> openingPayableBuyerId,
+  Value<String> entryType,
+  Value<String> amount,
+  Value<String> occurredAt,
+  Value<String?> notes,
+  Value<String> createdByUserId,
+  Value<String> createdAt,
+  Value<int> rowid,
+});
+
+final class $$BuyerTransactionsTableReferences extends BaseReferences<
+    _$LocalDatabase, $BuyerTransactionsTable, BuyerTransaction> {
+  $$BuyerTransactionsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $BuyersTable _buyerIdTable(_$LocalDatabase db) =>
+      db.buyers.createAlias(
+          $_aliasNameGenerator(db.buyerTransactions.buyerId, db.buyers.id));
+
+  $$BuyersTableProcessedTableManager get buyerId {
+    final $_column = $_itemColumn<String>('buyer_id')!;
+
+    final manager = $$BuyersTableTableManager($_db, $_db.buyers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_buyerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $LocalUsersTable _createdByUserIdTable(_$LocalDatabase db) =>
+      db.localUsers.createAlias($_aliasNameGenerator(
+          db.buyerTransactions.createdByUserId, db.localUsers.id));
+
+  $$LocalUsersTableProcessedTableManager get createdByUserId {
+    final $_column = $_itemColumn<String>('created_by_user_id')!;
+
+    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$BuyerTransactionsTableFilterComposer
+    extends Composer<_$LocalDatabase, $BuyerTransactionsTable> {
+  $$BuyerTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get requestId => $composableBuilder(
+      column: $table.requestId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get requestHash => $composableBuilder(
+      column: $table.requestHash, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get openingPayableBuyerId => $composableBuilder(
+      column: $table.openingPayableBuyerId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entryType => $composableBuilder(
+      column: $table.entryType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$BuyersTableFilterComposer get buyerId {
+    final $$BuyersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.buyerId,
+        referencedTable: $db.buyers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BuyersTableFilterComposer(
+              $db: $db,
+              $table: $db.buyers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableFilterComposer get createdByUserId {
+    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableFilterComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BuyerTransactionsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $BuyerTransactionsTable> {
+  $$BuyerTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get requestId => $composableBuilder(
+      column: $table.requestId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get requestHash => $composableBuilder(
+      column: $table.requestHash, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get openingPayableBuyerId => $composableBuilder(
+      column: $table.openingPayableBuyerId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entryType => $composableBuilder(
+      column: $table.entryType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$BuyersTableOrderingComposer get buyerId {
+    final $$BuyersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.buyerId,
+        referencedTable: $db.buyers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BuyersTableOrderingComposer(
+              $db: $db,
+              $table: $db.buyers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableOrderingComposer get createdByUserId {
+    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableOrderingComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BuyerTransactionsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $BuyerTransactionsTable> {
+  $$BuyerTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get requestId =>
+      $composableBuilder(column: $table.requestId, builder: (column) => column);
+
+  GeneratedColumn<String> get requestHash => $composableBuilder(
+      column: $table.requestHash, builder: (column) => column);
+
+  GeneratedColumn<String> get openingPayableBuyerId => $composableBuilder(
+      column: $table.openingPayableBuyerId, builder: (column) => column);
+
+  GeneratedColumn<String> get entryType =>
+      $composableBuilder(column: $table.entryType, builder: (column) => column);
+
+  GeneratedColumn<String> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$BuyersTableAnnotationComposer get buyerId {
+    final $$BuyersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.buyerId,
+        referencedTable: $db.buyers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$BuyersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.buyers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$LocalUsersTableAnnotationComposer get createdByUserId {
+    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.createdByUserId,
+        referencedTable: $db.localUsers,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalUsersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localUsers,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$BuyerTransactionsTableTableManager extends RootTableManager<
+    _$LocalDatabase,
+    $BuyerTransactionsTable,
+    BuyerTransaction,
+    $$BuyerTransactionsTableFilterComposer,
+    $$BuyerTransactionsTableOrderingComposer,
+    $$BuyerTransactionsTableAnnotationComposer,
+    $$BuyerTransactionsTableCreateCompanionBuilder,
+    $$BuyerTransactionsTableUpdateCompanionBuilder,
+    (BuyerTransaction, $$BuyerTransactionsTableReferences),
+    BuyerTransaction,
+    PrefetchHooks Function({bool buyerId, bool createdByUserId})> {
+  $$BuyerTransactionsTableTableManager(
+      _$LocalDatabase db, $BuyerTransactionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BuyerTransactionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BuyerTransactionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BuyerTransactionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> buyerId = const Value.absent(),
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
+            Value<String?> openingPayableBuyerId = const Value.absent(),
+            Value<String> entryType = const Value.absent(),
+            Value<String> amount = const Value.absent(),
+            Value<String> occurredAt = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<String> createdByUserId = const Value.absent(),
+            Value<String> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BuyerTransactionsCompanion(
+            id: id,
+            buyerId: buyerId,
+            requestId: requestId,
+            requestHash: requestHash,
+            openingPayableBuyerId: openingPayableBuyerId,
+            entryType: entryType,
+            amount: amount,
+            occurredAt: occurredAt,
+            notes: notes,
+            createdByUserId: createdByUserId,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String buyerId,
+            Value<String?> requestId = const Value.absent(),
+            Value<String?> requestHash = const Value.absent(),
+            Value<String?> openingPayableBuyerId = const Value.absent(),
+            required String entryType,
+            required String amount,
+            required String occurredAt,
+            Value<String?> notes = const Value.absent(),
+            required String createdByUserId,
+            required String createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BuyerTransactionsCompanion.insert(
+            id: id,
+            buyerId: buyerId,
+            requestId: requestId,
+            requestHash: requestHash,
+            openingPayableBuyerId: openingPayableBuyerId,
+            entryType: entryType,
+            amount: amount,
+            occurredAt: occurredAt,
+            notes: notes,
+            createdByUserId: createdByUserId,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$BuyerTransactionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({buyerId = false, createdByUserId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (buyerId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.buyerId,
+                    referencedTable:
+                        $$BuyerTransactionsTableReferences._buyerIdTable(db),
+                    referencedColumn:
+                        $$BuyerTransactionsTableReferences._buyerIdTable(db).id,
+                  ) as T;
+                }
+                if (createdByUserId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.createdByUserId,
+                    referencedTable: $$BuyerTransactionsTableReferences
+                        ._createdByUserIdTable(db),
+                    referencedColumn: $$BuyerTransactionsTableReferences
+                        ._createdByUserIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$BuyerTransactionsTableProcessedTableManager = ProcessedTableManager<
+    _$LocalDatabase,
+    $BuyerTransactionsTable,
+    BuyerTransaction,
+    $$BuyerTransactionsTableFilterComposer,
+    $$BuyerTransactionsTableOrderingComposer,
+    $$BuyerTransactionsTableAnnotationComposer,
+    $$BuyerTransactionsTableCreateCompanionBuilder,
+    $$BuyerTransactionsTableUpdateCompanionBuilder,
+    (BuyerTransaction, $$BuyerTransactionsTableReferences),
+    BuyerTransaction,
+    PrefetchHooks Function({bool buyerId, bool createdByUserId})>;
 typedef $$CompanyProfilesTableCreateCompanionBuilder = CompanyProfilesCompanion
     Function({
   required String id,
@@ -13507,6 +15462,10 @@ class $LocalDatabaseManager {
       $$StockMovementsTableTableManager(_db, _db.stockMovements);
   $$SellerTransactionsTableTableManager get sellerTransactions =>
       $$SellerTransactionsTableTableManager(_db, _db.sellerTransactions);
+  $$BuyersTableTableManager get buyers =>
+      $$BuyersTableTableManager(_db, _db.buyers);
+  $$BuyerTransactionsTableTableManager get buyerTransactions =>
+      $$BuyerTransactionsTableTableManager(_db, _db.buyerTransactions);
   $$CompanyProfilesTableTableManager get companyProfiles =>
       $$CompanyProfilesTableTableManager(_db, _db.companyProfiles);
   $$InvoiceItemsTableTableManager get invoiceItems =>
