@@ -35,12 +35,13 @@ def _seller_payload(state: str | None = None, state_code: str | None = None) -> 
 
 def _product_payload(item_code: str = "PEN-001", quantity: str = "5.000") -> dict:
     return {
-        "company": "Camlin",
+        "company_name": "Camlin",
         "category": "Pens",
         "item_name": f"Blue Pen {item_code}",
-        "item_code": item_code,
-        "default_selling_price_excl_tax": "100.00",
-        "default_gst_rate": "18.00",
+        "item_number": item_code,
+        "buying_price": "80.00",
+        "selling_price": "118.00",
+        "gst_rate": "18.00",
         "quantity_on_hand": quantity,
         "low_stock_threshold": "2.000",
     }

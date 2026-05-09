@@ -39,12 +39,13 @@ def test_build_quote_returns_expected_totals(db_session):
     )
     seller = Seller(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name="Blue Pen",
-        item_code="PEN-001",
-        default_selling_price_excl_tax=Decimal("100.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number="PEN-001",
+        buying_price=Decimal("80.00"),
+        selling_price=Decimal("118.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("5.000"),
         low_stock_threshold=Decimal("2.000"),
     )
@@ -85,12 +86,13 @@ def test_create_invoice_persists_invoice_items_and_credit_ledger(db_session, see
     )
     seller = Seller(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name="Blue Pen",
-        item_code="PEN-001",
-        default_selling_price_excl_tax=Decimal("100.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number="PEN-001",
+        buying_price=Decimal("80.00"),
+        selling_price=Decimal("118.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("5.000"),
         low_stock_threshold=Decimal("2.000"),
     )
@@ -140,12 +142,13 @@ def test_create_invoice_retry_succeeds_after_seller_is_archived(db_session, seed
     )
     seller = Seller(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name="Blue Pen",
-        item_code="PEN-001",
-        default_selling_price_excl_tax=Decimal("100.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number="PEN-001",
+        buying_price=Decimal("80.00"),
+        selling_price=Decimal("118.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("5.000"),
         low_stock_threshold=Decimal("2.000"),
     )
@@ -188,12 +191,13 @@ def test_create_invoice_hash_normalizes_equivalent_decimal_payloads(db_session, 
     )
     seller = Seller(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name="Blue Pen",
-        item_code="PEN-001",
-        default_selling_price_excl_tax=Decimal("100.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number="PEN-001",
+        buying_price=Decimal("80.00"),
+        selling_price=Decimal("118.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("5.000"),
         low_stock_threshold=Decimal("2.000"),
     )
@@ -314,22 +318,24 @@ def test_create_with_overlapping_products_is_idempotent_across_item_order(db_ses
     )
     seller = Seller(name=f"ABC Stores {uuid4()}", address="Market Yard", state="Maharashtra", state_code="27")
     product_a = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name=f"Blue Pen {uuid4()}",
-        item_code=f"PEN-{uuid4()}",
-        default_selling_price_excl_tax=Decimal("100.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number=f"PEN-{uuid4()}",
+        buying_price=Decimal("80.00"),
+        selling_price=Decimal("118.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("10.000"),
         low_stock_threshold=Decimal("2.000"),
     )
     product_b = Product(
-        company="Camlin",
+        company_name="Camlin",
         category="Pens",
         item_name=f"Black Pen {uuid4()}",
-        item_code=f"PEN-{uuid4()}",
-        default_selling_price_excl_tax=Decimal("50.00"),
-        default_gst_rate=Decimal("18.00"),
+        item_number=f"PEN-{uuid4()}",
+        buying_price=Decimal("40.00"),
+        selling_price=Decimal("59.00"),
+        gst_rate=Decimal("18.00"),
         quantity_on_hand=Decimal("10.000"),
         low_stock_threshold=Decimal("2.000"),
     )

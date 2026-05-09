@@ -59,7 +59,7 @@ def _ensure_seller(session, payload: SellerCreateRequest) -> Seller:
 
 
 def _ensure_product(session, payload: ProductCreateRequest, current_user: CurrentUserResponse) -> Product:
-    existing = session.scalar(select(Product).where(Product.item_code == payload.item_code))
+    existing = session.scalar(select(Product).where(Product.item_number == payload.item_number))
     if existing is not None:
         return existing
     return product_service.create_product(session, payload, current_user)
@@ -111,14 +111,13 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             "PEN-001": _ensure_product(
                 session,
                 ProductCreateRequest(
-                    company="Camlin",
+                    company_name="Camlin",
                     category="Pens",
                     item_name="Blue Ball Pen",
-                    item_code="PEN-001",
-                    buying_price_excl_tax=Decimal("8.00"),
-                    buying_gst_rate=Decimal("18.00"),
-                    default_selling_price_excl_tax=Decimal("12.00"),
-                    default_gst_rate=Decimal("18.00"),
+                    item_number="PEN-001",
+                    buying_price=Decimal("8.00"),
+                    selling_price=Decimal("12.00"),
+                    gst_rate=Decimal("18.00"),
                     quantity_on_hand=Decimal("120.000"),
                     low_stock_threshold=Decimal("20.000"),
                 ),
@@ -127,14 +126,13 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             "NOTE-001": _ensure_product(
                 session,
                 ProductCreateRequest(
-                    company="Navneet",
+                    company_name="Navneet",
                     category="Notebooks",
                     item_name="A5 Notebook",
-                    item_code="NOTE-001",
-                    buying_price_excl_tax=Decimal("38.00"),
-                    buying_gst_rate=Decimal("12.00"),
-                    default_selling_price_excl_tax=Decimal("55.00"),
-                    default_gst_rate=Decimal("12.00"),
+                    item_number="NOTE-001",
+                    buying_price=Decimal("38.00"),
+                    selling_price=Decimal("55.00"),
+                    gst_rate=Decimal("12.00"),
                     quantity_on_hand=Decimal("80.000"),
                     low_stock_threshold=Decimal("15.000"),
                 ),
@@ -143,14 +141,13 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             "MRK-001": _ensure_product(
                 session,
                 ProductCreateRequest(
-                    company="Camlin",
+                    company_name="Camlin",
                     category="Markers",
                     item_name="Permanent Marker Black",
-                    item_code="MRK-001",
-                    buying_price_excl_tax=Decimal("24.00"),
-                    buying_gst_rate=Decimal("18.00"),
-                    default_selling_price_excl_tax=Decimal("35.00"),
-                    default_gst_rate=Decimal("18.00"),
+                    item_number="MRK-001",
+                    buying_price=Decimal("24.00"),
+                    selling_price=Decimal("35.00"),
+                    gst_rate=Decimal("18.00"),
                     quantity_on_hand=Decimal("18.000"),
                     low_stock_threshold=Decimal("12.000"),
                 ),
@@ -159,14 +156,13 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             "FILE-001": _ensure_product(
                 session,
                 ProductCreateRequest(
-                    company="Solo",
+                    company_name="Solo",
                     category="Files",
                     item_name="Plastic Document File",
-                    item_code="FILE-001",
-                    buying_price_excl_tax=Decimal("15.00"),
-                    buying_gst_rate=Decimal("18.00"),
-                    default_selling_price_excl_tax=Decimal("22.00"),
-                    default_gst_rate=Decimal("18.00"),
+                    item_number="FILE-001",
+                    buying_price=Decimal("15.00"),
+                    selling_price=Decimal("22.00"),
+                    gst_rate=Decimal("18.00"),
                     quantity_on_hand=Decimal("45.000"),
                     low_stock_threshold=Decimal("10.000"),
                 ),
