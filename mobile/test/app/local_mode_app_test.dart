@@ -70,8 +70,9 @@ void main() {
     await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
     await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
     await tester.enterText(find.bySemanticsLabel('Item code'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
     await tester.enterText(
-      find.bySemanticsLabel('Selling price (excl tax)'),
+      find.bySemanticsLabel('Selling price'),
       '10.5',
     );
     await tester.enterText(find.bySemanticsLabel('GST rate'), '18');

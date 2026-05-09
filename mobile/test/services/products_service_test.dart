@@ -5,10 +5,31 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
+import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/services/api_client.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
+  group('Product', () {
+    test('requires canonical V2 JSON fields', () {
+      expect(
+        () => Product.fromJson(<String, dynamic>{
+          'id': 'p1',
+          'company': 'Acme',
+          'category': 'Pens',
+          'item_name': 'Blue Pen',
+          'item_code': 'PEN-1',
+          'default_selling_price_excl_tax': '10',
+          'default_gst_rate': '18',
+          'quantity_on_hand': '5',
+          'low_stock_threshold': '2',
+          'is_active': true,
+        }),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('ApiProductsService', () {
     test('create payload omits unsupported is_active field', () async {
       final httpClient = RecordingHttpClient(

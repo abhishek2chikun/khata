@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 void main() {
   test('local database exposes schema version and core tables', () async {
@@ -142,6 +146,82 @@ void main() {
     expect(
       uniqueKeys,
       contains(equals(<String>{'company_name', 'item_name', 'category'})),
+    );
+  });
+
+  test('migrates schema v1 products to canonical inclusive-price V2 rows',
+      () async {
+    final directory = await Directory.systemTemp.createTemp('khata-v1-');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/local.sqlite');
+    _seedSchemaV1Database(file);
+
+    final database = LocalDatabase.forConnection(NativeDatabase(file));
+    addTearDown(database.close);
+
+    final products = await database.select(database.products).get();
+
+    expect(products, hasLength(2));
+    final pen = products.singleWhere((product) => product.id == 'product-1');
+    expect(pen.id, 'product-1');
+    expect(pen.itemNumber, 'PEN-1');
+    expect(pen.companyName, 'Acme');
+    expect(pen.category, 'Pens');
+    expect(pen.itemName, 'Blue Pen');
+    expect(pen.buyerId, null);
+    expect(pen.buyingPrice, '84');
+    expect(pen.sellingPrice, '118');
+    expect(pen.unit, null);
+    expect(pen.gstRate, '18');
+    expect(pen.quantityOnHand, '7.500');
+    expect(pen.lowStockThreshold, '2.000');
+    expect(pen.isActive, isTrue);
+    expect(pen.createdAt, '2026-01-01T00:00:00.000Z');
+    expect(pen.updatedAt, '2026-01-02T00:00:00.000Z');
+
+    final fallback =
+        products.singleWhere((product) => product.id == 'product-2');
+    expect(fallback.buyingPrice, '56');
+    expect(fallback.sellingPrice, '56');
+    expect(fallback.quantityOnHand, '3.250');
+
+    final movement = await database.customSelect(
+      'SELECT product_id FROM stock_movements WHERE id = ?',
+      variables: <Variable<Object>>[Variable<String>('movement-1')],
+    ).getSingle();
+    expect(movement.data['product_id'], 'product-1');
+
+    await expectLater(
+      () => database.customStatement(
+        """
+        INSERT INTO products (
+          id, item_number, item_name, category, buyer_id, company_name,
+          buying_price, selling_price, unit, gst_rate, quantity_on_hand,
+          low_stock_threshold, is_active, created_at, updated_at
+        ) VALUES (
+          'duplicate-number', 'PEN-1', 'Other Pen', 'Pens', NULL, 'Other',
+          '10', '12', NULL, '18', '1', '0', 1,
+          '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'
+        )
+        """,
+      ),
+      throwsA(anything),
+    );
+    await expectLater(
+      () => database.customStatement(
+        """
+        INSERT INTO products (
+          id, item_number, item_name, category, buyer_id, company_name,
+          buying_price, selling_price, unit, gst_rate, quantity_on_hand,
+          low_stock_threshold, is_active, created_at, updated_at
+        ) VALUES (
+          'duplicate-identity', 'PEN-2', 'Blue Pen', 'Pens', NULL, 'Acme',
+          '10', '12', NULL, '18', '1', '0', 1,
+          '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'
+        )
+        """,
+      ),
+      throwsA(anything),
     );
   });
 
@@ -292,4 +372,60 @@ void _expectNullable(
       reason: '$tableName.$columnName should allow null');
   expect(column.requiredDuringInsert, isFalse,
       reason: '$tableName.$columnName should not require insert values');
+}
+
+void _seedSchemaV1Database(File file) {
+  final database = sqlite.sqlite3.open(file.path);
+  try {
+    database.execute('PRAGMA foreign_keys = ON');
+    database.execute('''
+      CREATE TABLE products (
+        id TEXT NOT NULL PRIMARY KEY,
+        company TEXT NOT NULL,
+        category TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        item_code TEXT NOT NULL UNIQUE,
+        buying_price_excl_tax TEXT NULL,
+        buying_gst_rate TEXT NULL,
+        default_selling_price_excl_tax TEXT NOT NULL,
+        default_gst_rate TEXT NOT NULL,
+        quantity_on_hand TEXT NOT NULL,
+        low_stock_threshold TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (company, category, item_name)
+      )
+    ''');
+    database.execute('''
+      CREATE TABLE stock_movements (
+        id TEXT NOT NULL PRIMARY KEY,
+        product_id TEXT NOT NULL REFERENCES products(id)
+      )
+    ''');
+    database.execute('''
+      INSERT INTO products (
+        id, company, category, item_name, item_code,
+        buying_price_excl_tax, buying_gst_rate,
+        default_selling_price_excl_tax, default_gst_rate,
+        quantity_on_hand, low_stock_threshold, is_active, created_at, updated_at
+      ) VALUES
+        (
+          'product-1', 'Acme', 'Pens', 'Blue Pen', 'PEN-1',
+          '80', '5', '100', '18', '7.500', '2.000', 1,
+          '2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z'
+        ),
+        (
+          'product-2', 'Acme', 'Books', 'Ledger Book', 'BOOK-1',
+          NULL, NULL, '50', '12', '3.250', '1.000', 0,
+          '2026-01-03T00:00:00.000Z', '2026-01-04T00:00:00.000Z'
+        )
+    ''');
+    database.execute(
+      "INSERT INTO stock_movements (id, product_id) VALUES ('movement-1', 'product-1')",
+    );
+    database.execute('PRAGMA user_version = 1');
+  } finally {
+    database.dispose();
+  }
 }

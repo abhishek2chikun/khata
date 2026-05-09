@@ -24,7 +24,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _categoryController;
   late final TextEditingController _itemNameController;
   late final TextEditingController _itemCodeController;
-  late final TextEditingController _priceController;
+  late final TextEditingController _buyingPriceController;
+  late final TextEditingController _sellingPriceController;
+  late final TextEditingController _unitController;
   late final TextEditingController _gstController;
   late final TextEditingController _quantityController;
   late final TextEditingController _thresholdController;
@@ -45,9 +47,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _itemNameController = TextEditingController(text: product?.itemName ?? '');
     _itemCodeController =
         TextEditingController(text: product?.itemNumber ?? '');
-    _priceController = TextEditingController(
+    _buyingPriceController = TextEditingController(
+      text: product == null ? '' : product.buyingPrice.toString(),
+    );
+    _sellingPriceController = TextEditingController(
       text: product == null ? '' : product.sellingPrice.toString(),
     );
+    _unitController = TextEditingController(text: product?.unit ?? '');
     _gstController = TextEditingController(
       text: product == null ? '' : product.gstRate.toString(),
     );
@@ -65,7 +71,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _categoryController.dispose();
     _itemNameController.dispose();
     _itemCodeController.dispose();
-    _priceController.dispose();
+    _buyingPriceController.dispose();
+    _sellingPriceController.dispose();
+    _unitController.dispose();
     _gstController.dispose();
     _quantityController.dispose();
     _thresholdController.dispose();
@@ -89,8 +97,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             _buildField(_categoryController, 'Category'),
             _buildField(_itemNameController, 'Item name'),
             _buildField(_itemCodeController, 'Item code'),
-            _buildField(_priceController, 'Selling price (excl tax)',
+            _buildField(_buyingPriceController, 'Buying price',
                 keyboardType: TextInputType.number),
+            _buildField(_sellingPriceController, 'Selling price',
+                keyboardType: TextInputType.number),
+            _buildField(_unitController, 'Unit'),
             _buildField(_gstController, 'GST rate',
                 keyboardType: TextInputType.number),
             if (!_isEditing)
@@ -158,8 +169,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
                 itemNumber: _itemCodeController.text.trim(),
-                buyingPrice: validation.sellingPrice,
+                buyingPrice: validation.buyingPrice,
                 sellingPrice: validation.sellingPrice,
+                unit: validation.unit,
                 gstRate: validation.gstRate,
                 lowStockThreshold: validation.lowStockThreshold,
               ),
@@ -170,8 +182,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
                 itemNumber: _itemCodeController.text.trim(),
-                buyingPrice: validation.sellingPrice,
+                buyingPrice: validation.buyingPrice,
                 sellingPrice: validation.sellingPrice,
+                unit: validation.unit,
                 gstRate: validation.gstRate,
                 quantityOnHand: validation.quantityOnHand,
                 lowStockThreshold: validation.lowStockThreshold,
@@ -203,10 +216,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _requireText(errors, _categoryController, 'Category');
     _requireText(errors, _itemNameController, 'Item name');
     _requireText(errors, _itemCodeController, 'Item code');
+    final buyingPrice = _parseRequiredNumber(
+      errors,
+      _buyingPriceController,
+      'Buying price',
+      'Buying price',
+    );
     final sellingPrice = _parseRequiredNumber(
       errors,
-      _priceController,
-      'Selling price (excl tax)',
+      _sellingPriceController,
+      'Selling price',
       'Selling price',
     );
     final gstRate = _parseRequiredNumber(
@@ -241,7 +260,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       return null;
     }
     return _ValidatedProductInput(
+      buyingPrice: buyingPrice!,
       sellingPrice: sellingPrice!,
+      unit: _unitController.text.trim().isEmpty
+          ? null
+          : _unitController.text.trim(),
       gstRate: gstRate!,
       quantityOnHand: quantityOnHand!,
       lowStockThreshold: lowStockThreshold!,
@@ -280,13 +303,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
 class _ValidatedProductInput {
   const _ValidatedProductInput({
+    required this.buyingPrice,
     required this.sellingPrice,
+    required this.unit,
     required this.gstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
   });
 
+  final double buyingPrice;
   final double sellingPrice;
+  final String? unit;
   final double gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
