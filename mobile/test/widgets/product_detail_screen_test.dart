@@ -150,7 +150,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.stockAdjustments.single.quantityDelta, 4);
-    expect(service.stockAdjustments.single.requestId, isNotEmpty);
+    expect(
+      service.stockAdjustments.single.requestId,
+      matches(
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ),
+      ),
+    );
     expect(find.text('7 box'), findsOneWidget);
     expect(find.text('Stock adjusted'), findsOneWidget);
   });
