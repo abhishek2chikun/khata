@@ -448,6 +448,11 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
+  Future<Product> adjustQuantity({required String id, required double delta}) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Product>> fetchProducts({ProductFilter? filter}) async {
     fetchFilters.add(filter);
     if (error != null) {

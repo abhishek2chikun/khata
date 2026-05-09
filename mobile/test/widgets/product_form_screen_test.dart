@@ -21,15 +21,69 @@ void main() {
     await tester.pump();
 
     expect(productsService.createdInputs, isEmpty);
-    expect(find.text('Company is required.'), findsOneWidget);
+    expect(find.text('Company or buyer is required.'), findsOneWidget);
     expect(find.text('Category is required.'), findsOneWidget);
     expect(find.text('Item name is required.'), findsOneWidget);
-    expect(find.text('Item code is required.'), findsOneWidget);
+    expect(find.text('Item number is required.'), findsOneWidget);
     expect(find.text('Buying price is required.'), findsOneWidget);
     expect(find.text('Selling price is required.'), findsOneWidget);
     expect(find.text('GST rate is required.'), findsOneWidget);
     expect(find.text('Quantity on hand is required.'), findsOneWidget);
     expect(find.text('Low stock threshold is required.'), findsOneWidget);
+  });
+
+  testWidgets('unit is optional when creating product', (tester) async {
+    final productsService = FakeProductsService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductFormScreen(productsService: productsService),
+      ),
+    );
+
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
+    await tester.enterText(find.bySemanticsLabel('Selling price'), '10');
+    await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pumpAndSettle();
+
+    expect(productsService.createdInputs.single.unit, isNull);
+  });
+
+  testWidgets('invalid prices show clear validation without saving',
+      (tester) async {
+    final productsService = FakeProductsService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductFormScreen(productsService: productsService),
+      ),
+    );
+
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), 'free');
+    await tester.enterText(find.bySemanticsLabel('Selling price'), '-1');
+    await tester.enterText(find.bySemanticsLabel('GST rate'), 'abc');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pump();
+
+    expect(productsService.createdInputs, isEmpty);
+    expect(find.text('Buying price must be a valid amount.'), findsOneWidget);
+    expect(find.text('Selling price must be zero or greater.'), findsOneWidget);
+    expect(find.text('GST rate must be a valid percentage.'), findsOneWidget);
   });
 
   testWidgets('valid fields submit current product fields', (tester) async {
@@ -41,10 +95,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.bySemanticsLabel('Company'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
     await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
     await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
-    await tester.enterText(find.bySemanticsLabel('Item code'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
     await tester.enterText(find.bySemanticsLabel('Buying price'), '8.25');
     await tester.enterText(
       find.bySemanticsLabel('Selling price'),
@@ -136,6 +190,51 @@ void main() {
     expect(update.sellingPrice, 10.5);
     expect(update.unit, 'box');
   });
+
+  testWidgets('save pops with created product for inventory refresh',
+      (tester) async {
+    final productsService = FakeProductsService();
+    Product? returnedProduct;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                returnedProduct = await Navigator.of(context).push<Product>(
+                  MaterialPageRoute<Product>(
+                    builder: (_) => ProductFormScreen(
+                      productsService: productsService,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Open form'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open form'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
+    await tester.enterText(find.bySemanticsLabel('Selling price'), '10');
+    await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pumpAndSettle();
+
+    expect(returnedProduct?.itemNumber, 'PEN-1');
+    expect(find.text('Open form'), findsOneWidget);
+  });
 }
 
 class FakeProductsService implements ProductsService {
@@ -159,6 +258,11 @@ class FakeProductsService implements ProductsService {
       lowStockThreshold: input.lowStockThreshold,
       isActive: true,
     );
+  }
+
+  @override
+  Future<Product> adjustQuantity({required String id, required double delta}) {
+    throw ApiError(message: 'not used');
   }
 
   @override

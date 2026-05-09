@@ -66,10 +66,10 @@ void main() {
 
     expect(find.text('Add product'), findsWidgets);
 
-    await tester.enterText(find.bySemanticsLabel('Company'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
     await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
     await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
-    await tester.enterText(find.bySemanticsLabel('Item code'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
     await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
     await tester.enterText(
       find.bySemanticsLabel('Selling price'),
@@ -84,7 +84,9 @@ void main() {
 
     expect(find.text('Inventory'), findsWidgets);
     expect(find.text('Blue Pen'), findsOneWidget);
-    expect(find.text('Acme • Pens • PEN-1'), findsOneWidget);
+    expect(find.text('Acme'), findsOneWidget);
+    expect(find.text('Pens'), findsOneWidget);
+    expect(find.text('PEN-1'), findsOneWidget);
   });
 
   testWidgets('BillingApp disposes provided app dependencies when removed',
@@ -357,6 +359,11 @@ class _FakeAuthService implements AuthService {
 class _FakeProductsService implements ProductsService {
   @override
   Future<Product> createProduct(CreateProductInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustQuantity({required String id, required double delta}) {
     throw UnimplementedError();
   }
 

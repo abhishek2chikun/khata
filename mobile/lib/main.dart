@@ -13,6 +13,7 @@ import 'screens/invoice_list_screen.dart';
 import 'screens/inventory_list_screen.dart';
 import 'screens/local_first_user_setup_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/product_detail_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
 import 'screens/seller_list_screen.dart';
@@ -156,12 +157,13 @@ class _BillingAppState extends State<BillingApp> {
               );
               return result != null;
             },
-            onEditProduct: (product) async {
+            onProductSelected: (product) async {
               final result = await Navigator.of(context).push<Product>(
                 MaterialPageRoute<Product>(
-                  builder: (_) => ProductFormScreen(
+                  builder: (_) => ProductDetailScreen(
                     productsService: widget.productsService,
                     product: product,
+                    onEditProduct: _openProductForm,
                   ),
                 ),
               );
@@ -214,6 +216,18 @@ class _BillingAppState extends State<BillingApp> {
         ) ??
         false;
     return created;
+  }
+
+  Future<bool> _openProductForm(Product product) async {
+    final result = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (_) => ProductFormScreen(
+          productsService: widget.productsService,
+          product: product,
+        ),
+      ),
+    );
+    return result != null;
   }
 
   Future<void> _checkLocalUsers() async {

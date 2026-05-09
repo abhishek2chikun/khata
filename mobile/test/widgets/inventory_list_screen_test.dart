@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/screens/inventory_list_screen.dart';
+import 'package:internal_billing_khata_mobile/screens/product_detail_screen.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
@@ -45,7 +46,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => false,
         ),
       ),
     );
@@ -87,7 +88,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => false,
         ),
       ),
     );
@@ -158,7 +159,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => true,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => false,
         ),
       ),
     );
@@ -174,7 +175,7 @@ void main() {
     expect(find.text('Ledger Book'), findsOneWidget);
   });
 
-  testWidgets('refreshes product list after edit flow returns success',
+  testWidgets('refreshes product list after detail flow returns success',
       (tester) async {
     final service = SequencedProductsService(
       responses: <List<Product>>[
@@ -215,7 +216,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => true,
+          onProductSelected: (_) async => true,
         ),
       ),
     );
@@ -223,7 +224,7 @@ void main() {
 
     expect(find.text('Blue Pen'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('editProductButton-1')));
+    await tester.tap(find.byKey(const Key('productRow-1')));
     await tester.pumpAndSettle();
 
     expect(service.fetchCount, 2);
@@ -253,23 +254,17 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => false,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('Archived'), findsWidgets);
     expect(find.text('Editing disabled for archived products'), findsOneWidget);
-    expect(
-      tester
-          .widget<IconButton>(find.byKey(const Key('editProductButton-9')))
-          .onPressed,
-      isNull,
-    );
   });
 
-  testWidgets('opens add and edit product flows through callbacks',
+  testWidgets('opens add and detail product flows through callbacks',
       (tester) async {
     final product = Product(
       id: '1',
@@ -284,7 +279,7 @@ void main() {
       lowStockThreshold: 5,
       isActive: true,
     );
-    Product? editedProduct;
+    Product? selectedProduct;
     var addTapped = false;
 
     await tester.pumpWidget(
@@ -295,8 +290,8 @@ void main() {
             addTapped = true;
             return false;
           },
-          onEditProduct: (value) async {
-            editedProduct = value;
+          onProductSelected: (value) async {
+            selectedProduct = value;
             return false;
           },
         ),
@@ -308,9 +303,93 @@ void main() {
     await tester.pump();
     expect(addTapped, isTrue);
 
-    await tester.tap(find.byKey(const Key('editProductButton-1')));
+    await tester.tap(find.byKey(const Key('productRow-1')));
     await tester.pump();
-    expect(editedProduct?.id, '1');
+    expect(selectedProduct?.id, '1');
+  });
+
+  testWidgets('list row shows all inventory summary fields', (tester) async {
+    final product = Product(
+      id: '1',
+      companyName: 'Acme Traders',
+      category: 'Pens',
+      itemName: 'Blue Pen',
+      itemNumber: 'PEN-1',
+      buyingPrice: 8,
+      sellingPrice: 10.5,
+      unit: 'box',
+      gstRate: 18,
+      quantityOnHand: 2,
+      lowStockThreshold: 5,
+      isActive: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InventoryListScreen(
+          productsService: FakeProductsService(products: <Product>[product]),
+          onAddProduct: () async => false,
+          onProductSelected: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PEN-1'), findsOneWidget);
+    expect(find.text('Blue Pen'), findsOneWidget);
+    expect(find.text('Acme Traders'), findsOneWidget);
+    expect(find.text('Pens'), findsOneWidget);
+    expect(find.text('Stock: 2 box'), findsOneWidget);
+    expect(find.text('Selling: 10.50'), findsOneWidget);
+    expect(find.text('GST: 18%'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+  });
+
+  testWidgets('default list navigation opens product detail screen',
+      (tester) async {
+    final product = Product(
+      id: '1',
+      companyName: 'Acme',
+      category: 'Pens',
+      itemName: 'Blue Pen',
+      itemNumber: 'PEN-1',
+      buyingPrice: 8,
+      sellingPrice: 10,
+      gstRate: 18,
+      quantityOnHand: 2,
+      lowStockThreshold: 5,
+      isActive: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InventoryListScreen(
+          productsService: FakeProductsService(products: <Product>[product]),
+          onAddProduct: () async => false,
+          onProductSelected: (selected) async {
+            await tester.state<NavigatorState>(find.byType(Navigator)).push(
+                  MaterialPageRoute<Product>(
+                    builder: (_) => ProductDetailScreen(
+                      product: selected,
+                      productsService: FakeProductsService(
+                        products: <Product>[selected],
+                      ),
+                      onEditProduct: (_) async => false,
+                    ),
+                  ),
+                );
+            return false;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productRow-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product details'), findsOneWidget);
+    expect(find.text('Blue Pen'), findsWidgets);
   });
 }
 
@@ -323,6 +402,11 @@ class FakeProductsService implements ProductsService {
 
   @override
   Future<Product> createProduct(CreateProductInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustQuantity({required String id, required double delta}) {
     throw UnimplementedError();
   }
 
@@ -366,6 +450,11 @@ class SequencedProductsService implements ProductsService {
 
   @override
   Future<Product> createProduct(CreateProductInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustQuantity({required String id, required double delta}) {
     throw UnimplementedError();
   }
 
