@@ -420,6 +420,123 @@ void main() {
     expect(await database.select(database.stockMovements).get(), hasLength(1));
   });
 
+  test('idempotent replay matches edited unit price against entered price',
+      () async {
+    final draft = _draft(customer: customer, product: product, quantity: 1)
+        .copyWith(items: <InvoiceDraftItem>[
+      InvoiceDraftItem(product: product, quantity: 1, unitPrice: 150),
+    ]);
+    final first = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(30),
+    );
+
+    final replay = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(30),
+    );
+
+    expect(replay.invoice.id, first.invoice.id);
+    await expectLater(
+      () => invoicesService.createInvoice(
+        draft: _draft(customer: customer, product: product, quantity: 1)
+            .copyWith(items: <InvoiceDraftItem>[
+          InvoiceDraftItem(product: product, quantity: 1, unitPrice: 151),
+        ]),
+        requestId: _uuid(30),
+      ),
+      throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),
+    );
+  });
+
+  test('idempotent replay compares place, pricing, gst, and discount',
+      () async {
+    final draft = _draftWithItems(
+      customer: customer,
+      placeOfSupplyStateCode: '29',
+      items: <InvoiceDraftItem>[
+        InvoiceDraftItem(
+          product: product,
+          quantity: 1,
+          pricingMode: 'PRE_TAX',
+          unitPrice: 100,
+          gstRate: 12,
+          discountPercent: 5,
+        ),
+      ],
+    );
+    await invoicesService.createInvoice(draft: draft, requestId: _uuid(31));
+
+    Future<void> expectConflict(InvoiceDraft changed) async {
+      await expectLater(
+        () =>
+            invoicesService.createInvoice(draft: changed, requestId: _uuid(31)),
+        throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),
+      );
+    }
+
+    await expectConflict(draft.copyWith(placeOfSupplyStateCode: '27'));
+    await expectConflict(draft.copyWith(items: <InvoiceDraftItem>[
+      InvoiceDraftItem(
+        product: product,
+        quantity: 1,
+        pricingMode: 'TAX_INCLUSIVE',
+        unitPrice: 100,
+        gstRate: 12,
+        discountPercent: 5,
+      ),
+    ]));
+    await expectConflict(draft.copyWith(items: <InvoiceDraftItem>[
+      InvoiceDraftItem(
+        product: product,
+        quantity: 1,
+        pricingMode: 'PRE_TAX',
+        unitPrice: 100,
+        gstRate: 18,
+        discountPercent: 5,
+      ),
+    ]));
+    await expectConflict(draft.copyWith(items: <InvoiceDraftItem>[
+      InvoiceDraftItem(
+        product: product,
+        quantity: 1,
+        pricingMode: 'PRE_TAX',
+        unitPrice: 100,
+        gstRate: 12,
+        discountPercent: 6,
+      ),
+    ]));
+  });
+
+  test('idempotent replay matches omitted invoice datetime to stored value',
+      () async {
+    final draft = _draft(
+      customer: customer,
+      product: product,
+      quantity: 1,
+      invoiceDate: '',
+      invoiceDatetime: null,
+    );
+    final first = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(32),
+    );
+    await (database.update(database.invoices)
+          ..where((invoice) => invoice.id.equals(first.invoice.id)))
+        .write(const db.InvoicesCompanion(
+      invoiceDatetime: Value('2026-02-01T01:02:03.004Z'),
+      invoiceDate: Value('2026-02-01'),
+    ));
+
+    final replay = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(32),
+    );
+
+    expect(replay.invoice.id, first.invoice.id);
+    expect(replay.invoice.invoiceDatetime, '2026-02-01T01:02:03.004Z');
+  });
+
   test(
       'duplicate request insert returns idempotent result without raw DB error',
       () async {

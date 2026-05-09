@@ -488,6 +488,8 @@ void main() {
         id: 'partial-zero', paymentState: 'PARTIAL_PAID', paidAmount: '0');
     await expectRejected(
         id: 'partial-full', paymentState: 'PARTIAL_PAID', paidAmount: '118');
+    await expectRejected(
+        id: 'malformed-paid', paymentState: 'CREDIT', paidAmount: 'abc');
   });
 
   test('migration normalizes unknown legacy payment modes to CREDIT', () async {
