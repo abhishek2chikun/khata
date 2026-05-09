@@ -182,6 +182,14 @@ class LocalProductsService implements ProductsService {
       );
     }
 
+    if (!existing.isActive) {
+      throw const ApiError(
+        code: 'PRODUCT_ARCHIVED',
+        message: 'Archived product cannot be adjusted',
+        statusCode: 400,
+      );
+    }
+
     if (input.requestId.trim().isEmpty) {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
@@ -190,10 +198,29 @@ class LocalProductsService implements ProductsService {
       );
     }
 
+    if (input.quantityDelta == 0) {
+      throw const ApiError(
+        code: 'VALIDATION_ERROR',
+        message: 'quantity_delta must be non-zero',
+        statusCode: 400,
+      );
+    }
+
     final existingMovement = await (_database.select(_database.stockMovements)
           ..where((movement) => movement.requestId.equals(input.requestId)))
         .getSingleOrNull();
     if (existingMovement != null) {
+      final matchesExistingPayload = existingMovement.productId == id &&
+          existingMovement.quantityDelta ==
+              _normalizeDecimal(input.quantityDelta) &&
+          existingMovement.reason == input.reason;
+      if (!matchesExistingPayload) {
+        throw const ApiError(
+          code: 'IDEMPOTENCY_CONFLICT',
+          message: 'request_id already used with different payload',
+          statusCode: 409,
+        );
+      }
       final product = await (_database.select(_database.products)
             ..where((product) => product.id.equals(id)))
           .getSingle();

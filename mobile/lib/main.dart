@@ -169,7 +169,7 @@ class _BillingAppState extends State<BillingApp> {
                   ),
                 ),
               );
-              return result != null;
+              return result;
             },
           );
         case AppDestination.sellers:
@@ -220,7 +220,7 @@ class _BillingAppState extends State<BillingApp> {
     return created;
   }
 
-  Future<bool> _openProductForm(Product product) async {
+  Future<Product?> _openProductForm(Product product) async {
     final result = await Navigator.of(context).push<Product>(
       MaterialPageRoute<Product>(
         builder: (_) => ProductFormScreen(
@@ -229,7 +229,7 @@ class _BillingAppState extends State<BillingApp> {
         ),
       ),
     );
-    return result != null;
+    return result;
   }
 
   Future<void> _checkLocalUsers() async {

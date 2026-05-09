@@ -17,7 +17,7 @@ class ProductDetailScreen extends StatefulWidget {
 
   final Product product;
   final ProductsService productsService;
-  final Future<bool> Function(Product product) onEditProduct;
+  final Future<Product?> Function(Product product) onEditProduct;
   final bool supportsProductReactivation;
 
   @override
@@ -94,13 +94,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               label: const Text('Edit product'),
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const Key('adjustStockButton'),
-              onPressed: _isSaving ? null : _showStockAdjustmentDialog,
-              icon: const Icon(Icons.inventory_2_outlined),
-              label: const Text('Adjust stock'),
-            ),
-            const SizedBox(height: 8),
+            if (_product.isActive) ...<Widget>[
+              OutlinedButton.icon(
+                key: const Key('adjustStockButton'),
+                onPressed: _isSaving ? null : _showStockAdjustmentDialog,
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: const Text('Adjust stock'),
+              ),
+              const SizedBox(height: 8),
+            ],
             if (_product.isActive)
               OutlinedButton.icon(
                 key: const Key('archiveProductButton'),
@@ -178,9 +180,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _handleEdit() async {
-    final shouldRefresh = await widget.onEditProduct(_product);
-    if (shouldRefresh && mounted) {
-      Navigator.of(context).pop(_product);
+    final updatedProduct = await widget.onEditProduct(_product);
+    if (updatedProduct != null && mounted) {
+      Navigator.of(context).pop(updatedProduct);
     }
   }
 
@@ -229,39 +231,46 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _showStockAdjustmentDialog() async {
     final controller = TextEditingController();
+    String? stockAdjustmentError;
     final delta = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Adjust stock'),
-        content: TextField(
-          key: const Key('stockAdjustmentField'),
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(
-            decimal: true,
-            signed: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Adjust stock'),
+          content: TextField(
+            key: const Key('stockAdjustmentField'),
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            decoration: InputDecoration(
+              labelText: 'Quantity change',
+              helperText: 'Use a negative number to reduce stock.',
+              errorText: stockAdjustmentError,
+              border: const OutlineInputBorder(),
+            ),
           ),
-          decoration: const InputDecoration(
-            labelText: 'Quantity change',
-            helperText: 'Use a negative number to reduce stock.',
-            border: OutlineInputBorder(),
-          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final parsed = double.tryParse(controller.text.trim());
+                if (parsed != null && parsed.isFinite && parsed != 0) {
+                  Navigator.of(context).pop(parsed);
+                } else if (parsed == 0) {
+                  setDialogState(() {
+                    stockAdjustmentError = 'Quantity change must be non-zero.';
+                  });
+                }
+              },
+              child: const Text('Apply adjustment'),
+            ),
+          ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final parsed = double.tryParse(controller.text.trim());
-              if (parsed != null && parsed.isFinite) {
-                FocusScope.of(context).unfocus();
-                Navigator.of(context).pop(parsed);
-              }
-            },
-            child: const Text('Apply adjustment'),
-          ),
-        ],
       ),
     );
     if (delta == null) {

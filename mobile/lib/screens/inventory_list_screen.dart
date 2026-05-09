@@ -16,7 +16,7 @@ class InventoryListScreen extends StatefulWidget {
 
   final ProductsService productsService;
   final Future<bool> Function() onAddProduct;
-  final Future<bool> Function(Product product) onProductSelected;
+  final Future<Product?> Function(Product product) onProductSelected;
   final Widget? drawer;
 
   @override
@@ -223,8 +223,8 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   }
 
   Future<void> _handleProductSelected(Product product) async {
-    final shouldRefresh = await widget.onProductSelected(product);
-    if (shouldRefresh && mounted) {
+    final updatedProduct = await widget.onProductSelected(product);
+    if (updatedProduct != null && mounted) {
       await _loadProducts();
     }
   }

@@ -46,7 +46,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onProductSelected: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -88,7 +88,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onProductSelected: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -159,7 +159,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => true,
-          onProductSelected: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -216,7 +216,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onProductSelected: (_) async => true,
+          onProductSelected: (product) async => product,
         ),
       ),
     );
@@ -254,7 +254,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onProductSelected: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -292,7 +292,7 @@ void main() {
           },
           onProductSelected: (value) async {
             selectedProduct = value;
-            return false;
+            return null;
           },
         ),
       ),
@@ -329,7 +329,7 @@ void main() {
         home: InventoryListScreen(
           productsService: FakeProductsService(products: <Product>[product]),
           onAddProduct: () async => false,
-          onProductSelected: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -374,11 +374,11 @@ void main() {
                       productsService: FakeProductsService(
                         products: <Product>[selected],
                       ),
-                      onEditProduct: (_) async => false,
+                      onEditProduct: (_) async => null,
                     ),
                   ),
                 );
-            return false;
+            return null;
           },
         ),
       ),
