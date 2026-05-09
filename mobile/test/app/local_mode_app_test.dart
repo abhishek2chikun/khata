@@ -24,7 +24,8 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
 
 void main() {
-  testWidgets('local mode sets up first user and opens inventory',
+  testWidgets(
+      'local mode sets up first user and creates product from inventory',
       (tester) async {
     final database = LocalDatabase.memory();
     final dependencies = await AppDependencies.create(
@@ -58,6 +59,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Inventory'), findsWidgets);
+    expect(find.text('No products found'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('addProductButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add product'), findsWidgets);
+
+    await tester.enterText(find.bySemanticsLabel('Company'), 'Acme');
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item code'), 'PEN-1');
+    await tester.enterText(
+      find.bySemanticsLabel('Selling price (excl tax)'),
+      '10.5',
+    );
+    await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inventory'), findsWidgets);
+    expect(find.text('Blue Pen'), findsOneWidget);
+    expect(find.text('Acme • Pens • PEN-1'), findsOneWidget);
   });
 
   testWidgets('BillingApp disposes provided app dependencies when removed',
