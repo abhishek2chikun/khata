@@ -420,6 +420,76 @@ void main() {
     );
   });
 
+  test('invoice payment state constraints reject invalid paid amounts',
+      () async {
+    final database = LocalDatabase.memory();
+    addTearDown(database.close);
+
+    await database.into(database.localUsers).insert(
+          LocalUsersCompanion.insert(
+            id: 'local-system-user',
+            username: 'system',
+            passwordHash: 'hash',
+            salt: 'salt',
+            passwordHashVersion: 1,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          ),
+        );
+    await database.into(database.customers).insert(
+          CustomersCompanion.insert(
+            id: 'customer-1',
+            name: 'Acme Stores',
+            address: '1 Market Road',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          ),
+        );
+
+    Future<void> expectRejected({
+      required String id,
+      required String paymentState,
+      required String paidAmount,
+      String grandTotal = '118',
+    }) async {
+      await expectLater(
+        () => database.customStatement(
+          """
+          INSERT INTO invoices (
+            id, request_id, request_hash, invoice_number, customer_id,
+            customer_name, customer_address, place_of_supply_state,
+            place_of_supply_state_code, company_name, company_address,
+            company_city, company_state, company_state_code, invoice_date,
+            tax_regime, status, payment_state, paid_amount, payment_mode,
+            subtotal, discount_total, taxable_total, gst_total, grand_total,
+            created_by_user_id, created_at
+          ) VALUES (
+            '$id', 'request-$id', 'hash', ${id.hashCode.abs()}, 'customer-1',
+            'Acme Stores', '1 Market Road', 'Maharashtra', '27',
+            'Khata Traders', '10 Market Road', 'Mumbai', 'Maharashtra', '27',
+            '2026-01-10', 'INTRA_STATE', 'ACTIVE', '$paymentState',
+            '$paidAmount', '$paymentState', '100', '0', '100', '18',
+            '$grandTotal', 'local-system-user', '2026-01-10T00:00:00.000Z'
+          )
+          """,
+        ),
+        throwsA(predicate((Object error) =>
+            error.toString().contains('CHECK constraint failed'))),
+      );
+    }
+
+    await expectRejected(
+        id: 'negative-paid', paymentState: 'PARTIAL_PAID', paidAmount: '-1');
+    await expectRejected(
+        id: 'credit-paid', paymentState: 'CREDIT', paidAmount: '1');
+    await expectRejected(
+        id: 'total-underpaid', paymentState: 'TOTAL_PAID', paidAmount: '117');
+    await expectRejected(
+        id: 'partial-zero', paymentState: 'PARTIAL_PAID', paidAmount: '0');
+    await expectRejected(
+        id: 'partial-full', paymentState: 'PARTIAL_PAID', paidAmount: '118');
+  });
+
   test('migration normalizes unknown legacy payment modes to CREDIT', () async {
     final directory = await Directory.systemTemp.createTemp('khata-v4-');
     addTearDown(() => directory.delete(recursive: true));
