@@ -448,7 +448,20 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> adjustQuantity({required String id, required double delta}) {
+  Future<Product> archiveProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) {
     throw UnimplementedError();
   }
 

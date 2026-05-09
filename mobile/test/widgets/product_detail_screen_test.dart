@@ -13,6 +13,7 @@ void main() {
           product: _product,
           productsService: FakeProductsService(product: _product),
           onEditProduct: (_) async => false,
+          supportsProductReactivation: true,
         ),
       ),
     );
@@ -49,6 +50,7 @@ void main() {
             editedProduct = product;
             return false;
           },
+          supportsProductReactivation: true,
         ),
       ),
     );
@@ -77,6 +79,7 @@ void main() {
                       product: _product,
                       productsService: service,
                       onEditProduct: (_) async => false,
+                      supportsProductReactivation: true,
                     ),
                   ),
                 );
@@ -96,7 +99,7 @@ void main() {
     await tester.tap(find.text('Archive').last);
     await tester.pumpAndSettle();
 
-    expect(service.activeChanges.single, isFalse);
+    expect(service.archiveCalls, 1);
     expect(returnedProduct?.isActive, isFalse);
   });
 
@@ -110,6 +113,7 @@ void main() {
           product: archived,
           productsService: service,
           onEditProduct: (_) async => false,
+          supportsProductReactivation: true,
         ),
       ),
     );
@@ -119,7 +123,7 @@ void main() {
     await tester.tap(find.byKey(const Key('reactivateProductButton')));
     await tester.pumpAndSettle();
 
-    expect(service.activeChanges.single, isTrue);
+    expect(service.reactivateCalls, 1);
     expect(find.text('Product reactivated'), findsOneWidget);
   });
 
@@ -133,6 +137,7 @@ void main() {
           product: _product,
           productsService: service,
           onEditProduct: (_) async => false,
+          supportsProductReactivation: true,
         ),
       ),
     );
@@ -144,10 +149,10 @@ void main() {
     await tester.tap(find.text('Apply adjustment'));
     await tester.pumpAndSettle();
 
-    expect(service.quantityAdjustments.single, 4);
+    expect(service.stockAdjustments.single.quantityDelta, 4);
+    expect(service.stockAdjustments.single.requestId, isNotEmpty);
     expect(find.text('7 box'), findsOneWidget);
-    expect(find.text('Stock adjusted. Movement history is deferred.'),
-        findsOneWidget);
+    expect(find.text('Stock adjusted'), findsOneWidget);
   });
 
   testWidgets('archived detail explains invoice guard', (tester) async {
@@ -159,12 +164,40 @@ void main() {
             product: _product.copyWith(isActive: false),
           ),
           onEditProduct: (_) async => false,
+          supportsProductReactivation: false,
         ),
       ),
     );
 
     expect(find.text('Archived products are hidden from new invoices.'),
         findsOneWidget);
+    expect(find.byKey(const Key('reactivateProductButton')), findsNothing);
+    expect(find.text('Reactivation is only available in local mode.'),
+        findsOneWidget);
+  });
+
+  testWidgets('archive uses archive service method', (tester) async {
+    final service = FakeProductsService(product: _product);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductDetailScreen(
+          product: _product,
+          productsService: service,
+          onEditProduct: (_) async => false,
+          supportsProductReactivation: false,
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('archiveProductButton')));
+    await tester.tap(find.byKey(const Key('archiveProductButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive').last);
+    await tester.pumpAndSettle();
+
+    expect(service.archiveCalls, 1);
+    expect(service.updatedInputs, isEmpty);
   });
 }
 
@@ -209,7 +242,9 @@ class FakeProductsService implements ProductsService {
   Product product;
   final List<UpdateProductInput> updatedInputs = <UpdateProductInput>[];
   final List<bool?> activeChanges = <bool?>[];
-  final List<double> quantityAdjustments = <double>[];
+  final List<AdjustStockInput> stockAdjustments = <AdjustStockInput>[];
+  var archiveCalls = 0;
+  var reactivateCalls = 0;
 
   @override
   Future<Product> createProduct(CreateProductInput input) {
@@ -226,7 +261,6 @@ class FakeProductsService implements ProductsService {
     required UpdateProductInput input,
   }) async {
     updatedInputs.add(input);
-    activeChanges.add(input.isActive);
     product = Product(
       id: id,
       companyName: input.companyName,
@@ -239,18 +273,34 @@ class FakeProductsService implements ProductsService {
       gstRate: input.gstRate,
       quantityOnHand: product.quantityOnHand,
       lowStockThreshold: input.lowStockThreshold,
-      isActive: input.isActive ?? product.isActive,
+      isActive: product.isActive,
     );
     return product;
   }
 
   @override
-  Future<Product> adjustQuantity({
+  Future<Product> archiveProduct({required String id}) async {
+    archiveCalls += 1;
+    product = product.copyWith(isActive: false);
+    return product;
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) async {
+    reactivateCalls += 1;
+    product = product.copyWith(isActive: true);
+    return product;
+  }
+
+  @override
+  Future<Product> adjustStock({
     required String id,
-    required double delta,
+    required AdjustStockInput input,
   }) async {
-    quantityAdjustments.add(delta);
-    product = product.copyWith(quantityOnHand: product.quantityOnHand + delta);
+    stockAdjustments.add(input);
+    product = product.copyWith(
+      quantityOnHand: product.quantityOnHand + input.quantityDelta,
+    );
     return product;
   }
 }

@@ -236,6 +236,80 @@ void main() {
     expect(storedProduct.isActive, isFalse);
   });
 
+  test('archive marks product inactive without changing other fields',
+      () async {
+    final product = await service.createProduct(_createProductInput());
+
+    final archived = await service.archiveProduct(id: product.id);
+
+    expect(archived.id, product.id);
+    expect(archived.isActive, isFalse);
+    expect(archived.quantityOnHand, 3.25);
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.isActive, isFalse);
+    expect(storedProduct.quantityOnHand, '3.25');
+  });
+
+  test('reactivate marks archived product active locally', () async {
+    final product = await service.createProduct(_createProductInput());
+    await service.archiveProduct(id: product.id);
+
+    final reactivated = await service.reactivateProduct(id: product.id);
+
+    expect(reactivated.isActive, isTrue);
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.isActive, isTrue);
+  });
+
+  test('adjust stock inserts movement and updates quantity transactionally',
+      () async {
+    final product = await service.createProduct(_createProductInput());
+
+    final adjusted = await service.adjustStock(
+      id: product.id,
+      input: const AdjustStockInput(
+        requestId: 'stock-adjust-1',
+        quantityDelta: -1.25,
+        reason: 'Damaged goods',
+      ),
+    );
+
+    expect(adjusted.quantityOnHand, 2);
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.quantityOnHand, '2');
+    final movements = await database.select(database.stockMovements).get();
+    expect(movements, hasLength(1));
+    expect(movements.single.productId, product.id);
+    expect(movements.single.requestId, 'stock-adjust-1');
+    expect(movements.single.movementType, 'MANUAL_ADJUSTMENT');
+    expect(movements.single.quantityDelta, '-1.25');
+    expect(movements.single.reason, 'Damaged goods');
+    expect(movements.single.createdByUserId, 'local-system-user');
+  });
+
+  test('duplicate stock adjustment request returns existing adjusted product',
+      () async {
+    final product = await service.createProduct(_createProductInput());
+
+    await service.adjustStock(
+      id: product.id,
+      input: const AdjustStockInput(
+        requestId: 'stock-adjust-1',
+        quantityDelta: 1,
+      ),
+    );
+    final duplicate = await service.adjustStock(
+      id: product.id,
+      input: const AdjustStockInput(
+        requestId: 'stock-adjust-1',
+        quantityDelta: 1,
+      ),
+    );
+
+    expect(duplicate.quantityOnHand, 4.25);
+    expect(await database.select(database.stockMovements).get(), hasLength(1));
+  });
+
   test('rejects duplicate company/name/category', () async {
     await service.createProduct(_createProductInput());
 

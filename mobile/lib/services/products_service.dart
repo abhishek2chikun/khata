@@ -82,7 +82,6 @@ class UpdateProductInput {
     this.unit,
     required this.gstRate,
     required this.lowStockThreshold,
-    this.isActive,
   });
 
   final String companyName;
@@ -94,10 +93,9 @@ class UpdateProductInput {
   final String? unit;
   final double gstRate;
   final double lowStockThreshold;
-  final bool? isActive;
 
   Map<String, dynamic> toJson() {
-    final payload = <String, dynamic>{
+    return <String, dynamic>{
       'company_name': companyName,
       'category': category,
       'item_name': itemName,
@@ -108,10 +106,26 @@ class UpdateProductInput {
       'gst_rate': gstRate,
       'low_stock_threshold': lowStockThreshold,
     };
-    if (isActive != null) {
-      payload['is_active'] = isActive;
-    }
-    return payload;
+  }
+}
+
+class AdjustStockInput {
+  const AdjustStockInput({
+    required this.requestId,
+    required this.quantityDelta,
+    this.reason,
+  });
+
+  final String requestId;
+  final double quantityDelta;
+  final String? reason;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'request_id': requestId,
+      'quantity_delta': quantityDelta,
+      if (reason != null && reason!.isNotEmpty) 'reason': reason,
+    };
   }
 }
 
@@ -123,7 +137,14 @@ abstract class ProductsService {
   Future<Product> updateProduct(
       {required String id, required UpdateProductInput input});
 
-  Future<Product> adjustQuantity({required String id, required double delta});
+  Future<Product> archiveProduct({required String id});
+
+  Future<Product> reactivateProduct({required String id});
+
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  });
 }
 
 class ApiProductsService implements ProductsService {
@@ -156,11 +177,24 @@ class ApiProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> adjustQuantity(
-      {required String id, required double delta}) async {
+  Future<Product> archiveProduct({required String id}) async {
+    final response = await _apiClient.delete('/products/$id');
+    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnsupportedError('Product reactivation is only available locally.');
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) async {
     final response = await _apiClient.post(
-      '/products/$id/adjust-quantity',
-      body: <String, dynamic>{'delta': delta},
+      '/products/$id/adjust-stock',
+      body: input.toJson(),
     );
     return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }

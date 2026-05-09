@@ -210,6 +210,68 @@ void main() {
       expect(httpClient.lastQueryParameters['company_name'], 'Acme');
       expect(httpClient.lastQueryParameters['category'], 'Pens');
     });
+
+    test('archive calls backend delete endpoint', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 200,
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":false}',
+        ),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final archived = await service.archiveProduct(id: 'p1');
+
+      expect(httpClient.lastMethod, 'DELETE');
+      expect(httpClient.lastPath, '/products/p1');
+      expect(httpClient.lastBody, isEmpty);
+      expect(archived.isActive, isFalse);
+    });
+
+    test('adjust stock calls backend route with idempotent request body',
+        () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 200,
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"7","low_stock_threshold":"2","is_active":true}',
+        ),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final adjusted = await service.adjustStock(
+        id: 'p1',
+        input: const AdjustStockInput(
+          requestId: 'req-1',
+          quantityDelta: 2,
+          reason: 'Cycle count',
+        ),
+      );
+
+      expect(httpClient.lastMethod, 'POST');
+      expect(httpClient.lastPath, '/products/p1/adjust-stock');
+      final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
+      expect(payload['request_id'], 'req-1');
+      expect(payload['quantity_delta'], 2);
+      expect(payload['reason'], 'Cycle count');
+      expect(payload.containsKey('delta'), isFalse);
+      expect(adjusted.quantityOnHand, 7);
+    });
   });
 }
 
@@ -302,6 +364,16 @@ class RecordingHttpClient implements HttpClient {
   @override
   Future<HttpClientRequest> putUrl(Uri url) async {
     lastMethod = 'PUT';
+    lastPath = url.path;
+    return RecordingHttpRequest(
+      response: response,
+      onClose: (body) => lastBody = body,
+    );
+  }
+
+  @override
+  Future<HttpClientRequest> deleteUrl(Uri url) async {
+    lastMethod = 'DELETE';
     lastPath = url.path;
     return RecordingHttpRequest(
       response: response,
