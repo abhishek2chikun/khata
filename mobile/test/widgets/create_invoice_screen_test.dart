@@ -293,6 +293,52 @@ void main() {
     expect(find.text('New Customer'), findsWidgets);
   });
 
+  testWidgets('quick-add product popup creates product with buyingPrice 0',
+      (tester) async {
+    final productsService = FakeProductsService(products: <Product>[_product]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: productsService,
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('addProductButton')));
+    await tester.tap(find.byKey(const Key('addProductButton')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const Key('productItemNameField')), 'New Product');
+    await tester.enterText(
+        find.byKey(const Key('productItemNumberField')), 'NP-1');
+    await tester.enterText(
+        find.byKey(const Key('productCompanyNameField')), 'NewCo');
+    await tester.enterText(
+        find.byKey(const Key('productCategoryField')), 'General');
+    await tester.enterText(
+        find.byKey(const Key('productSellingPriceField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('productGstRateField')), '18');
+
+    await tester.tap(find.byKey(const Key('saveProductButton')));
+    await tester.pumpAndSettle();
+
+    expect(productsService.createdInputs, hasLength(1));
+    expect(productsService.createdInputs.single.buyingPrice, 0);
+    expect(productsService.createdInputs.single.sellingPrice, 50);
+  });
+
   testWidgets('quick-add product popup creates new product and selects it',
       (tester) async {
     final productsService = FakeProductsService(products: <Product>[_product]);
@@ -459,6 +505,60 @@ void main() {
     expect(tester.widget<TextField>(gstField1).controller?.text, '5.00');
   });
 
+  testWidgets('clearing apply GST to all field clears line GST values',
+      (tester) async {
+    final invoicesService = FakeInvoicesService(
+      quoteResponse: _quoteWithTwoItems,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: invoicesService,
+          productsService:
+              FakeProductsService(products: <Product>[_product, _product2]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue Pen').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('addItemButton')));
+    await tester.tap(find.byKey(const Key('addItemButton')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Red Pen').last);
+    await tester.pumpAndSettle();
+
+    final applyGstField = find.byKey(const Key('applyGstToAllField'));
+    await tester.enterText(applyGstField, '18');
+    await tester.pump();
+
+    var gstField0 = find.byKey(const Key('gstRateField-0'));
+    expect(tester.widget<TextField>(gstField0).controller?.text, '18.00');
+
+    await tester.enterText(applyGstField, '');
+    await tester.pump();
+
+    gstField0 = find.byKey(const Key('gstRateField-0'));
+    final gstField1 = find.byKey(const Key('gstRateField-1'));
+    expect(tester.widget<TextField>(gstField0).controller?.text, isEmpty);
+    expect(tester.widget<TextField>(gstField1).controller?.text, isEmpty);
+  });
+
   testWidgets(
       'payment state selection shows Credit Total Paid Partial Paid options',
       (tester) async {
@@ -510,11 +610,14 @@ void main() {
     expect(find.byKey(const Key('paidAmountField')), findsOneWidget);
   });
 
-  testWidgets('date/time picker defaults to current date/time', (tester) async {
+  testWidgets('invoice date is initialized from datetime defaulting to now',
+      (tester) async {
+    final invoicesService = FakeInvoicesService(quoteResponse: _quote);
+
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
-          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
           customersService:
               FakeCustomersService(customers: <Customer>[_customer]),
@@ -526,8 +629,20 @@ void main() {
     final dateTimeField = find.byKey(const Key('invoiceDatetimeField'));
     expect(dateTimeField, findsOneWidget);
 
-    final controller = tester.widget<TextField>(dateTimeField).controller;
-    expect(controller?.text, isNotEmpty);
+    final textController =
+        tester.widget<TextField>(dateTimeField).controller;
+    expect(textController?.text, isNotEmpty);
+
+    final datePart = textController!.text.split(' ').first;
+    expect(datePart, matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
+
+    await _fillDraft(tester);
+    await tester.ensureVisible(find.byKey(const Key('previewInvoiceButton')));
+    await tester.tap(find.byKey(const Key('previewInvoiceButton')));
+    await tester.pumpAndSettle();
+
+    expect(invoicesService.quotedDrafts, hasLength(1));
+    expect(invoicesService.quotedDrafts.single.invoiceDate, datePart);
   });
 
   testWidgets('add item button adds new product line', (tester) async {

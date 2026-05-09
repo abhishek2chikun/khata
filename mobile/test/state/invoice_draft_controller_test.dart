@@ -46,6 +46,33 @@ void main() {
         <String>[firstRequestId!, firstRequestId]);
   });
 
+  test('updatePaymentState syncs paymentMode so toJson reflects current selection',
+      () {
+    final controller = InvoiceDraftController(
+      invoicesService: FakeInvoicesService(),
+    );
+
+    controller.updatePaymentState('TOTAL_PAID');
+    expect(controller.draft.paymentState, 'TOTAL_PAID');
+    expect(controller.draft.toJson()['payment_state'], 'TOTAL_PAID');
+
+    controller.updatePaymentState('CREDIT');
+    expect(controller.draft.paymentState, 'CREDIT');
+    expect(controller.draft.toJson()['payment_state'], 'CREDIT');
+  });
+
+  test('updatePaymentState to PARTIAL_PAID serializes correctly', () {
+    final controller = InvoiceDraftController(
+      invoicesService: FakeInvoicesService(),
+    );
+
+    controller.updatePaymentState('PARTIAL_PAID');
+    controller.updatePaidAmount(50);
+    expect(controller.draft.paymentState, 'PARTIAL_PAID');
+    expect(controller.draft.toJson()['payment_state'], 'PARTIAL_PAID');
+    expect(controller.draft.toJson()['paid_amount'], 50);
+  });
+
   test(
       'editing draft after failure clears request id so next submit uses a new one',
       () async {
