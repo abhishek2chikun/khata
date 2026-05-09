@@ -22,6 +22,15 @@ def test_buying_price_conversion_preserves_value_when_gst_rate_is_null():
     assert product_schema_v2.to_inclusive_money(Decimal("100.00"), None) == Decimal("100.00")
 
 
+def test_downgrade_buying_price_conversion_restores_pre_tax_value():
+    assert product_schema_v2.to_pre_tax_money(Decimal("118.00"), Decimal("18.00")) == Decimal("100.00")
+
+
+def test_downgrade_buying_price_conversion_preserves_value_when_gst_rate_is_zero_or_null():
+    assert product_schema_v2.to_pre_tax_money(Decimal("100.00"), Decimal("0.00")) == Decimal("100.00")
+    assert product_schema_v2.to_pre_tax_money(Decimal("100.00"), None) == Decimal("100.00")
+
+
 def test_seed_invoice_lines_use_tax_inclusive_product_prices():
     from app.commands.seed_demo_data import _demo_product_payloads, _demo_invoice_line_payloads
 
@@ -36,3 +45,45 @@ def test_seed_invoice_lines_use_tax_inclusive_product_prices():
     assert lines["FILE-001"].unit_price == products["FILE-001"].selling_price
     assert lines["MRK-001"].pricing_mode == "TAX_INCLUSIVE"
     assert lines["MRK-001"].unit_price == products["MRK-001"].selling_price
+
+
+def test_seed_product_sync_updates_existing_product_to_current_v2_defaults():
+    from app.commands.seed_demo_data import _sync_seed_product
+
+    class ExistingProduct:
+        company_name = "Old Company"
+        category = "Old Category"
+        item_name = "Old Name"
+        item_number = "PEN-001"
+        buying_price = Decimal("8.00")
+        selling_price = Decimal("12.00")
+        unit = "old"
+        gst_rate = Decimal("5.00")
+        quantity_on_hand = Decimal("1.000")
+        low_stock_threshold = Decimal("1.000")
+
+    from app.commands.seed_demo_data import _demo_product_payloads
+
+    product = ExistingProduct()
+    payload = _demo_product_payloads()["PEN-001"]
+
+    _sync_seed_product(product, payload)
+
+    assert product.company_name == payload.company_name
+    assert product.category == payload.category
+    assert product.item_name == payload.item_name
+    assert product.buying_price == payload.buying_price
+    assert product.selling_price == payload.selling_price
+    assert product.unit == payload.unit
+    assert product.gst_rate == payload.gst_rate
+    assert product.low_stock_threshold == payload.low_stock_threshold
+    assert product.quantity_on_hand == Decimal("1.000")
+
+
+def test_seed_invoice_request_ids_are_versioned_for_tax_inclusive_payloads():
+    from app.commands.seed_demo_data import _demo_invoice_request_ids, _seed_uuid
+
+    request_ids = _demo_invoice_request_ids()
+
+    assert request_ids["abc_stores_credit"] == _seed_uuid("invoice-v2", "abc-stores", "credit-1")
+    assert request_ids["abc_stores_credit"] != _seed_uuid("invoice", "abc-stores", "credit-1")

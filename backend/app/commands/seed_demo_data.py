@@ -62,8 +62,23 @@ def _ensure_seller(session, payload: SellerCreateRequest) -> Seller:
 def _ensure_product(session, payload: ProductCreateRequest, current_user: CurrentUserResponse) -> Product:
     existing = session.scalar(select(Product).where(Product.item_number == payload.item_number))
     if existing is not None:
+        _sync_seed_product(existing, payload)
+        session.commit()
+        session.refresh(existing)
         return existing
     return product_service.create_product(session, payload, current_user)
+
+
+def _sync_seed_product(product: Product, payload: ProductCreateRequest) -> None:
+    product.company_name = payload.company_name
+    product.category = payload.category
+    product.item_name = payload.item_name
+    product.buyer_id = payload.buyer_id
+    product.buying_price = payload.buying_price
+    product.selling_price = payload.selling_price
+    product.unit = payload.unit
+    product.gst_rate = payload.gst_rate
+    product.low_stock_threshold = payload.low_stock_threshold
 
 
 def _demo_product_payloads() -> dict[str, ProductCreateRequest]:
@@ -135,6 +150,14 @@ def _demo_invoice_line_payloads(products: dict[str, ProductCreateRequest | Produ
     }
 
 
+def _demo_invoice_request_ids() -> dict[str, UUID]:
+    return {
+        "abc_stores_credit": _seed_uuid("invoice-v2", "abc-stores", "credit-1"),
+        "city_books_paid": _seed_uuid("invoice-v2", "city-books", "paid-1"),
+        "karnataka_office_credit": _seed_uuid("invoice-v2", "karnataka-office", "credit-1"),
+    }
+
+
 def seed_demo_data(*, username: str) -> dict[str, int]:
     session = get_session_factory()()
     try:
@@ -179,6 +202,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
 
         products = {item_number: _ensure_product(session, payload, current_user) for item_number, payload in _demo_product_payloads().items()}
         invoice_lines = _demo_invoice_line_payloads(products)
+        invoice_request_ids = _demo_invoice_request_ids()
 
         seller_service.create_opening_balance(
             session,
@@ -205,7 +229,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         invoice_service.create_invoice(
             session,
             InvoiceCreateRequest(
-                request_id=_seed_uuid("invoice", "abc-stores", "credit-1"),
+                request_id=invoice_request_ids["abc_stores_credit"],
                 seller_id=sellers["abc_stores"].id,
                 invoice_date=date(2026, 4, 19),
                 payment_mode="CREDIT",
@@ -222,7 +246,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         invoice_service.create_invoice(
             session,
             InvoiceCreateRequest(
-                request_id=_seed_uuid("invoice", "city-books", "paid-1"),
+                request_id=invoice_request_ids["city_books_paid"],
                 seller_id=sellers["city_books"].id,
                 invoice_date=date(2026, 4, 21),
                 payment_mode="PAID",
@@ -238,7 +262,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         invoice_service.create_invoice(
             session,
             InvoiceCreateRequest(
-                request_id=_seed_uuid("invoice", "karnataka-office", "credit-1"),
+                request_id=invoice_request_ids["karnataka_office_credit"],
                 seller_id=sellers["karnataka_office"].id,
                 invoice_date=date(2026, 4, 22),
                 payment_mode="CREDIT",

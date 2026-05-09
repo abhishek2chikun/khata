@@ -28,6 +28,16 @@ def to_inclusive_money(value: Decimal | None, gst_rate: Decimal | None) -> Decim
     return (Decimal(value) * (Decimal("1.00") + (tax_rate / Decimal("100.00")))).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
 
 
+def to_pre_tax_money(value: Decimal | None, gst_rate: Decimal | None) -> Decimal:
+    """Convert V2 inclusive money back to legacy pre-tax money with safe fallback."""
+    if value is None:
+        return Decimal("0.00")
+    tax_rate = Decimal("0.00") if gst_rate is None else Decimal(gst_rate)
+    if tax_rate == 0:
+        return Decimal(value).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+    return (Decimal(value) / (Decimal("1.00") + (tax_rate / Decimal("100.00")))).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+
+
 def upgrade() -> None:
     op.drop_constraint("uq_products_company_category_item_name", "products", type_="unique")
     op.drop_constraint("uq_products_item_code", "products", type_="unique")
@@ -84,9 +94,15 @@ def downgrade() -> None:
             """
             UPDATE products
             SET
-                buying_price_excl_tax = buying_price,
-                buying_gst_rate = NULL,
-                default_selling_price_excl_tax = ROUND(selling_price / (1 + (gst_rate / 100)), 2),
+                buying_price_excl_tax = CASE
+                    WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(buying_price, 0.00)
+                    ELSE ROUND(COALESCE(buying_price, 0.00) / (1 + (gst_rate / 100)), 2)
+                END,
+                buying_gst_rate = COALESCE(gst_rate, 0.00),
+                default_selling_price_excl_tax = CASE
+                    WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(selling_price, 0.00)
+                    ELSE ROUND(COALESCE(selling_price, 0.00) / (1 + (gst_rate / 100)), 2)
+                END,
                 default_gst_rate = gst_rate
             """
         )
