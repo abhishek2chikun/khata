@@ -14,10 +14,11 @@ class CustomerLedger {
   factory CustomerLedger.fromJson(Map<String, dynamic> json) {
     return CustomerLedger(
       customer: Customer.fromJson(json['customer'] as Map<String, dynamic>),
-      transactions: (json['transactions'] as List<dynamic>? ?? const <dynamic>[])
-          .cast<Map<String, dynamic>>()
-          .map(CustomerLedgerTransaction.fromJson)
-          .toList(),
+      transactions:
+          (json['transactions'] as List<dynamic>? ?? const <dynamic>[])
+              .cast<Map<String, dynamic>>()
+              .map(CustomerLedgerTransaction.fromJson)
+              .toList(),
       invoices: (json['invoices'] as List<dynamic>? ?? const <dynamic>[])
           .cast<Map<String, dynamic>>()
           .map(CustomerInvoiceHistoryEntry.fromJson)
@@ -32,6 +33,7 @@ class CustomerLedgerTransaction {
     required this.entryType,
     required this.amount,
     required this.occurredOn,
+    this.createdAt = '',
     required this.notes,
   });
 
@@ -39,6 +41,7 @@ class CustomerLedgerTransaction {
   final String entryType;
   final double amount;
   final String occurredOn;
+  final String createdAt;
   final String? notes;
 
   factory CustomerLedgerTransaction.fromJson(Map<String, dynamic> json) {
@@ -47,6 +50,7 @@ class CustomerLedgerTransaction {
       entryType: json['entry_type'] as String? ?? '',
       amount: _toDouble(json['amount']),
       occurredOn: json['occurred_on'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
       notes: json['notes'] as String?,
     );
   }

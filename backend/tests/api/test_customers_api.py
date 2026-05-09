@@ -107,6 +107,50 @@ def test_customer_ledger_preserves_balance_math_and_ordering(client, auth_header
     ]
 
 
+def test_customer_ledger_rows_include_creation_time_and_filter_by_date(client, auth_headers):
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload())
+    assert customer.status_code == 201
+    customer_id = customer.json()["id"]
+
+    first_collection = client.post(
+        "/collections",
+        headers=auth_headers,
+        json={
+            "request_id": str(uuid4()),
+            "customer_id": customer_id,
+            "amount": "25.00",
+            "occurred_on": "2026-04-20",
+            "notes": "Morning collection",
+        },
+    )
+    assert first_collection.status_code == 201
+    second_collection = client.post(
+        "/collections",
+        headers=auth_headers,
+        json={
+            "request_id": str(uuid4()),
+            "customer_id": customer_id,
+            "amount": "10.00",
+            "occurred_on": "2026-04-21",
+            "notes": "Next day collection",
+        },
+    )
+    assert second_collection.status_code == 201
+
+    ledger = client.get(
+        f"/customers/{customer_id}/ledger?on_date=2026-04-20",
+        headers=auth_headers,
+    )
+
+    assert ledger.status_code == 200
+    body = ledger.json()
+    assert [transaction["notes"] for transaction in body["transactions"]] == [
+        "Morning collection",
+    ]
+    assert body["transactions"][0]["occurred_on"] == "2026-04-20"
+    assert body["transactions"][0]["created_at"]
+
+
 def test_seller_routes_are_not_active(client, auth_headers):
     response = client.get("/sellers", headers=auth_headers)
     assert response.status_code == 404

@@ -10,13 +10,16 @@ class BalanceAdjustmentScreen extends StatefulWidget {
     super.key,
     required this.paymentsService,
     required this.customer,
+    this.initialDirection = 'INCREASE',
   });
 
   final PaymentsService paymentsService;
   final Customer customer;
+  final String initialDirection;
 
   @override
-  State<BalanceAdjustmentScreen> createState() => _BalanceAdjustmentScreenState();
+  State<BalanceAdjustmentScreen> createState() =>
+      _BalanceAdjustmentScreenState();
 }
 
 class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
@@ -25,8 +28,16 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
   final _notesController = TextEditingController();
 
   bool _isSaving = false;
-  String _direction = 'INCREASE';
+  late String _direction;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _direction = widget.initialDirection;
+    _occurredOnController.text =
+        DateTime.now().toIso8601String().substring(0, 10);
+  }
 
   @override
   void dispose() {
@@ -152,7 +163,9 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
           direction: _direction,
           amount: amount,
           occurredOn: occurredOn,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         ),
       );
       if (!mounted) {

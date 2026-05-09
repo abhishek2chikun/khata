@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import date
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -191,9 +192,12 @@ def build_customer_response(session: Session, customer: Customer) -> CustomerRes
     return data
 
 
-def get_customer_ledger(session: Session, customer_id) -> CustomerLedgerResponse:
+def get_customer_ledger(session: Session, customer_id, *, on_date: date | None = None) -> CustomerLedgerResponse:
     customer = get_customer(session, customer_id)
-    transactions = list(session.scalars(select(CustomerTransaction).where(CustomerTransaction.customer_id == customer.id).order_by(CustomerTransaction.occurred_on, CustomerTransaction.created_at)).all())
+    transactions_query = select(CustomerTransaction).where(CustomerTransaction.customer_id == customer.id)
+    if on_date is not None:
+        transactions_query = transactions_query.where(CustomerTransaction.occurred_on == on_date)
+    transactions = list(session.scalars(transactions_query.order_by(CustomerTransaction.occurred_on, CustomerTransaction.created_at, CustomerTransaction.id)).all())
     invoices = list(session.scalars(select(Invoice).where(Invoice.customer_id == customer.id).order_by(Invoice.invoice_date, Invoice.invoice_number)).all())
     return CustomerLedgerResponse(
         customer=build_customer_response(session, customer),

@@ -30,7 +30,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          customersService: FakeCustomersService(customers: <Customer>[_customer]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -80,7 +81,8 @@ void main() {
                 const ApiError(message: 'Quote failed', statusCode: 400),
           ),
           productsService: FakeProductsService(products: <Product>[_product]),
-          customersService: FakeCustomersService(customers: <Customer>[_customer]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -133,7 +135,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          customersService: FakeCustomersService(customers: <Customer>[_customer]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -166,7 +169,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          customersService: FakeCustomersService(customers: <Customer>[_customer]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -200,8 +204,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: FakeProductsService(products: <Product>[_product]),
-          customersService:
-              FakeCustomersService(customers: <Customer>[_customer, _otherCustomer]),
+          customersService: FakeCustomersService(
+              customers: <Customer>[_customer, _otherCustomer]),
           initialCustomer: _customer,
         ),
       ),
@@ -223,8 +227,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: productsService,
-          customersService:
-              FakeCustomersService(customers: <Customer>[_customer, _archivedCustomer]),
+          customersService: FakeCustomersService(
+              customers: <Customer>[_customer, _archivedCustomer]),
         ),
       ),
     );
@@ -251,7 +255,8 @@ void main() {
             products: const <Product>[],
             error: const SocketException('timed out'),
           ),
-          customersService: FakeCustomersService(customers: <Customer>[_customer]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -501,7 +506,8 @@ class FakeCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) {
     throw UnimplementedError();
   }
 }

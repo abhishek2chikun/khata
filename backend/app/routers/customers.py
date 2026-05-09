@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -48,5 +50,5 @@ def create_balance_adjustment(customer_id: str, payload: BalanceAdjustmentReques
 
 
 @router.get("/{customer_id}/ledger", response_model=CustomerLedgerResponse)
-def get_customer_ledger(customer_id: str, _: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> CustomerLedgerResponse:
-    return customer_service.get_customer_ledger(session, customer_id)
+def get_customer_ledger(customer_id: str, on_date: date | None = None, _: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> CustomerLedgerResponse:
+    return customer_service.get_customer_ledger(session, customer_id, on_date=on_date)

@@ -34,6 +34,13 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _occurredOnController.text =
+        DateTime.now().toIso8601String().substring(0, 10);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Add opening balance')),

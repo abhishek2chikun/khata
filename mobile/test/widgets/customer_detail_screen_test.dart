@@ -10,7 +10,8 @@ import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  testWidgets('customer detail loads profile balance ledger and invoices', (tester) async {
+  testWidgets('customer detail loads profile balance ledger and invoices',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CustomerDetailScreen(
@@ -25,6 +26,7 @@ void main() {
                     entryType: 'COLLECTION',
                     amount: 100,
                     occurredOn: '2026-04-20',
+                    createdAt: '2026-04-20T10:30:00.000Z',
                     notes: 'Cash collection',
                   ),
                 ],
@@ -52,11 +54,75 @@ void main() {
     expect(find.text('ABC Stores'), findsWidgets);
     expect(find.text('Market Yard'), findsOneWidget);
     expect(find.textContaining('500'), findsWidgets);
+    expect(find.text('Collect money'), findsOneWidget);
+    expect(find.text('Increase balance'), findsOneWidget);
+    expect(find.text('Decrease balance'), findsOneWidget);
+    expect(find.text('Ledger history'), findsOneWidget);
+    expect(find.text('2026-04-20 10:30'), findsOneWidget);
     expect(find.text('Cash collection'), findsOneWidget);
     expect(find.text('1001'), findsOneWidget);
   });
 
-  testWidgets('customer detail refreshes after successful payment flow', (tester) async {
+  testWidgets('customer detail payment forms default occurred date to today',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
+              ),
+            ],
+          ),
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+
+    await tester.tap(find.byKey(const Key('recordCollectionActionButton')));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(
+                find.byKey(const Key('collectionOccurredOnField')))
+            .controller
+            ?.text,
+        today);
+    Navigator.of(tester.element(find.text('Record collection'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('openingBalanceActionButton')));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(
+                find.byKey(const Key('openingBalanceOccurredOnField')))
+            .controller
+            ?.text,
+        today);
+    Navigator.of(tester.element(find.text('Add opening balance'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('balanceAdjustmentActionButton')));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(
+                find.byKey(const Key('balanceAdjustmentOccurredOnField')))
+            .controller
+            ?.text,
+        today);
+  });
+
+  testWidgets('customer detail refreshes after successful payment flow',
+      (tester) async {
     final customersService = FakeCustomersService(
       ledgers: <CustomerLedger>[
         CustomerLedger(
@@ -95,9 +161,12 @@ void main() {
 
     await tester.tap(find.byKey(const Key('recordCollectionActionButton')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('collectionAmountField')), '125');
-    await tester.enterText(find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('collectionNotesField')), 'Cash');
+    await tester.enterText(
+        find.byKey(const Key('collectionAmountField')), '125');
+    await tester.enterText(
+        find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('collectionNotesField')), 'Cash');
     await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
 
@@ -107,7 +176,8 @@ void main() {
     expect(find.textContaining('375'), findsWidgets);
   });
 
-  testWidgets('customer detail refreshes after opening balance flow', (tester) async {
+  testWidgets('customer detail refreshes after opening balance flow',
+      (tester) async {
     final customersService = FakeCustomersService(
       ledgers: <CustomerLedger>[
         CustomerLedger(
@@ -146,8 +216,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('openingBalanceActionButton')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '200');
-    await tester.enterText(find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '200');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
 
@@ -157,7 +229,8 @@ void main() {
     expect(find.text('OPENING_BALANCE'), findsOneWidget);
   });
 
-  testWidgets('customer detail refreshes after balance adjustment flow', (tester) async {
+  testWidgets('customer detail refreshes after balance adjustment flow',
+      (tester) async {
     final customersService = FakeCustomersService(
       ledgers: <CustomerLedger>[
         CustomerLedger(
@@ -196,9 +269,13 @@ void main() {
 
     await tester.tap(find.byKey(const Key('balanceAdjustmentActionButton')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '50');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')),
+        '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
 
@@ -257,7 +334,8 @@ void main() {
     expect(invoiceCustomer?.id, 'customer-1');
   });
 
-  testWidgets('customer detail disables create invoice for archived customer', (tester) async {
+  testWidgets('customer detail disables create invoice for archived customer',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CustomerDetailScreen(
@@ -279,12 +357,15 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final button = tester.widget<OutlinedButton>(find.byKey(const Key('createInvoiceActionButton')));
+    final button = tester.widget<OutlinedButton>(
+        find.byKey(const Key('createInvoiceActionButton')));
     expect(button.onPressed, isNull);
-    expect(find.text('Create invoice unavailable for archived customers'), findsOneWidget);
+    expect(find.text('Create invoice unavailable for archived customers'),
+        findsOneWidget);
   });
 
-  testWidgets('customer detail shows error banner when load fails', (tester) async {
+  testWidgets('customer detail shows error banner when load fails',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CustomerDetailScreen(
@@ -304,7 +385,9 @@ void main() {
     expect(find.text('Unable to load customer detail'), findsOneWidget);
   });
 
-  testWidgets('customer detail shows network error banner when load throws socket exception', (tester) async {
+  testWidgets(
+      'customer detail shows network error banner when load throws socket exception',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CustomerDetailScreen(
@@ -350,11 +433,14 @@ class FakeCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) async {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) async {
     if (error != null) {
       throw error!;
     }
-    final index = fetchCustomerLedgerCount < ledgers.length ? fetchCustomerLedgerCount : ledgers.length - 1;
+    final index = fetchCustomerLedgerCount < ledgers.length
+        ? fetchCustomerLedgerCount
+        : ledgers.length - 1;
     fetchCustomerLedgerCount += 1;
     return ledgers[index];
   }
@@ -366,7 +452,8 @@ class FakeCustomersService implements CustomersService {
 }
 
 class FakePaymentsService implements PaymentsService {
-  final List<RecordCollectionInput> recordedCollections = <RecordCollectionInput>[];
+  final List<RecordCollectionInput> recordedCollections =
+      <RecordCollectionInput>[];
   final List<_OpeningBalanceCall> openingBalances = <_OpeningBalanceCall>[];
   final List<_BalanceAdjustmentCall> adjustments = <_BalanceAdjustmentCall>[];
 
@@ -375,7 +462,8 @@ class FakePaymentsService implements PaymentsService {
     required String customerId,
     required BalanceAdjustmentInput input,
   }) async {
-    adjustments.add(_BalanceAdjustmentCall(customerId: customerId, input: input));
+    adjustments
+        .add(_BalanceAdjustmentCall(customerId: customerId, input: input));
   }
 
   @override
@@ -383,7 +471,8 @@ class FakePaymentsService implements PaymentsService {
     required String customerId,
     required OpeningBalanceInput input,
   }) async {
-    openingBalances.add(_OpeningBalanceCall(customerId: customerId, input: input));
+    openingBalances
+        .add(_OpeningBalanceCall(customerId: customerId, input: input));
   }
 
   @override

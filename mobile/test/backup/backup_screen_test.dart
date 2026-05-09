@@ -240,7 +240,8 @@ class _FakeCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) {
     throw UnimplementedError();
   }
 

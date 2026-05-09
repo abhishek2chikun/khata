@@ -9,7 +9,8 @@ import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  testWidgets('customer list filters customers client side without refetching', (tester) async {
+  testWidgets('customer list filters customers client side without refetching',
+      (tester) async {
     final customersService = FakeCustomersService(
       customers: const <Customer>[
         Customer(
@@ -60,7 +61,9 @@ void main() {
     expect(customersService.fetchCount, 1);
   });
 
-  testWidgets('customer list shows network error banner when load throws socket exception', (tester) async {
+  testWidgets(
+      'customer list shows network error banner when load throws socket exception',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CustomerListScreen(
@@ -92,7 +95,8 @@ class FakeCustomersService implements CustomersService {
   }
 
   @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) {
     throw UnimplementedError();
   }
 

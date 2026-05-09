@@ -38,6 +38,13 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _occurredOnController.text =
+        DateTime.now().toIso8601String().substring(0, 10);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Record collection')),
@@ -46,7 +53,8 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(widget.customer.name, style: Theme.of(context).textTheme.titleMedium),
+            Text(widget.customer.name,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
@@ -56,7 +64,8 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
               key: const Key('collectionAmountField'),
               controller: _amountController,
               label: 'Amount',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             _buildField(
               key: const Key('collectionOccurredOnField'),
@@ -135,7 +144,9 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
           customerId: widget.customer.id,
           amount: amount,
           occurredOn: occurredOn,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         ),
       );
       if (!mounted) {
