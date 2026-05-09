@@ -322,6 +322,119 @@ void main() {
     _expectRequired(database, 'invoice_items', 'category');
   });
 
+  test('payment state columns use safe defaults and constraints', () async {
+    final database = LocalDatabase.memory();
+    addTearDown(database.close);
+
+    await database.into(database.localUsers).insert(
+          LocalUsersCompanion.insert(
+            id: 'local-system-user',
+            username: 'system',
+            passwordHash: 'hash',
+            salt: 'salt',
+            passwordHashVersion: 1,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          ),
+        );
+    await database.into(database.customers).insert(
+          CustomersCompanion.insert(
+            id: 'customer-1',
+            name: 'Acme Stores',
+            address: '1 Market Road',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          ),
+        );
+    await database.into(database.invoices).insert(
+          InvoicesCompanion.insert(
+            id: 'invoice-default-payment-state',
+            requestId: 'request-default-payment-state',
+            requestHash: 'hash',
+            invoiceNumber: 99,
+            customerId: 'customer-1',
+            customerName: 'Acme Stores',
+            customerAddress: '1 Market Road',
+            placeOfSupplyState: 'Maharashtra',
+            placeOfSupplyStateCode: '27',
+            companyName: 'Khata Traders',
+            companyAddress: '10 Market Road',
+            companyCity: 'Mumbai',
+            companyState: 'Maharashtra',
+            companyStateCode: '27',
+            invoiceDate: '2026-01-10',
+            taxRegime: 'INTRA_STATE',
+            status: 'ACTIVE',
+            paymentMode: 'CREDIT',
+            subtotal: '100',
+            discountTotal: '0',
+            taxableTotal: '100',
+            gstTotal: '18',
+            grandTotal: '118',
+            createdByUserId: 'local-system-user',
+            createdAt: '2026-01-10T00:00:00.000Z',
+          ),
+        );
+    final defaulted = await (database.select(database.invoices)
+          ..where(
+              (invoice) => invoice.id.equals('invoice-default-payment-state')))
+        .getSingle();
+    expect(defaulted.paymentState, 'CREDIT');
+    expect(defaulted.paidAmount, '0');
+    final invalidInsert = database.into(database.invoices).insert(
+          InvoicesCompanion.insert(
+            id: 'invoice-invalid-payment-state',
+            requestId: 'request-invalid-payment-state',
+            requestHash: 'hash',
+            invoiceNumber: 1,
+            customerId: 'missing-customer',
+            customerName: 'Acme Stores',
+            customerAddress: '1 Market Road',
+            placeOfSupplyState: 'Maharashtra',
+            placeOfSupplyStateCode: '27',
+            companyName: 'Khata Traders',
+            companyAddress: '10 Market Road',
+            companyCity: 'Mumbai',
+            companyState: 'Maharashtra',
+            companyStateCode: '27',
+            invoiceDate: '2026-01-10',
+            taxRegime: 'INTRA_STATE',
+            status: 'ACTIVE',
+            paymentState: const Value('CASH'),
+            paidAmount: const Value('0'),
+            paymentMode: 'CASH',
+            subtotal: '100',
+            discountTotal: '0',
+            taxableTotal: '100',
+            gstTotal: '18',
+            grandTotal: '118',
+            createdByUserId: 'missing-user',
+            createdAt: '2026-01-10T00:00:00.000Z',
+          ),
+        );
+    await expectLater(
+      () => invalidInsert,
+      throwsA(predicate((Object error) =>
+          error.toString().contains('payment_state') ||
+          error.toString().contains('CHECK constraint failed'))),
+    );
+  });
+
+  test('migration normalizes unknown legacy payment modes to CREDIT', () async {
+    final directory = await Directory.systemTemp.createTemp('khata-v4-');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/local.sqlite');
+    _seedSchemaV4InvoiceDatabase(file, paymentMode: 'CASH');
+
+    final database = LocalDatabase.forConnection(NativeDatabase(file));
+    addTearDown(database.close);
+
+    final invoice = await database.select(database.invoices).getSingle();
+    expect(invoice.paymentState, 'CREDIT');
+    expect(invoice.paidAmount, '0');
+    expect(invoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
+  });
+
   test('foreign key constraints reject orphan invoice items', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
@@ -503,6 +616,133 @@ void _seedSchemaV1Database(File file) {
       "INSERT INTO stock_movements (id, product_id) VALUES ('movement-1', 'product-1')",
     );
     database.execute('PRAGMA user_version = 1');
+  } finally {
+    database.dispose();
+  }
+}
+
+void _seedSchemaV4InvoiceDatabase(File file, {required String paymentMode}) {
+  final database = sqlite.sqlite3.open(file.path);
+  try {
+    database.execute('PRAGMA foreign_keys = ON');
+    database.execute('''
+      CREATE TABLE local_users (
+        id TEXT NOT NULL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        display_name TEXT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        salt TEXT NOT NULL,
+        password_hash_version INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    database.execute('''
+      CREATE TABLE customers (
+        id TEXT NOT NULL PRIMARY KEY,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        state TEXT NULL,
+        state_code TEXT NULL,
+        phone TEXT NULL,
+        gstin TEXT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    database.execute('''
+      CREATE TABLE invoices (
+        id TEXT NOT NULL PRIMARY KEY,
+        request_id TEXT NOT NULL UNIQUE,
+        request_hash TEXT NOT NULL,
+        invoice_number INTEGER NOT NULL UNIQUE,
+        customer_id TEXT NOT NULL REFERENCES customers(id),
+        customer_name TEXT NOT NULL,
+        customer_address TEXT NOT NULL,
+        customer_state TEXT NULL,
+        customer_state_code TEXT NULL,
+        customer_phone TEXT NULL,
+        customer_gstin TEXT NULL,
+        place_of_supply_state TEXT NOT NULL,
+        place_of_supply_state_code TEXT NOT NULL,
+        company_name TEXT NOT NULL,
+        company_address TEXT NOT NULL,
+        company_city TEXT NOT NULL,
+        company_state TEXT NOT NULL,
+        company_state_code TEXT NOT NULL,
+        company_gstin TEXT NULL,
+        company_phone TEXT NULL,
+        company_email TEXT NULL,
+        company_bank_name TEXT NULL,
+        company_bank_account TEXT NULL,
+        company_bank_ifsc TEXT NULL,
+        company_bank_branch TEXT NULL,
+        company_jurisdiction TEXT NULL,
+        invoice_date TEXT NOT NULL,
+        tax_regime TEXT NOT NULL,
+        status TEXT NOT NULL,
+        payment_mode TEXT NOT NULL,
+        subtotal TEXT NOT NULL,
+        discount_total TEXT NOT NULL,
+        taxable_total TEXT NOT NULL,
+        gst_total TEXT NOT NULL,
+        grand_total TEXT NOT NULL,
+        notes TEXT NULL,
+        created_by_user_id TEXT NOT NULL REFERENCES local_users(id),
+        cancel_request_id TEXT NULL UNIQUE,
+        cancel_request_hash TEXT NULL,
+        canceled_by_user_id TEXT NULL REFERENCES local_users(id),
+        cancel_reason TEXT NULL,
+        canceled_at TEXT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    database.execute('''
+      INSERT INTO local_users (
+        id, username, password_hash, display_name, is_active, salt,
+        password_hash_version, created_at, updated_at
+      ) VALUES (
+        'local-system-user', 'system', 'hash', 'System', 1, 'salt', 1,
+        '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'
+      )
+    ''');
+    database.execute('''
+      INSERT INTO customers (
+        id, name, address, state, state_code, phone, gstin, is_active,
+        created_at, updated_at
+      ) VALUES (
+        'customer-1', 'Acme Stores', '1 Market Road', 'Maharashtra', '27',
+        '9999999999', NULL, 1,
+        '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'
+      )
+    ''');
+    database.execute('''
+      INSERT INTO invoices (
+        id, request_id, request_hash, invoice_number, customer_id,
+        customer_name, customer_address, customer_state, customer_state_code,
+        customer_phone, customer_gstin, place_of_supply_state,
+        place_of_supply_state_code, company_name, company_address, company_city,
+        company_state, company_state_code, company_gstin, company_phone,
+        company_email, company_bank_name, company_bank_account,
+        company_bank_ifsc, company_bank_branch, company_jurisdiction,
+        invoice_date, tax_regime, status, payment_mode, subtotal,
+        discount_total, taxable_total, gst_total, grand_total, notes,
+        created_by_user_id, cancel_request_id, cancel_request_hash,
+        canceled_by_user_id, cancel_reason, canceled_at, created_at
+      ) VALUES (
+        'invoice-1', 'request-1', 'hash', 1, 'customer-1',
+        'Acme Stores', '1 Market Road', 'Maharashtra', '27',
+        '9999999999', NULL, 'Maharashtra', '27', 'Khata Traders',
+        '10 Market Road', 'Mumbai', 'Maharashtra', '27', NULL, NULL,
+        NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-10', 'INTRA_STATE',
+        'ACTIVE', '$paymentMode', '100', '0', '100', '18', '118', NULL,
+        'local-system-user', NULL, NULL, NULL, NULL, NULL,
+        '2026-01-10T00:00:00.000Z'
+      )
+    ''');
+    database.execute('PRAGMA user_version = 4');
   } finally {
     database.dispose();
   }

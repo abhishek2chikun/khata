@@ -1905,7 +1905,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       'invoice_datetime', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant(''));
+      $customConstraints: 'NOT NULL DEFAULT \'1970-01-01T00:00:00.000Z\'',
+      defaultValue: const CustomExpression('\'1970-01-01T00:00:00.000Z\''));
   static const VerificationMeta _taxRegimeMeta =
       const VerificationMeta('taxRegime');
   @override
@@ -1924,7 +1925,9 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       'payment_state', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant(''));
+      $customConstraints:
+          'NOT NULL DEFAULT \'CREDIT\' CHECK (payment_state IN (\'CREDIT\',\'TOTAL_PAID\',\'PARTIAL_PAID\'))',
+      defaultValue: const CustomExpression('\'CREDIT\''));
   static const VerificationMeta _paidAmountMeta =
       const VerificationMeta('paidAmount');
   @override
@@ -1932,7 +1935,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       'paid_amount', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant(''));
+      $customConstraints: 'NOT NULL DEFAULT \'0\'',
+      defaultValue: const CustomExpression('\'0\''));
   static const VerificationMeta _paymentModeMeta =
       const VerificationMeta('paymentMode');
   @override

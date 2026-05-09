@@ -145,11 +145,14 @@ class Invoices extends Table {
   TextColumn get companyBankBranch => text().nullable()();
   TextColumn get companyJurisdiction => text().nullable()();
   TextColumn get invoiceDate => text()();
-  TextColumn get invoiceDatetime => text().withDefault(const Constant(''))();
+  TextColumn get invoiceDatetime =>
+      text().customConstraint("NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'")();
   TextColumn get taxRegime => text()();
   TextColumn get status => text()();
-  TextColumn get paymentState => text().withDefault(const Constant(''))();
-  TextColumn get paidAmount => text().withDefault(const Constant(''))();
+  TextColumn get paymentState => text().customConstraint(
+      "NOT NULL DEFAULT 'CREDIT' CHECK (payment_state IN ('CREDIT','TOTAL_PAID','PARTIAL_PAID'))")();
+  TextColumn get paidAmount =>
+      text().customConstraint("NOT NULL DEFAULT '0'")();
   TextColumn get paymentMode => text()();
   TextColumn get subtotal => text()();
   TextColumn get discountTotal => text()();
@@ -483,11 +486,11 @@ class LocalDatabase extends _$LocalDatabase {
               await m.addColumn(invoices, invoices.paymentState);
               await m.addColumn(invoices, invoices.paidAmount);
               await customStatement(
-                  "UPDATE invoices SET invoice_datetime = invoice_date || 'T00:00:00.000Z' WHERE invoice_datetime = ''");
+                  "UPDATE invoices SET invoice_datetime = invoice_date || 'T00:00:00.000Z' WHERE invoice_datetime = '1970-01-01T00:00:00.000Z'");
               await customStatement(
-                  "UPDATE invoices SET payment_state = CASE WHEN payment_mode = 'PAID' THEN 'TOTAL_PAID' ELSE payment_mode END WHERE payment_state = ''");
+                  "UPDATE invoices SET payment_state = CASE WHEN payment_mode = 'PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'TOTAL_PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'PARTIAL_PAID' THEN 'PARTIAL_PAID' ELSE 'CREDIT' END WHERE payment_state = 'CREDIT'");
               await customStatement(
-                  "UPDATE invoices SET paid_amount = CASE WHEN payment_state = 'TOTAL_PAID' THEN grand_total ELSE '0' END WHERE paid_amount = ''");
+                  "UPDATE invoices SET paid_amount = CASE WHEN payment_state = 'TOTAL_PAID' THEN grand_total ELSE '0' END WHERE paid_amount = '0'");
             }
             if (await _tableExists('invoice_items')) {
               await m.addColumn(invoiceItems, invoiceItems.productItemNumber);

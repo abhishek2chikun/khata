@@ -352,6 +352,64 @@ void main() {
     );
   });
 
+  test('idempotent replay uses resolved paid amount and invoice datetime',
+      () async {
+    final dateOnlyDraft = _draft(
+      customer: customer,
+      product: product,
+      quantity: 2,
+      paymentState: 'TOTAL_PAID',
+      invoiceDatetime: null,
+    );
+
+    final first = await invoicesService.createInvoice(
+      draft: dateOnlyDraft,
+      requestId: _uuid(23),
+    );
+    final second = await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        paymentState: 'TOTAL_PAID',
+        paidAmount: 236,
+        invoiceDatetime: '2026-01-10T00:00:00.000Z',
+      ),
+      requestId: _uuid(23),
+    );
+
+    expect(second.invoice.id, first.invoice.id);
+    expect(second.invoice.paymentState, 'TOTAL_PAID');
+    expect(second.invoice.paidAmount, 236);
+    expect(second.invoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
+    expect(await database.select(database.invoices).get(), hasLength(1));
+    expect(await database.select(database.customerTransactions).get(),
+        hasLength(2));
+  });
+
+  test('legacy PAID payment mode resolves to TOTAL_PAID before validation',
+      () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        paymentMode: 'PAID',
+      ),
+      requestId: _uuid(24),
+    );
+
+    expect(result.invoice.paymentState, 'TOTAL_PAID');
+    expect(result.invoice.paidAmount, 236);
+    final transactions =
+        await database.select(database.customerTransactions).get();
+    expect(
+      transactions
+          .map((transaction) => (transaction.entryType, transaction.amount)),
+      <(String, String)>[('CREDIT_SALE', '236'), ('COLLECTION', '236')],
+    );
+  });
+
   test('lists and fetches invoice detail', () async {
     final first = await invoicesService.createInvoice(
       draft: _draft(customer: customer, product: product, quantity: 1),
@@ -437,6 +495,184 @@ void main() {
     expect(
         (await database.select(database.products).getSingle()).quantityOnHand,
         '5');
+  });
+
+  test('cancel does not duplicate side effects when status changed first',
+      () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 2),
+      requestId: _uuid(25),
+    );
+
+    await (database.update(database.invoices)
+          ..where((invoice) => invoice.id.equals(result.invoice.id)))
+        .write(const db.InvoicesCompanion(status: Value('CANCELED')));
+
+    await expectLater(
+      () => invoicesService.cancelInvoice(
+        invoiceId: result.invoice.id,
+        reason: 'Already canceled elsewhere',
+      ),
+      throwsA(_apiError(code: 'INVOICE_ALREADY_CANCELED', statusCode: 409)),
+    );
+    expect(await database.select(database.stockMovements).get(), hasLength(1));
+    expect(await database.select(database.customerTransactions).get(),
+        hasLength(1));
+    expect(
+        (await database.select(database.products).getSingle()).quantityOnHand,
+        '3');
+  });
+
+  test('cancel guards reversal inserts inside the transaction', () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 2),
+      requestId: _uuid(26),
+    );
+    await database.into(database.stockMovements).insert(
+          db.StockMovementsCompanion.insert(
+            id: 'existing-cancel-stock',
+            productId: product.id,
+            invoiceId: Value(result.invoice.id),
+            movementType: 'INVOICE_CANCEL_REVERSAL',
+            quantityDelta: '2',
+            reason: const Value('Cancel invoice 1'),
+            createdByUserId: 'local-system-user',
+            createdAt: '2026-01-10T16:00:00.000Z',
+          ),
+        );
+    await database.into(database.customerTransactions).insert(
+          db.CustomerTransactionsCompanion.insert(
+            id: 'existing-cancel-ledger',
+            customerId: customer.id,
+            invoiceId: Value(result.invoice.id),
+            entryType: 'INVOICE_CANCEL_REVERSAL',
+            amount: '236',
+            occurredOn: '2026-01-10',
+            notes: const Value('Cancel invoice 1'),
+            createdByUserId: 'local-system-user',
+            createdAt: '2026-01-10T16:00:00.000Z',
+          ),
+        );
+
+    await invoicesService.cancelInvoice(
+      invoiceId: result.invoice.id,
+      reason: 'Retry after partial local cancel',
+    );
+
+    final movements = await database.select(database.stockMovements).get();
+    final transactions =
+        await database.select(database.customerTransactions).get();
+    expect(
+      movements
+          .where(
+              (movement) => movement.movementType == 'INVOICE_CANCEL_REVERSAL')
+          .length,
+      1,
+    );
+    expect(
+      transactions
+          .where((transaction) =>
+              transaction.entryType == 'INVOICE_CANCEL_REVERSAL')
+          .length,
+      1,
+    );
+    expect(
+        (await database.select(database.products).getSingle()).quantityOnHand,
+        '3');
+  });
+
+  test('quote rejects invalid invoice line numeric values', () async {
+    Future<void> expectInvalid(InvoiceDraftItem item) async {
+      await expectLater(
+        () => invoicesService.quoteInvoice(_draftWithItems(
+          customer: customer,
+          items: <InvoiceDraftItem>[item],
+        )),
+        throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+      );
+    }
+
+    await expectInvalid(InvoiceDraftItem(product: product, quantity: 0));
+    await expectInvalid(InvoiceDraftItem(product: product, quantity: -1));
+    await expectInvalid(InvoiceDraftItem(product: product, quantity: 1.0001));
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 100000000000),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, unitPrice: 0),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, unitPrice: -1),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, gstRate: -0.01),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, gstRate: 100.01),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, discountPercent: -0.01),
+    );
+    await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, discountPercent: 100.01),
+    );
+
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
+
+  test('create rejects invalid invoice line numeric values', () async {
+    await expectLater(
+      () => invoicesService.createInvoice(
+        draft: _draftWithItems(
+          customer: customer,
+          items: <InvoiceDraftItem>[
+            InvoiceDraftItem(product: product, quantity: 1, unitPrice: 0),
+          ],
+        ),
+        requestId: _uuid(27),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+
+    expect(await database.select(database.invoices).get(), isEmpty);
+    expect(await database.select(database.stockMovements).get(), isEmpty);
+    expect(await database.select(database.customerTransactions).get(), isEmpty);
+  });
+
+  test('invoice datetime requires timezone and must match invoice date',
+      () async {
+    await expectLater(
+      () => invoicesService.quoteInvoice(_draft(
+        customer: customer,
+        product: product,
+        quantity: 1,
+        invoiceDatetime: '2026-01-10T15:30:00.000',
+      )),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+    await expectLater(
+      () => invoicesService.quoteInvoice(_draft(
+        customer: customer,
+        product: product,
+        quantity: 1,
+        invoiceDate: '2026-01-11',
+        invoiceDatetime: '2026-01-10T15:30:00.000Z',
+      )),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+    );
+  });
+
+  test('inclusive GST half-cent rounding is deterministic', () async {
+    final quote = await invoicesService.quoteInvoice(_draftWithItems(
+      customer: customer,
+      items: <InvoiceDraftItem>[
+        InvoiceDraftItem(product: product, quantity: 1, unitPrice: 1.005),
+      ],
+    ));
+
+    expect(quote.items.single.enteredUnitPrice, 1.01);
+    expect(quote.items.single.lineTotal, 1.01);
+    expect(quote.totals.grandTotal, 1.01);
   });
 
   test('rejects unsupported payment modes', () async {
@@ -595,6 +831,8 @@ InvoiceDraft _draft({
   required Customer customer,
   required Product product,
   required double quantity,
+  String invoiceDate = '2026-01-10',
+  String? invoiceDatetime = '2026-01-10T15:30:00.000Z',
   String paymentState = 'CREDIT',
   double paidAmount = 0,
   String? paymentMode,
@@ -603,8 +841,8 @@ InvoiceDraft _draft({
 }) {
   return _draftWithItems(
     customer: customer,
-    invoiceDate: '2026-01-10',
-    invoiceDatetime: '2026-01-10T15:30:00.000Z',
+    invoiceDate: invoiceDate,
+    invoiceDatetime: invoiceDatetime,
     paymentState: paymentState,
     paidAmount: paidAmount,
     paymentMode: paymentMode,
