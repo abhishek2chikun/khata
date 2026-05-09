@@ -36,12 +36,12 @@ class Product {
       category: json['category'] as String? ?? '',
       itemName: json['item_name'] as String? ?? '',
       itemNumber: _requireString(json, 'item_number'),
-      buyingPrice: _toDouble(json['buying_price']),
-      sellingPrice: _toDouble(json['selling_price']),
+      buyingPrice: _requireDouble(json, 'buying_price'),
+      sellingPrice: _requireDouble(json, 'selling_price'),
       unit: json['unit'] as String?,
-      gstRate: _toDouble(json['gst_rate']),
-      quantityOnHand: _toDouble(json['quantity_on_hand']),
-      lowStockThreshold: _toDouble(json['low_stock_threshold']),
+      gstRate: _requireDouble(json, 'gst_rate'),
+      quantityOnHand: _requireDouble(json, 'quantity_on_hand'),
+      lowStockThreshold: _requireDouble(json, 'low_stock_threshold'),
       isActive: json['is_active'] as bool? ?? true,
     );
   }
@@ -54,10 +54,21 @@ class Product {
     throw FormatException('Missing required product field: $key');
   }
 
-  static double _toDouble(Object? value) {
+  static double _requireDouble(Map<String, dynamic> json, String key) {
+    if (!json.containsKey(key) || json[key] == null) {
+      throw FormatException('Missing required product field: $key');
+    }
+    final value = _toDouble(json[key]);
+    if (value == null) {
+      throw FormatException('Invalid product field: $key');
+    }
+    return value;
+  }
+
+  static double? _toDouble(Object? value) {
     if (value is num) {
       return value.toDouble();
     }
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+    return double.tryParse(value?.toString() ?? '');
   }
 }

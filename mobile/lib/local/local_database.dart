@@ -339,8 +339,8 @@ class LocalDatabase extends _$LocalDatabase {
                 company,
                 RTRIM(RTRIM(CAST(
                   ROUND(
-                    CAST(COALESCE(buying_price_excl_tax, default_selling_price_excl_tax) AS REAL)
-                    * (1 + CAST(COALESCE(buying_gst_rate, default_gst_rate) AS REAL) / 100),
+                    CAST(COALESCE(buying_price_excl_tax, '0') AS REAL)
+                    * (1 + CAST(COALESCE(buying_gst_rate, '0') AS REAL) / 100),
                     2
                   ) AS TEXT
                 ), '0'), '.'),

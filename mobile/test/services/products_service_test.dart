@@ -28,6 +28,57 @@ void main() {
         throwsA(isA<FormatException>()),
       );
     });
+
+    test('requires canonical numeric JSON fields', () {
+      final payload = <String, dynamic>{
+        'id': 'p1',
+        'company_name': 'Acme',
+        'category': 'Pens',
+        'item_name': 'Blue Pen',
+        'item_number': 'PEN-1',
+        'buying_price': '8',
+        'selling_price': '10',
+        'unit': null,
+        'gst_rate': '18',
+        'quantity_on_hand': '5',
+        'low_stock_threshold': '2',
+        'is_active': true,
+      };
+
+      for (final key in <String>[
+        'buying_price',
+        'selling_price',
+        'gst_rate',
+        'quantity_on_hand',
+        'low_stock_threshold',
+      ]) {
+        expect(
+          () => Product.fromJson(<String, dynamic>{...payload}..remove(key)),
+          throwsA(isA<FormatException>()),
+          reason: '$key should be required',
+        );
+      }
+    });
+
+    test('rejects invalid canonical numeric JSON fields', () {
+      expect(
+        () => Product.fromJson(<String, dynamic>{
+          'id': 'p1',
+          'company_name': 'Acme',
+          'category': 'Pens',
+          'item_name': 'Blue Pen',
+          'item_number': 'PEN-1',
+          'buying_price': 'not-a-number',
+          'selling_price': '10',
+          'unit': null,
+          'gst_rate': '18',
+          'quantity_on_hand': '5',
+          'low_stock_threshold': '2',
+          'is_active': true,
+        }),
+        throwsA(isA<FormatException>()),
+      );
+    });
   });
 
   group('ApiProductsService', () {
