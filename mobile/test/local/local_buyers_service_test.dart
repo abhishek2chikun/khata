@@ -71,7 +71,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(1),
-        amount: 1250.5,
+        amount: '1250.50',
         occurredAt: '2026-01-02T10:30:00.000Z',
       ),
     );
@@ -82,7 +82,7 @@ void main() {
 
     expect(buyers.single.pendingPayable, 1250.5);
     expect(storedTransaction.entryType, 'OPENING_PAYABLE');
-    expect(storedTransaction.amount, '1250.5');
+    expect(storedTransaction.amount, '1250.50');
     expect(storedTransaction.createdByUserId, 'local-system-user');
   });
 
@@ -93,7 +93,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(2),
-        amount: 600,
+        amount: '600.00',
         occurredAt: '2026-01-03T10:30:00.000Z',
         notes: 'Invoice 44',
       ),
@@ -104,6 +104,7 @@ void main() {
     expect(ledger.buyer.pendingPayable, 600);
     expect(ledger.transactions.single.entryType, 'PURCHASE_AMOUNT');
     expect(ledger.transactions.single.notes, 'Invoice 44');
+    expect(ledger.transactions.single.amount, '600.00');
   });
 
   test('records payment made and decreases payable balance', () async {
@@ -113,7 +114,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(3),
-        amount: 1000,
+        amount: '1000.00',
         occurredAt: '2026-01-01T10:30:00.000Z',
       ),
     );
@@ -121,7 +122,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(4),
-        amount: 250.25,
+        amount: '250.25',
         occurredAt: '2026-01-02T10:30:00.000Z',
         notes: 'Bank transfer',
       ),
@@ -143,7 +144,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(5),
-        amount: 1000,
+        amount: '1000.00',
         occurredAt: '2026-01-01T10:30:00.000Z',
       ),
     );
@@ -152,7 +153,7 @@ void main() {
       input: BuyerPayableAdjustmentInput(
         requestId: _uuid(6),
         direction: 'INCREASE',
-        amount: 50,
+        amount: '50.00',
         occurredAt: '2026-01-02T10:30:00.000Z',
       ),
     );
@@ -161,7 +162,7 @@ void main() {
       input: BuyerPayableAdjustmentInput(
         requestId: _uuid(7),
         direction: 'DECREASE',
-        amount: 100,
+        amount: '100.00',
         occurredAt: '2026-01-03T10:30:00.000Z',
         notes: 'Rate correction',
       ),
@@ -188,7 +189,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(8),
-        amount: 1000,
+        amount: '1000.00',
         occurredAt: '2026-01-01T10:30:00.000Z',
       ),
     );
@@ -196,7 +197,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(9),
-        amount: 250.25,
+        amount: '250.25',
         occurredAt: '2026-01-02T10:30:00.000Z',
       ),
     );
@@ -204,7 +205,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(10),
-        amount: 300,
+        amount: '300.00',
         occurredAt: '2026-01-03T10:30:00.000Z',
       ),
     );
@@ -213,7 +214,7 @@ void main() {
       input: BuyerPayableAdjustmentInput(
         requestId: _uuid(11),
         direction: 'INCREASE',
-        amount: 20,
+        amount: '20.00',
         occurredAt: '2026-01-04T10:30:00.000Z',
       ),
     );
@@ -222,7 +223,7 @@ void main() {
       input: BuyerPayableAdjustmentInput(
         requestId: _uuid(12),
         direction: 'DECREASE',
-        amount: 70,
+        amount: '70.00',
         occurredAt: '2026-01-05T10:30:00.000Z',
       ),
     );
@@ -242,7 +243,7 @@ void main() {
       input: BuyerPayableAdjustmentInput(
         requestId: _uuid(13),
         direction: 'INCREASE',
-        amount: 20,
+        amount: '20.00',
         occurredAt: '2026-01-02T10:00:00.000Z',
       ),
     );
@@ -250,7 +251,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(14),
-        amount: 100,
+        amount: '100.00',
         occurredAt: '2026-01-01T10:00:00.000Z',
       ),
     );
@@ -258,7 +259,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(15),
-        amount: 10,
+        amount: '10.00',
         occurredAt: '2026-01-02T10:00:00.000Z',
       ),
     );
@@ -282,7 +283,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(16),
-        amount: 100,
+        amount: '100.00',
         occurredAt: '2026-01-01T10:00:00.000Z',
       ),
     );
@@ -291,7 +292,7 @@ void main() {
       buyerId: buyer.id,
       input: BuyerLedgerEntryInput(
         requestId: _uuid(16),
-        amount: 100,
+        amount: '100.00',
         occurredAt: '2026-01-01T10:00:00.000Z',
       ),
     );
@@ -300,7 +301,7 @@ void main() {
         buyerId: buyer.id,
         input: BuyerLedgerEntryInput(
           requestId: _uuid(17),
-          amount: 200,
+          amount: '200.00',
           occurredAt: '2026-01-02T10:00:00.000Z',
         ),
       ),
@@ -311,7 +312,7 @@ void main() {
         buyerId: buyer.id,
         input: BuyerLedgerEntryInput(
           requestId: _uuid(16),
-          amount: 150,
+          amount: '150.00',
           occurredAt: '2026-01-01T10:00:00.000Z',
         ),
       ),
@@ -319,6 +320,64 @@ void main() {
     );
     expect(
         await database.select(database.buyerTransactions).get(), hasLength(1));
+  });
+
+  test('stores exact decimal strings and rejects invalid money amounts',
+      () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+
+    await buyersService.addPurchaseAmount(
+      buyerId: buyer.id,
+      input: BuyerLedgerEntryInput(
+        requestId: _uuid(18),
+        amount: '123456789012.34',
+        occurredAt: '2026-01-01T10:00:00.000Z',
+      ),
+    );
+
+    final storedTransaction =
+        await database.select(database.buyerTransactions).getSingle();
+    expect(storedTransaction.amount, '123456789012.34');
+
+    final invalidAmounts = <String>[
+      '0',
+      '-1.00',
+      '1.234',
+      '1000000000000.00',
+      'not-money',
+    ];
+    for (var index = 0; index < invalidAmounts.length; index += 1) {
+      await expectLater(
+        () => buyersService.addPurchaseAmount(
+          buyerId: buyer.id,
+          input: BuyerLedgerEntryInput(
+            requestId: _uuid(19 + index),
+            amount: invalidAmounts[index],
+            occurredAt: '2026-01-02T10:00:00.000Z',
+          ),
+        ),
+        throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+      );
+    }
+    expect(
+        await database.select(database.buyerTransactions).get(), hasLength(1));
+  });
+
+  test('accepts timezone-aware occurred_at offsets', () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+
+    await buyersService.addPaymentMade(
+      buyerId: buyer.id,
+      input: BuyerLedgerEntryInput(
+        requestId: _uuid(30),
+        amount: '50.00',
+        occurredAt: '2026-05-09T10:30:00+05:30',
+      ),
+    );
+
+    final storedTransaction =
+        await database.select(database.buyerTransactions).getSingle();
+    expect(storedTransaction.occurredAt, '2026-05-09T10:30:00+05:30');
   });
 }
 
