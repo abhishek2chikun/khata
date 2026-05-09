@@ -124,7 +124,7 @@ void main() {
     );
 
     final products = await service.fetchProducts(
-      filter: const ProductFilter(company: 'Acme', category: 'Pens'),
+      filter: const ProductFilter(companyName: 'Acme', category: 'Pens'),
     );
 
     expect(products.map((product) => product.id), <String>[expected.id]);

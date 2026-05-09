@@ -78,7 +78,8 @@ void main() {
       expect(quote.totals.grandTotal, 236);
     });
 
-    test('create parses nested seller snapshot and full item objects', () async {
+    test('create parses nested seller snapshot and full item objects',
+        () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 201,
@@ -175,7 +176,8 @@ void main() {
         ),
       );
 
-      final result = await service.createInvoice(draft: _draft, requestId: 'request-1');
+      final result =
+          await service.createInvoice(draft: _draft, requestId: 'request-1');
 
       expect(httpClient.lastMethod, 'POST');
       expect(httpClient.lastPath, '/invoices');
@@ -186,7 +188,8 @@ void main() {
       expect(result.invoice.items.single.productName, 'Blue Pen');
       expect(result.invoice.items.single.quantity, 2);
       expect(result.invoice.items.single.lineTotal, 236);
-      expect(result.warnings.single.message, 'Stock will go negative for Blue Pen');
+      expect(result.warnings.single.message,
+          'Stock will go negative for Blue Pen');
     });
   });
 }
@@ -209,12 +212,13 @@ const _draft = InvoiceDraft(
     InvoiceDraftItem(
       product: Product(
         id: 'product-1',
-        company: 'Acme',
+        companyName: 'Acme',
         category: 'Pens',
         itemName: 'Blue Pen',
-        itemCode: 'PEN-1',
-        defaultSellingPriceExclTax: 100,
-        defaultGstRate: 18,
+        itemNumber: 'PEN-1',
+        buyingPrice: 100,
+        sellingPrice: 100,
+        gstRate: 18,
         quantityOnHand: 5,
         lowStockThreshold: 2,
         isActive: true,
@@ -230,7 +234,8 @@ const _draft = InvoiceDraft(
 
 class FakeAuthService implements AuthService {
   @override
-  Future<AuthSessionTokens> login({required String username, required String password}) {
+  Future<AuthSessionTokens> login(
+      {required String username, required String password}) {
     throw UnimplementedError();
   }
 
@@ -312,7 +317,8 @@ class RecordingHttpRequest implements HttpClientRequest {
 
 class FakeHttpResponse extends Stream<List<int>> implements HttpClientResponse {
   FakeHttpResponse({required this.statusCode, required String body})
-      : _bodyStream = Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
+      : _bodyStream =
+            Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
 
   @override
   final int statusCode;

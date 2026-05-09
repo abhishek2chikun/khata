@@ -23,8 +23,13 @@ void main() {
     final package = await LocalBackupService(database: source).exportEncrypted(
       password: 'backup-password',
     );
+    final payload = LocalBackupPayload.decode(
+      await BackupCrypto()
+          .decrypt(package: package, password: 'backup-password'),
+    );
 
     expect(package.version, LocalBackupPackage.currentVersion);
+    expect(payload.schemaVersion, 2);
     expect(package.payloadCiphertext, isNot(contains('product-0001')));
     expect(package.payloadCiphertext, isNot(contains('123.4500')));
 

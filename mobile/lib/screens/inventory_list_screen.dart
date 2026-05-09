@@ -134,7 +134,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                    '${product.company} • ${product.category} • ${product.itemCode}'),
+                    '${product.companyName} • ${product.category} • ${product.itemNumber}'),
                 if (product.isLowStock)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
@@ -181,7 +181,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       final products = await widget.productsService.fetchProducts(
         filter: ProductFilter(
           search: _searchController.text.trim(),
-          company: _companyController.text.trim(),
+          companyName: _companyController.text.trim(),
           category: _categoryController.text.trim(),
         ),
       );

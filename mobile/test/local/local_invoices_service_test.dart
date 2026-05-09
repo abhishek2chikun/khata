@@ -436,12 +436,13 @@ CreateSellerInput _sellerInput({
 
 CreateProductInput _productInput() {
   return const CreateProductInput(
-    company: 'Acme',
+    companyName: 'Acme',
     category: 'Pens',
     itemName: 'Blue Pen',
-    itemCode: 'PEN-1',
-    defaultSellingPriceExclTax: 100,
-    defaultGstRate: 18,
+    itemNumber: 'PEN-1',
+    buyingPrice: 100,
+    sellingPrice: 100,
+    gstRate: 18,
     quantityOnHand: 5,
     lowStockThreshold: 2,
   );

@@ -95,12 +95,13 @@ const _seller = Seller(
 
 const _product = Product(
   id: 'product-1',
-  company: 'Acme',
+  companyName: 'Acme',
   category: 'Pens',
   itemName: 'Blue Pen',
-  itemCode: 'PEN-1',
-  defaultSellingPriceExclTax: 10,
-  defaultGstRate: 18,
+  itemNumber: 'PEN-1',
+  buyingPrice: 10,
+  sellingPrice: 10,
+  gstRate: 18,
   quantityOnHand: 4,
   lowStockThreshold: 2,
   isActive: true,
