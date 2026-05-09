@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/product.dart';
+import '../services/payments_service.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
 
@@ -270,7 +271,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       () => widget.productsService.adjustStock(
         id: _product.id,
         input: AdjustStockInput(
-          requestId: DateTime.now().toUtc().microsecondsSinceEpoch.toString(),
+          requestId: generateRequestId(),
           quantityDelta: delta,
           reason: 'Manual inventory adjustment',
         ),
