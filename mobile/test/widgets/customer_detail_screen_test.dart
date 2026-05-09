@@ -121,6 +121,103 @@ void main() {
         today);
   });
 
+  testWidgets('customer detail filters ledger by today by default',
+      (tester) async {
+    final customersService = FakeCustomersService(
+      ledgers: <CustomerLedger>[
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: customersService,
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+
+    expect(find.byKey(const Key('ledgerDateFilterField')), findsOneWidget);
+    expect(find.text('Ledger date'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('ledgerDateFilterField')))
+          .controller
+          ?.text,
+      today,
+    );
+    expect(customersService.requestedLedgerDates, <String?>[today]);
+  });
+
+  testWidgets('customer detail refreshes ledger when date filter changes',
+      (tester) async {
+    final customersService = FakeCustomersService(
+      ledgers: <CustomerLedger>[
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[
+            CustomerLedgerTransaction(
+              id: 'txn-today',
+              entryType: 'COLLECTION',
+              amount: 50,
+              occurredOn: '2026-04-20',
+              notes: 'Today row',
+            ),
+          ],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
+        ),
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[
+            CustomerLedgerTransaction(
+              id: 'txn-selected',
+              entryType: 'COLLECTION',
+              amount: 75,
+              occurredOn: '2026-04-18',
+              notes: 'Selected date row',
+            ),
+          ],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: customersService,
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+
+    await tester.enterText(
+      find.byKey(const Key('ledgerDateFilterField')),
+      '2026-04-18',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(customersService.requestedLedgerDates, <String?>[
+      today,
+      '2026-04-18',
+    ]);
+    expect(find.text('Selected date row'), findsOneWidget);
+  });
+
   testWidgets('customer detail refreshes after successful payment flow',
       (tester) async {
     final customersService = FakeCustomersService(
@@ -426,6 +523,7 @@ class FakeCustomersService implements CustomersService {
   final List<CustomerLedger> ledgers;
   final Object? error;
   var fetchCustomerLedgerCount = 0;
+  final requestedLedgerDates = <String?>[];
 
   @override
   Future<Customer> createCustomer(CreateCustomerInput input) {
@@ -435,6 +533,7 @@ class FakeCustomersService implements CustomersService {
   @override
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate}) async {
+    requestedLedgerDates.add(onDate);
     if (error != null) {
       throw error!;
     }
