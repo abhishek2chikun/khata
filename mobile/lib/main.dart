@@ -164,6 +164,8 @@ class _BillingAppState extends State<BillingApp> {
                     productsService: widget.productsService,
                     product: product,
                     onEditProduct: _openProductForm,
+                    supportsProductReactivation:
+                        widget.dependencies?.mode == DataMode.local,
                   ),
                 ),
               );

@@ -11,11 +11,13 @@ class ProductDetailScreen extends StatefulWidget {
     required this.product,
     required this.productsService,
     required this.onEditProduct,
+    this.supportsProductReactivation = false,
   });
 
   final Product product;
   final ProductsService productsService;
   final Future<bool> Function(Product product) onEditProduct;
+  final bool supportsProductReactivation;
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -76,8 +78,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               <Widget>[
                 _buildDetail(
                     'Status', _product.isActive ? 'Active' : 'Archived'),
-                if (!_product.isActive)
+                if (!_product.isActive) ...<Widget>[
                   const Text('Archived products are hidden from new invoices.'),
+                  if (!widget.supportsProductReactivation)
+                    const Text('Reactivation is only available in local mode.'),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -102,10 +107,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 icon: const Icon(Icons.archive_outlined),
                 label: const Text('Archive product'),
               )
-            else
+            else if (widget.supportsProductReactivation)
               FilledButton.icon(
                 key: const Key('reactivateProductButton'),
-                onPressed: _isSaving ? null : () => _setActive(true),
+                onPressed: _isSaving ? null : _reactivate,
                 icon: const Icon(Icons.unarchive_outlined),
                 label: const Text('Reactivate product'),
               ),
@@ -200,31 +205,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ) ??
         false;
     if (confirmed) {
-      await _setActive(false, popOnSuccess: true);
+      await _archive(popOnSuccess: true);
     }
   }
 
-  Future<void> _setActive(bool isActive, {bool popOnSuccess = false}) async {
-    await _saveChange(() {
-      return widget.productsService.updateProduct(
-        id: _product.id,
-        input: UpdateProductInput(
-          companyName: _product.companyName,
-          category: _product.category,
-          itemName: _product.itemName,
-          itemNumber: _product.itemNumber,
-          buyingPrice: _product.buyingPrice,
-          sellingPrice: _product.sellingPrice,
-          unit: _product.unit,
-          gstRate: _product.gstRate,
-          lowStockThreshold: _product.lowStockThreshold,
-          isActive: isActive,
-        ),
-      );
-    }, successMessage: isActive ? 'Product reactivated' : 'Product archived');
+  Future<void> _archive({bool popOnSuccess = false}) async {
+    await _saveChange(
+      () => widget.productsService.archiveProduct(id: _product.id),
+      successMessage: 'Product archived',
+    );
     if (popOnSuccess && mounted && _errorMessage == null) {
       Navigator.of(context).pop(_product);
     }
+  }
+
+  Future<void> _reactivate() async {
+    await _saveChange(
+      () => widget.productsService.reactivateProduct(id: _product.id),
+      successMessage: 'Product reactivated',
+    );
   }
 
   Future<void> _showStockAdjustmentDialog() async {
@@ -268,9 +267,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
     await _saveChange(
-      () =>
-          widget.productsService.adjustQuantity(id: _product.id, delta: delta),
-      successMessage: 'Stock adjusted. Movement history is deferred.',
+      () => widget.productsService.adjustStock(
+        id: _product.id,
+        input: AdjustStockInput(
+          requestId: DateTime.now().toUtc().microsecondsSinceEpoch.toString(),
+          quantityDelta: delta,
+          reason: 'Manual inventory adjustment',
+        ),
+      ),
+      successMessage: 'Stock adjusted',
     );
   }
 
