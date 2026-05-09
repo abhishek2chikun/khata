@@ -8,9 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 
-class Seller(Base):
-    __tablename__ = "sellers"
-    __table_args__ = (UniqueConstraint("name", "phone", name="uq_sellers_name_phone"),)
+class Customer(Base):
+    __tablename__ = "customers"
+    __table_args__ = (UniqueConstraint("name", "phone", name="uq_customers_name_phone"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -19,7 +19,7 @@ def _company_payload() -> dict:
     }
 
 
-def _seller_payload() -> dict:
+def _customer_payload() -> dict:
     return {
         "name": "ABC Stores",
         "address": "Market Yard",
@@ -48,9 +48,9 @@ def test_credit_sale_payment_flow_updates_invoice_stock_and_ledger(client, auth_
     company = client.put("/company-profile", headers=auth_headers, json=_company_payload())
     assert company.status_code == 200
 
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload())
-    assert seller.status_code == 201
-    seller_id = seller.json()["id"]
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload())
+    assert customer.status_code == 201
+    customer_id = customer.json()["id"]
 
     product = client.post("/products", headers=auth_headers, json=_product_payload())
     assert product.status_code == 201
@@ -58,7 +58,7 @@ def test_credit_sale_payment_flow_updates_invoice_stock_and_ledger(client, auth_
 
     invoice_payload = {
         "request_id": str(uuid4()),
-        "seller_id": seller_id,
+        "customer_id": customer_id,
         "invoice_date": "2026-04-19",
         "payment_mode": "CREDIT",
         "items": [
@@ -88,19 +88,19 @@ def test_credit_sale_payment_flow_updates_invoice_stock_and_ledger(client, auth_
     assert created_body["invoice"]["status"] == "ACTIVE"
     assert created_body["invoice"]["payment_mode"] == "CREDIT"
     assert created_body["invoice"]["grand_total"] == "236.00"
-    assert created_body["invoice"]["seller_snapshot"]["id"] == seller_id
+    assert created_body["invoice"]["customer_snapshot"]["id"] == customer_id
     assert created_body["invoice"]["company_snapshot"]["name"] == "Acme Traders"
     assert created_body["invoice"]["items"][0]["product_id"] == product_id
     assert created_body["invoice"]["items"][0]["quantity"] == "2.000"
 
-    invoice_list = client.get("/invoices?seller_id=" + seller_id + "&payment_mode=CREDIT&status=ACTIVE", headers=auth_headers)
+    invoice_list = client.get("/invoices?customer_id=" + customer_id + "&payment_mode=CREDIT&status=ACTIVE", headers=auth_headers)
     assert invoice_list.status_code == 200
     assert invoice_list.json()["invoices"] == [
         {
             "id": invoice_id,
             "invoice_number": invoice_number,
-            "seller_id": seller_id,
-            "seller_name": "ABC Stores",
+            "customer_id": customer_id,
+            "customer_name": "ABC Stores",
             "invoice_date": "2026-04-19",
             "status": "ACTIVE",
             "payment_mode": "CREDIT",
@@ -116,9 +116,9 @@ def test_credit_sale_payment_flow_updates_invoice_stock_and_ledger(client, auth_
     assert product_detail.status_code == 200
     assert product_detail.json()["quantity_on_hand"] == "3.000"
 
-    ledger_after_sale = client.get(f"/sellers/{seller_id}/ledger", headers=auth_headers)
+    ledger_after_sale = client.get(f"/customers/{customer_id}/ledger", headers=auth_headers)
     assert ledger_after_sale.status_code == 200
-    assert ledger_after_sale.json()["seller"]["pending_balance"] == "236.00"
+    assert ledger_after_sale.json()["customer"]["pending_balance"] == "236.00"
     assert ledger_after_sale.json()["transactions"] == [
         {
             "id": ledger_after_sale.json()["transactions"][0]["id"],
@@ -140,30 +140,30 @@ def test_credit_sale_payment_flow_updates_invoice_stock_and_ledger(client, auth_
     ]
 
     payment = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
         json={
             "request_id": str(uuid4()),
-            "seller_id": seller_id,
+            "customer_id": customer_id,
             "amount": "100.00",
             "occurred_on": "2026-04-20",
             "notes": "Cash collection",
         },
     )
     assert payment.status_code == 201
-    assert payment.json()["entry_type"] == "PAYMENT"
+    assert payment.json()["entry_type"] == "COLLECTION"
     assert payment.json()["amount"] == "100.00"
     assert payment.json()["occurred_on"] == "2026-04-20"
     assert payment.json()["notes"] == "Cash collection"
 
-    seller_detail = client.get(f"/sellers/{seller_id}", headers=auth_headers)
-    assert seller_detail.status_code == 200
-    assert seller_detail.json()["pending_balance"] == "136.00"
+    customer_detail = client.get(f"/customers/{customer_id}", headers=auth_headers)
+    assert customer_detail.status_code == 200
+    assert customer_detail.json()["pending_balance"] == "136.00"
 
-    ledger_after_payment = client.get(f"/sellers/{seller_id}/ledger", headers=auth_headers)
+    ledger_after_payment = client.get(f"/customers/{customer_id}/ledger", headers=auth_headers)
     assert ledger_after_payment.status_code == 200
-    assert ledger_after_payment.json()["seller"]["pending_balance"] == "136.00"
-    assert [entry["entry_type"] for entry in ledger_after_payment.json()["transactions"]] == ["CREDIT_SALE", "PAYMENT"]
+    assert ledger_after_payment.json()["customer"]["pending_balance"] == "136.00"
+    assert [entry["entry_type"] for entry in ledger_after_payment.json()["transactions"]] == ["CREDIT_SALE", "COLLECTION"]
     assert [entry["amount"] for entry in ledger_after_payment.json()["transactions"]] == ["236.00", "100.00"]
     assert ledger_after_payment.json()["transactions"][1]["occurred_on"] == "2026-04-20"
     assert ledger_after_payment.json()["transactions"][1]["notes"] == "Cash collection"

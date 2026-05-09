@@ -7,7 +7,7 @@ import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart'
-    hide Buyer, CompanyProfile, Product, Seller;
+    hide Buyer, CompanyProfile, Product, Customer;
 import 'package:internal_billing_khata_mobile/main.dart';
 import 'package:internal_billing_khata_mobile/models/buyer.dart';
 import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
@@ -17,14 +17,14 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   testWidgets(
@@ -102,7 +102,7 @@ void main() {
         sessionStore: _MemorySessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
       buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
@@ -132,7 +132,7 @@ void main() {
         sessionStore: _AuthenticatedSessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
       buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
@@ -162,7 +162,7 @@ void main() {
         sessionStore: _AuthenticatedSessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
       buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
@@ -193,7 +193,7 @@ void main() {
         sessionStore: _AuthenticatedSessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
       buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
@@ -222,7 +222,7 @@ void main() {
         sessionStore: _AuthenticatedSessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
       buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
@@ -400,19 +400,19 @@ class _FakeProductsService implements ProductsService {
   }
 }
 
-class _FakeSellersService implements SellersService {
+class _FakeCustomersService implements CustomersService {
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) {
+  Future<List<Customer>> fetchCustomers({String search = ''}) {
     throw UnimplementedError();
   }
 }
@@ -481,7 +481,7 @@ class _FakeCompanyProfileService implements CompanyProfileService {
 class _FakePaymentsService implements PaymentsService {
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) {
     throw UnimplementedError();
@@ -489,14 +489,14 @@ class _FakePaymentsService implements PaymentsService {
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) {
+  Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
 }

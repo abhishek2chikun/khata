@@ -22,7 +22,7 @@ class InvoiceLineRequest(BaseModel):
 
 
 class InvoiceQuoteRequest(BaseModel):
-    seller_id: uuid.UUID
+    customer_id: uuid.UUID
     invoice_date: date
     payment_mode: str
     place_of_supply_state_code: str | None = None
@@ -89,7 +89,7 @@ class InvoiceQuoteResponse(BaseModel):
     warnings: list[InvoiceWarning]
 
 
-class InvoiceSellerSnapshotResponse(BaseModel):
+class InvoiceCustomerSnapshotResponse(BaseModel):
     id: uuid.UUID
     name: str
     address: str
@@ -148,7 +148,7 @@ class InvoiceDetailResponse(BaseModel):
     id: uuid.UUID
     request_id: uuid.UUID
     invoice_number: int
-    seller_id: uuid.UUID
+    customer_id: uuid.UUID
     invoice_date: date
     tax_regime: str
     status: str
@@ -165,7 +165,7 @@ class InvoiceDetailResponse(BaseModel):
     cancel_request_id: uuid.UUID | None
     cancel_reason: str | None
     canceled_at: datetime | None
-    seller_snapshot: InvoiceSellerSnapshotResponse
+    customer_snapshot: InvoiceCustomerSnapshotResponse
     company_snapshot: InvoiceCompanySnapshotResponse
     items: list[InvoiceItemResponse]
 
@@ -178,8 +178,8 @@ class InvoiceCreateResponse(BaseModel):
 class InvoiceListItemResponse(BaseModel):
     id: uuid.UUID
     invoice_number: int
-    seller_id: uuid.UUID
-    seller_name: str
+    customer_id: uuid.UUID
+    customer_name: str
     invoice_date: date
     status: str
     payment_mode: str

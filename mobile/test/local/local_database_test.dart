@@ -11,15 +11,15 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
           'local_users',
           'products',
           'stock_movements',
-          'sellers',
-          'seller_transactions',
+          'customers',
+          'customer_transactions',
           'buyers',
           'buyer_transactions',
           'company_profiles',
@@ -52,7 +52,7 @@ void main() {
           'is_active',
         ]));
     expect(
-        _columnNames(database, 'sellers'),
+        _columnNames(database, 'customers'),
         containsAll(<String>[
           'state',
           'state_code',
@@ -95,8 +95,8 @@ void main() {
         containsAll(<String>[
           'request_id',
           'request_hash',
-          'seller_name',
-          'seller_state_code',
+          'customer_name',
+          'customer_state_code',
           'company_bank_ifsc',
           'tax_regime',
           'discount_total',
@@ -273,13 +273,13 @@ void main() {
     _expectRequired(database, 'products', 'gst_rate');
     _expectNullable(database, 'products', 'unit');
 
-    _expectRequired(database, 'sellers', 'address');
+    _expectRequired(database, 'customers', 'address');
     _expectRequired(database, 'company_profiles', 'address');
     _expectRequired(database, 'company_profiles', 'city');
     _expectRequired(database, 'company_profiles', 'state');
     _expectRequired(database, 'company_profiles', 'state_code');
 
-    _expectRequired(database, 'invoices', 'seller_address');
+    _expectRequired(database, 'invoices', 'customer_address');
     _expectRequired(database, 'invoices', 'place_of_supply_state');
     _expectRequired(database, 'invoices', 'place_of_supply_state_code');
     _expectRequired(database, 'invoices', 'company_address');
@@ -292,8 +292,8 @@ void main() {
 
     _expectNullable(database, 'stock_movements', 'request_id');
     _expectNullable(database, 'stock_movements', 'request_hash');
-    _expectNullable(database, 'seller_transactions', 'request_id');
-    _expectNullable(database, 'seller_transactions', 'request_hash');
+    _expectNullable(database, 'customer_transactions', 'request_id');
+    _expectNullable(database, 'customer_transactions', 'request_hash');
 
     _expectRequired(database, 'invoice_items', 'product_code');
     _expectRequired(database, 'invoice_items', 'company');

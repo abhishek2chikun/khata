@@ -3,33 +3,33 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
-import 'package:internal_billing_khata_mobile/screens/seller_detail_screen.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/screens/customer_detail_screen.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  testWidgets('seller detail loads profile balance ledger and invoices', (tester) async {
+  testWidgets('customer detail loads profile balance ledger and invoices', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: FakeSellersService(
-            ledgers: <SellerLedger>[
-              SellerLedger(
-                seller: _seller,
-                transactions: const <SellerLedgerTransaction>[
-                  SellerLedgerTransaction(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[
+                  CustomerLedgerTransaction(
                     id: 'txn-1',
-                    entryType: 'PAYMENT',
+                    entryType: 'COLLECTION',
                     amount: 100,
                     occurredOn: '2026-04-20',
                     notes: 'Cash collection',
                   ),
                 ],
-                invoices: const <SellerInvoiceHistoryEntry>[
-                  SellerInvoiceHistoryEntry(
+                invoices: const <CustomerInvoiceHistoryEntry>[
+                  CustomerInvoiceHistoryEntry(
                     invoiceId: 'inv-1',
                     invoiceNumber: '1001',
                     invoiceDate: '2026-04-18',
@@ -56,26 +56,26 @@ void main() {
     expect(find.text('1001'), findsOneWidget);
   });
 
-  testWidgets('seller detail refreshes after successful payment flow', (tester) async {
-    final sellersService = FakeSellersService(
-      ledgers: <SellerLedger>[
-        SellerLedger(
-          seller: _seller,
-          transactions: const <SellerLedgerTransaction>[],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+  testWidgets('customer detail refreshes after successful payment flow', (tester) async {
+    final customersService = FakeCustomersService(
+      ledgers: <CustomerLedger>[
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
-        SellerLedger(
-          seller: _seller.copyWith(pendingBalance: 375),
-          transactions: const <SellerLedgerTransaction>[
-            SellerLedgerTransaction(
+        CustomerLedger(
+          customer: _customer.copyWith(pendingBalance: 375),
+          transactions: const <CustomerLedgerTransaction>[
+            CustomerLedgerTransaction(
               id: 'txn-2',
-              entryType: 'PAYMENT',
+              entryType: 'COLLECTION',
               amount: 125,
               occurredOn: '2026-04-20',
               notes: 'Cash',
             ),
           ],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
       ],
     );
@@ -83,9 +83,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: sellersService,
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: customersService,
           paymentsService: paymentsService,
           onCreateInvoice: (_) async => false,
         ),
@@ -93,32 +93,32 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('recordPaymentActionButton')));
+    await tester.tap(find.byKey(const Key('recordCollectionActionButton')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('paymentAmountField')), '125');
-    await tester.enterText(find.byKey(const Key('paymentOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('paymentNotesField')), 'Cash');
-    await tester.tap(find.byKey(const Key('submitPaymentButton')));
+    await tester.enterText(find.byKey(const Key('collectionAmountField')), '125');
+    await tester.enterText(find.byKey(const Key('collectionOccurredOnField')), '2026-04-20');
+    await tester.enterText(find.byKey(const Key('collectionNotesField')), 'Cash');
+    await tester.tap(find.byKey(const Key('submitCollectionButton')));
     await tester.pumpAndSettle();
 
-    expect(paymentsService.recordedPayments, hasLength(1));
-    expect(sellersService.fetchSellerLedgerCount, 2);
+    expect(paymentsService.recordedCollections, hasLength(1));
+    expect(customersService.fetchCustomerLedgerCount, 2);
     expect(find.text('Cash'), findsOneWidget);
     expect(find.textContaining('375'), findsWidgets);
   });
 
-  testWidgets('seller detail refreshes after opening balance flow', (tester) async {
-    final sellersService = FakeSellersService(
-      ledgers: <SellerLedger>[
-        SellerLedger(
-          seller: _seller,
-          transactions: const <SellerLedgerTransaction>[],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+  testWidgets('customer detail refreshes after opening balance flow', (tester) async {
+    final customersService = FakeCustomersService(
+      ledgers: <CustomerLedger>[
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
-        SellerLedger(
-          seller: _seller.copyWith(pendingBalance: 700),
-          transactions: const <SellerLedgerTransaction>[
-            SellerLedgerTransaction(
+        CustomerLedger(
+          customer: _customer.copyWith(pendingBalance: 700),
+          transactions: const <CustomerLedgerTransaction>[
+            CustomerLedgerTransaction(
               id: 'txn-3',
               entryType: 'OPENING_BALANCE',
               amount: 200,
@@ -126,7 +126,7 @@ void main() {
               notes: null,
             ),
           ],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
       ],
     );
@@ -134,9 +134,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: sellersService,
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: customersService,
           paymentsService: paymentsService,
           onCreateInvoice: (_) async => false,
         ),
@@ -152,23 +152,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(paymentsService.openingBalances, hasLength(1));
-    expect(sellersService.fetchSellerLedgerCount, 2);
+    expect(customersService.fetchCustomerLedgerCount, 2);
     expect(find.textContaining('700'), findsWidgets);
     expect(find.text('OPENING_BALANCE'), findsOneWidget);
   });
 
-  testWidgets('seller detail refreshes after balance adjustment flow', (tester) async {
-    final sellersService = FakeSellersService(
-      ledgers: <SellerLedger>[
-        SellerLedger(
-          seller: _seller,
-          transactions: const <SellerLedgerTransaction>[],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+  testWidgets('customer detail refreshes after balance adjustment flow', (tester) async {
+    final customersService = FakeCustomersService(
+      ledgers: <CustomerLedger>[
+        CustomerLedger(
+          customer: _customer,
+          transactions: const <CustomerLedgerTransaction>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
-        SellerLedger(
-          seller: _seller.copyWith(pendingBalance: 450),
-          transactions: const <SellerLedgerTransaction>[
-            SellerLedgerTransaction(
+        CustomerLedger(
+          customer: _customer.copyWith(pendingBalance: 450),
+          transactions: const <CustomerLedgerTransaction>[
+            CustomerLedgerTransaction(
               id: 'txn-4',
               entryType: 'BALANCE_ADJUSTMENT',
               amount: 50,
@@ -176,7 +176,7 @@ void main() {
               notes: 'Correction',
             ),
           ],
-          invoices: const <SellerInvoiceHistoryEntry>[],
+          invoices: const <CustomerInvoiceHistoryEntry>[],
         ),
       ],
     );
@@ -184,9 +184,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: sellersService,
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: customersService,
           paymentsService: paymentsService,
           onCreateInvoice: (_) async => false,
         ),
@@ -203,30 +203,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(paymentsService.adjustments, hasLength(1));
-    expect(sellersService.fetchSellerLedgerCount, 2);
+    expect(customersService.fetchCustomerLedgerCount, 2);
     expect(find.textContaining('450'), findsWidgets);
     expect(find.text('Correction'), findsOneWidget);
   });
 
-  testWidgets('seller detail action buttons are wired', (tester) async {
-    Seller? invoiceSeller;
+  testWidgets('customer detail action buttons are wired', (tester) async {
+    Customer? invoiceCustomer;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: FakeSellersService(
-            ledgers: <SellerLedger>[
-              SellerLedger(
-                seller: _seller,
-                transactions: const <SellerLedgerTransaction>[],
-                invoices: const <SellerInvoiceHistoryEntry>[],
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
               ),
             ],
           ),
           paymentsService: FakePaymentsService(),
-          onCreateInvoice: (seller) async {
-            invoiceSeller = seller;
+          onCreateInvoice: (customer) async {
+            invoiceCustomer = customer;
             return false;
           },
         ),
@@ -234,10 +234,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('recordPaymentActionButton')));
+    await tester.tap(find.byKey(const Key('recordCollectionActionButton')));
     await tester.pumpAndSettle();
-    expect(find.text('Record payment'), findsOneWidget);
-    Navigator.of(tester.element(find.text('Record payment'))).pop();
+    expect(find.text('Record collection'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Record collection'))).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('openingBalanceActionButton')));
@@ -254,20 +254,20 @@ void main() {
 
     await tester.tap(find.byKey(const Key('createInvoiceActionButton')));
     await tester.pump();
-    expect(invoiceSeller?.id, 'seller-1');
+    expect(invoiceCustomer?.id, 'customer-1');
   });
 
-  testWidgets('seller detail disables create invoice for archived seller', (tester) async {
+  testWidgets('customer detail disables create invoice for archived customer', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: FakeSellersService(
-            ledgers: <SellerLedger>[
-              SellerLedger(
-                seller: _seller.copyWith(isActive: false),
-                transactions: const <SellerLedgerTransaction>[],
-                invoices: const <SellerInvoiceHistoryEntry>[],
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer.copyWith(isActive: false),
+                transactions: const <CustomerLedgerTransaction>[],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
               ),
             ],
           ),
@@ -281,17 +281,17 @@ void main() {
 
     final button = tester.widget<OutlinedButton>(find.byKey(const Key('createInvoiceActionButton')));
     expect(button.onPressed, isNull);
-    expect(find.text('Create invoice unavailable for archived sellers'), findsOneWidget);
+    expect(find.text('Create invoice unavailable for archived customers'), findsOneWidget);
   });
 
-  testWidgets('seller detail shows error banner when load fails', (tester) async {
+  testWidgets('customer detail shows error banner when load fails', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: FakeSellersService(
-            ledgers: <SellerLedger>[],
-            error: const ApiError(message: 'Unable to load seller detail'),
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[],
+            error: const ApiError(message: 'Unable to load customer detail'),
           ),
           paymentsService: FakePaymentsService(),
           onCreateInvoice: (_) async => false,
@@ -301,16 +301,16 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Unable to load seller detail'), findsOneWidget);
+    expect(find.text('Unable to load customer detail'), findsOneWidget);
   });
 
-  testWidgets('seller detail shows network error banner when load throws socket exception', (tester) async {
+  testWidgets('customer detail shows network error banner when load throws socket exception', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SellerDetailScreen(
-          sellerId: 'seller-1',
-          sellersService: FakeSellersService(
-            ledgers: <SellerLedger>[],
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[],
             error: const SocketException('timed out'),
           ),
           paymentsService: FakePaymentsService(),
@@ -325,8 +325,8 @@ void main() {
   });
 }
 
-const _seller = Seller(
-  id: 'seller-1',
+const _customer = Customer(
+  id: 'customer-1',
   name: 'ABC Stores',
   address: 'Market Yard',
   phone: '9999999999',
@@ -337,71 +337,71 @@ const _seller = Seller(
   pendingBalance: 500,
 );
 
-class FakeSellersService implements SellersService {
-  FakeSellersService({required this.ledgers, this.error});
+class FakeCustomersService implements CustomersService {
+  FakeCustomersService({required this.ledgers, this.error});
 
-  final List<SellerLedger> ledgers;
+  final List<CustomerLedger> ledgers;
   final Object? error;
-  var fetchSellerLedgerCount = 0;
+  var fetchCustomerLedgerCount = 0;
 
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) async {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId) async {
     if (error != null) {
       throw error!;
     }
-    final index = fetchSellerLedgerCount < ledgers.length ? fetchSellerLedgerCount : ledgers.length - 1;
-    fetchSellerLedgerCount += 1;
+    final index = fetchCustomerLedgerCount < ledgers.length ? fetchCustomerLedgerCount : ledgers.length - 1;
+    fetchCustomerLedgerCount += 1;
     return ledgers[index];
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) {
+  Future<List<Customer>> fetchCustomers({String search = ''}) {
     throw UnimplementedError();
   }
 }
 
 class FakePaymentsService implements PaymentsService {
-  final List<RecordPaymentInput> recordedPayments = <RecordPaymentInput>[];
+  final List<RecordCollectionInput> recordedCollections = <RecordCollectionInput>[];
   final List<_OpeningBalanceCall> openingBalances = <_OpeningBalanceCall>[];
   final List<_BalanceAdjustmentCall> adjustments = <_BalanceAdjustmentCall>[];
 
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) async {
-    adjustments.add(_BalanceAdjustmentCall(sellerId: sellerId, input: input));
+    adjustments.add(_BalanceAdjustmentCall(customerId: customerId, input: input));
   }
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) async {
-    openingBalances.add(_OpeningBalanceCall(sellerId: sellerId, input: input));
+    openingBalances.add(_OpeningBalanceCall(customerId: customerId, input: input));
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) async {
-    recordedPayments.add(input);
+  Future<void> recordCollection(RecordCollectionInput input) async {
+    recordedCollections.add(input);
   }
 }
 
 class _OpeningBalanceCall {
-  const _OpeningBalanceCall({required this.sellerId, required this.input});
+  const _OpeningBalanceCall({required this.customerId, required this.input});
 
-  final String sellerId;
+  final String customerId;
   final OpeningBalanceInput input;
 }
 
 class _BalanceAdjustmentCall {
-  const _BalanceAdjustmentCall({required this.sellerId, required this.input});
+  const _BalanceAdjustmentCall({required this.customerId, required this.input});
 
-  final String sellerId;
+  final String customerId;
   final BalanceAdjustmentInput input;
 }

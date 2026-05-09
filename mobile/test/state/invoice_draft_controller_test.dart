@@ -7,7 +7,7 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/state/invoice_draft_controller.dart';
 
@@ -26,7 +26,7 @@ void main() {
     );
     final controller = InvoiceDraftController(invoicesService: invoicesService);
 
-    controller.updateSeller(_seller);
+    controller.updateCustomer(_customer);
     controller.updateInvoiceDate('2026-04-20');
     controller.updatePlaceOfSupplyStateCode('27');
     controller.updateItemProduct(0, _product);
@@ -60,7 +60,7 @@ void main() {
     );
     final controller = InvoiceDraftController(invoicesService: invoicesService);
 
-    controller.updateSeller(_seller);
+    controller.updateCustomer(_customer);
     controller.updateInvoiceDate('2026-04-20');
     controller.updatePlaceOfSupplyStateCode('27');
     controller.updateItemProduct(0, _product);
@@ -81,8 +81,8 @@ void main() {
   });
 }
 
-const _seller = Seller(
-  id: 'seller-1',
+const _customer = Customer(
+  id: 'customer-1',
   name: 'ABC Stores',
   address: 'Market Yard',
   phone: '9999999999',
@@ -109,11 +109,11 @@ const _product = Product(
 
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
-  sellerId: 'seller-1',
+  customerId: 'customer-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
   paymentMode: 'CREDIT',
-  sellerName: 'ABC Stores',
+  customerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
   grandTotal: 118,
   notes: null,

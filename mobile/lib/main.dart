@@ -6,7 +6,7 @@ import 'app/app_mode.dart';
 import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
-import 'models/seller.dart';
+import 'models/customer.dart';
 import 'screens/buyer_list_screen.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
@@ -17,13 +17,13 @@ import 'screens/login_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
-import 'screens/seller_list_screen.dart';
+import 'screens/customer_list_screen.dart';
 import 'services/company_profile_service.dart';
 import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
-import 'services/sellers_service.dart';
+import 'services/customers_service.dart';
 import 'widgets/app_navigation_drawer.dart';
 
 Future<void> main() async {
@@ -43,7 +43,7 @@ class BillingApp extends StatefulWidget {
     AppDependencies? dependencies,
     AuthController? controller,
     ProductsService? productsService,
-    SellersService? sellersService,
+    CustomersService? customersService,
     BuyersService? buyersService,
     CompanyProfileService? companyProfileService,
     PaymentsService? paymentsService,
@@ -53,7 +53,7 @@ class BillingApp extends StatefulWidget {
   })  : dependencies = dependencies,
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
-        sellersService = sellersService ?? dependencies!.sellersService,
+        customersService = customersService ?? dependencies!.customersService,
         buyersService = buyersService ?? dependencies!.buyersService,
         companyProfileService =
             companyProfileService ?? dependencies!.companyProfileService,
@@ -66,7 +66,7 @@ class BillingApp extends StatefulWidget {
   final AppDependencies? dependencies;
   final AuthController controller;
   final ProductsService productsService;
-  final SellersService sellersService;
+  final CustomersService customersService;
   final BuyersService buyersService;
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
@@ -177,12 +177,12 @@ class _BillingAppState extends State<BillingApp> {
               return result;
             },
           );
-        case AppDestination.sellers:
-          return SellerListScreen(
+        case AppDestination.customers:
+          return CustomerListScreen(
             drawer: drawer,
-            sellersService: widget.sellersService,
+            customersService: widget.customersService,
             paymentsService: widget.paymentsService,
-            onCreateInvoice: _openCreateInvoiceForSeller,
+            onCreateInvoice: _openCreateInvoiceForCustomer,
           );
         case AppDestination.buyers:
           return BuyerListScreen(
@@ -194,7 +194,7 @@ class _BillingAppState extends State<BillingApp> {
             drawer: drawer,
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
-            sellersService: widget.sellersService,
+            customersService: widget.customersService,
           );
         case AppDestination.companyProfile:
           return CompanyProfileScreen(
@@ -215,14 +215,14 @@ class _BillingAppState extends State<BillingApp> {
     );
   }
 
-  Future<bool> _openCreateInvoiceForSeller(Seller seller) async {
+  Future<bool> _openCreateInvoiceForCustomer(Customer customer) async {
     final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => CreateInvoiceScreen(
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
-              sellersService: widget.sellersService,
-              initialSeller: seller,
+              customersService: widget.customersService,
+              initialCustomer: customer,
             ),
           ),
         ) ??

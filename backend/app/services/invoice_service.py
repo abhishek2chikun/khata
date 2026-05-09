@@ -17,11 +17,11 @@ from app.models.company_profile import CompanyProfile
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
 from app.models.product import Product
-from app.models.seller import Seller
-from app.models.seller_transaction import SellerTransaction
+from app.models.customer import Customer
+from app.models.customer_transaction import CustomerTransaction
 from app.models.stock_movement import StockMovement
 from app.schemas.auth import CurrentUserResponse
-from app.schemas.invoice import InvoiceCancelRequest, InvoiceCompanySnapshotResponse, InvoiceCreateRequest, InvoiceCreateResponse, InvoiceDetailResponse, InvoiceItemResponse, InvoiceLineQuoteResponse, InvoiceListItemResponse, InvoiceListResponse, InvoiceQuoteRequest, InvoiceQuoteResponse, InvoiceSellerSnapshotResponse, InvoiceTotalsResponse, InvoiceWarning
+from app.schemas.invoice import InvoiceCancelRequest, InvoiceCompanySnapshotResponse, InvoiceCreateRequest, InvoiceCreateResponse, InvoiceDetailResponse, InvoiceItemResponse, InvoiceLineQuoteResponse, InvoiceListItemResponse, InvoiceListResponse, InvoiceQuoteRequest, InvoiceQuoteResponse, InvoiceCustomerSnapshotResponse, InvoiceTotalsResponse, InvoiceWarning
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ class PreparedInvoiceLine:
 
 @dataclass(frozen=True)
 class PreparedInvoice:
-    seller: Seller
+    customer: Customer
     company: CompanyProfile
     place_of_supply_state_code: str
     place_of_supply_state: str
@@ -64,23 +64,23 @@ def _get_active_company_for_invoicing(session: Session) -> CompanyProfile:
     return company
 
 
-def _resolve_place_of_supply_state_code(seller: Seller, provided_state_code: str | None) -> str:
+def _resolve_place_of_supply_state_code(customer: Customer, provided_state_code: str | None) -> str:
     if provided_state_code:
         return normalize_state_code(provided_state_code)
 
-    if seller.state_code and seller.state:
-        normalized_code = normalize_state_code(seller.state_code)
+    if customer.state_code and customer.state:
+        normalized_code = normalize_state_code(customer.state_code)
         canonical_state = get_state_name(normalized_code)
-        if canonical_state.lower() != seller.state.strip().lower():
-            raise _validation_error("Seller state and state_code do not match")
+        if canonical_state.lower() != customer.state.strip().lower():
+            raise _validation_error("Customer state and state_code do not match")
         return normalized_code
 
-    if seller.state_code:
-        normalized_code = normalize_state_code(seller.state_code)
+    if customer.state_code:
+        normalized_code = normalize_state_code(customer.state_code)
         get_state_name(normalized_code)
         return normalized_code
 
-    raise _validation_error("place_of_supply_state_code is required when seller state metadata is incomplete")
+    raise _validation_error("place_of_supply_state_code is required when customer state metadata is incomplete")
 
 
 def _lock_or_load_products(session: Session, product_ids: list[UUID], lock: bool) -> dict[UUID, Product]:
@@ -100,7 +100,7 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
         return f"{Decimal(value):.3f}"
 
     normalized_payload = {
-        "seller_id": str(payload.seller_id),
+        "customer_id": str(payload.customer_id),
         "invoice_date": payload.invoice_date.isoformat(),
         "payment_mode": payload.payment_mode,
         "place_of_supply_state_code": resolved_state_code,
@@ -121,14 +121,14 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
 
 
 def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_products: bool) -> PreparedInvoice:
-    seller = session.get(Seller, payload.seller_id)
-    if seller is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"code": "NOT_FOUND", "message": "Seller not found"}})
-    if not seller.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "SELLER_ARCHIVED", "message": "Archived seller cannot be invoiced"}})
+    customer = session.get(Customer, payload.customer_id)
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"code": "NOT_FOUND", "message": "Customer not found"}})
+    if not customer.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "CUSTOMER_ARCHIVED", "message": "Archived customer cannot be invoiced"}})
 
     company = _get_active_company_for_invoicing(session)
-    resolved_state_code = _resolve_place_of_supply_state_code(seller, payload.place_of_supply_state_code)
+    resolved_state_code = _resolve_place_of_supply_state_code(customer, payload.place_of_supply_state_code)
     resolved_state = get_state_name(resolved_state_code)
     tax_regime = derive_tax_regime(company.state_code, resolved_state_code)
 
@@ -179,7 +179,7 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
             )
 
     return PreparedInvoice(
-        seller=seller,
+        customer=customer,
         company=company,
         place_of_supply_state_code=resolved_state_code,
         place_of_supply_state=resolved_state,
@@ -281,8 +281,8 @@ def _apply_stock_and_ledger(session: Session, invoice: Invoice, prepared: Prepar
 
     if invoice.payment_mode == "CREDIT":
         session.add(
-            SellerTransaction(
-                seller_id=invoice.seller_id,
+            CustomerTransaction(
+                customer_id=invoice.customer_id,
                 invoice_id=invoice.id,
                 entry_type="CREDIT_SALE",
                 amount=invoice.grand_total,
@@ -299,7 +299,7 @@ def _build_invoice_detail(session: Session, invoice: Invoice) -> InvoiceDetailRe
         id=invoice.id,
         request_id=invoice.request_id,
         invoice_number=invoice.invoice_number,
-        seller_id=invoice.seller_id,
+        customer_id=invoice.customer_id,
         invoice_date=invoice.invoice_date,
         tax_regime=invoice.tax_regime,
         status=invoice.status,
@@ -316,14 +316,14 @@ def _build_invoice_detail(session: Session, invoice: Invoice) -> InvoiceDetailRe
         cancel_request_id=invoice.cancel_request_id,
         cancel_reason=invoice.cancel_reason,
         canceled_at=invoice.canceled_at,
-        seller_snapshot=InvoiceSellerSnapshotResponse(
-            id=invoice.seller_id,
-            name=invoice.seller_name,
-            address=invoice.seller_address,
-            state=invoice.seller_state,
-            state_code=invoice.seller_state_code,
-            phone=invoice.seller_phone,
-            gstin=invoice.seller_gstin,
+        customer_snapshot=InvoiceCustomerSnapshotResponse(
+            id=invoice.customer_id,
+            name=invoice.customer_name,
+            address=invoice.customer_address,
+            state=invoice.customer_state,
+            state_code=invoice.customer_state_code,
+            phone=invoice.customer_phone,
+            gstin=invoice.customer_gstin,
         ),
         company_snapshot=InvoiceCompanySnapshotResponse(
             name=invoice.company_name,
@@ -363,13 +363,13 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
         invoice = Invoice(
             request_id=payload.request_id,
             request_hash=request_hash,
-            seller_id=prepared.seller.id,
-            seller_name=prepared.seller.name,
-            seller_address=prepared.seller.address,
-            seller_state=prepared.seller.state,
-            seller_state_code=prepared.seller.state_code,
-            seller_phone=prepared.seller.phone,
-            seller_gstin=prepared.seller.gstin,
+            customer_id=prepared.customer.id,
+            customer_name=prepared.customer.name,
+            customer_address=prepared.customer.address,
+            customer_state=prepared.customer.state,
+            customer_state_code=prepared.customer.state_code,
+            customer_phone=prepared.customer.phone,
+            customer_gstin=prepared.customer.gstin,
             place_of_supply_state_code=prepared.place_of_supply_state_code,
             company_name=prepared.company.name,
             company_address=prepared.company.address,
@@ -425,7 +425,7 @@ def list_invoices(
     *,
     from_date: date | None = None,
     to_date: date | None = None,
-    seller_id: UUID | None = None,
+    customer_id: UUID | None = None,
     status_filter: str | None = None,
     payment_mode: str | None = None,
     invoice_number: int | None = None,
@@ -435,8 +435,8 @@ def list_invoices(
         query = query.where(Invoice.invoice_date >= from_date)
     if to_date is not None:
         query = query.where(Invoice.invoice_date <= to_date)
-    if seller_id is not None:
-        query = query.where(Invoice.seller_id == seller_id)
+    if customer_id is not None:
+        query = query.where(Invoice.customer_id == customer_id)
     if status_filter is not None:
         query = query.where(Invoice.status == status_filter)
     if payment_mode is not None:
@@ -449,8 +449,8 @@ def list_invoices(
             InvoiceListItemResponse(
                 id=invoice.id,
                 invoice_number=invoice.invoice_number,
-                seller_id=invoice.seller_id,
-                seller_name=invoice.seller_name,
+                customer_id=invoice.customer_id,
+                customer_name=invoice.customer_name,
                 invoice_date=invoice.invoice_date,
                 status=invoice.status,
                 payment_mode=invoice.payment_mode,
@@ -511,8 +511,8 @@ def cancel_invoice(session: Session, invoice_id: UUID, payload: InvoiceCancelReq
 
         if invoice.payment_mode == "CREDIT":
             session.add(
-                SellerTransaction(
-                    seller_id=invoice.seller_id,
+                CustomerTransaction(
+                    customer_id=invoice.customer_id,
                     invoice_id=invoice.id,
                     entry_type="INVOICE_CANCEL_REVERSAL",
                     amount=invoice.grand_total,

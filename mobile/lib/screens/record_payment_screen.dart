@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
 
-class RecordPaymentScreen extends StatefulWidget {
-  const RecordPaymentScreen({
+class RecordCollectionScreen extends StatefulWidget {
+  const RecordCollectionScreen({
     super.key,
     required this.paymentsService,
-    required this.seller,
+    required this.customer,
     this.onSubmitted,
   });
 
   final PaymentsService paymentsService;
-  final Seller seller;
+  final Customer customer;
   final VoidCallback? onSubmitted;
 
   @override
-  State<RecordPaymentScreen> createState() => _RecordPaymentScreenState();
+  State<RecordCollectionScreen> createState() => _RecordCollectionScreenState();
 }
 
-class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
+class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
   final _amountController = TextEditingController();
   final _occurredOnController = TextEditingController();
   final _notesController = TextEditingController();
@@ -40,37 +40,37 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Record payment')),
+      appBar: AppBar(title: const Text('Record collection')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(widget.seller.name, style: Theme.of(context).textTheme.titleMedium),
+            Text(widget.customer.name, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
             _buildField(
-              key: const Key('paymentAmountField'),
+              key: const Key('collectionAmountField'),
               controller: _amountController,
               label: 'Amount',
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             _buildField(
-              key: const Key('paymentOccurredOnField'),
+              key: const Key('collectionOccurredOnField'),
               controller: _occurredOnController,
               label: 'Occurred on',
             ),
             _buildField(
-              key: const Key('paymentNotesField'),
+              key: const Key('collectionNotesField'),
               controller: _notesController,
               label: 'Notes',
             ),
             const SizedBox(height: 16),
             FilledButton(
-              key: const Key('submitPaymentButton'),
+              key: const Key('submitCollectionButton'),
               onPressed: _isSaving ? null : _submit,
               child: _isSaving
                   ? const SizedBox(
@@ -78,7 +78,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save payment'),
+                  : const Text('Save collection'),
             ),
           ],
         ),
@@ -129,10 +129,10 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
     });
 
     try {
-      await widget.paymentsService.recordPayment(
-        RecordPaymentInput(
+      await widget.paymentsService.recordCollection(
+        RecordCollectionInput(
           requestId: generateRequestId(),
-          sellerId: widget.seller.id,
+          customerId: widget.customer.id,
           amount: amount,
           occurredOn: occurredOn,
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),

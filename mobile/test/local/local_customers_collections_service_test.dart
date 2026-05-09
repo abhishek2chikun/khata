@@ -2,19 +2,19 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart';
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_sellers_service.dart';
+import 'package:internal_billing_khata_mobile/local/local_customers_service.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   late LocalDatabase database;
-  late LocalSellersService sellersService;
+  late LocalCustomersService customersService;
   late LocalPaymentsService paymentsService;
 
   setUp(() async {
     database = LocalDatabase.memory();
-    sellersService = LocalSellersService(database: database);
+    customersService = LocalCustomersService(database: database);
     paymentsService = LocalPaymentsService(database: database);
     await _seedLocalUser(database);
   });
@@ -23,110 +23,110 @@ void main() {
     await database.close();
   });
 
-  test('creates sellers and stores backend-compatible fields', () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+  test('creates customers and stores backend-compatible fields', () async {
+    final customer = await customersService.createCustomer(_customerInput());
 
-    expect(seller.id, isNotEmpty);
-    expect(seller.name, 'Acme Stores');
-    expect(seller.address, '1 Market Road');
-    expect(seller.phone, '9999999999');
-    expect(seller.gstin, '27ABCDE1234F1Z5');
-    expect(seller.state, 'Maharashtra');
-    expect(seller.stateCode, '27');
-    expect(seller.isActive, isTrue);
-    expect(seller.pendingBalance, 0);
+    expect(customer.id, isNotEmpty);
+    expect(customer.name, 'Acme Stores');
+    expect(customer.address, '1 Market Road');
+    expect(customer.phone, '9999999999');
+    expect(customer.gstin, '27ABCDE1234F1Z5');
+    expect(customer.state, 'Maharashtra');
+    expect(customer.stateCode, '27');
+    expect(customer.isActive, isTrue);
+    expect(customer.pendingBalance, 0);
 
-    final storedSeller = await database.select(database.sellers).getSingle();
-    expect(storedSeller.id, seller.id);
-    expect(storedSeller.name, 'Acme Stores');
-    expect(storedSeller.phone, '9999999999');
-    expect(storedSeller.isActive, isTrue);
+    final storedCustomer = await database.select(database.customers).getSingle();
+    expect(storedCustomer.id, customer.id);
+    expect(storedCustomer.name, 'Acme Stores');
+    expect(storedCustomer.phone, '9999999999');
+    expect(storedCustomer.isActive, isTrue);
   });
 
-  test('lists sellers ordered by name and searches case-insensitively',
+  test('lists customers ordered by name and searches case-insensitively',
       () async {
-    final zeta = await sellersService.createSeller(
-      _sellerInput(name: 'Zeta Traders', phone: '1111111111'),
+    final zeta = await customersService.createCustomer(
+      _customerInput(name: 'Zeta Traders', phone: '1111111111'),
     );
-    final alpha = await sellersService.createSeller(
-      _sellerInput(name: 'Alpha Stores', phone: '2222222222'),
+    final alpha = await customersService.createCustomer(
+      _customerInput(name: 'Alpha Stores', phone: '2222222222'),
     );
-    final inactive = await sellersService.createSeller(
-      _sellerInput(name: 'Beta Stores', phone: '3333333333'),
+    final inactive = await customersService.createCustomer(
+      _customerInput(name: 'Beta Stores', phone: '3333333333'),
     );
     await database.customStatement(
-      "UPDATE sellers SET is_active = 0 WHERE id = '${inactive.id}'",
+      "UPDATE customers SET is_active = 0 WHERE id = '${inactive.id}'",
     );
 
-    final sellers = await sellersService.fetchSellers();
-    final nameMatches = await sellersService.fetchSellers(search: 'zeta');
-    final phoneMatches = await sellersService.fetchSellers(search: '2222');
+    final customers = await customersService.fetchCustomers();
+    final nameMatches = await customersService.fetchCustomers(search: 'zeta');
+    final phoneMatches = await customersService.fetchCustomers(search: '2222');
 
-    expect(sellers.map((seller) => seller.id), <String>[
+    expect(customers.map((customer) => customer.id), <String>[
       alpha.id,
       inactive.id,
       zeta.id,
     ]);
-    expect(nameMatches.map((seller) => seller.id), <String>[zeta.id]);
-    expect(phoneMatches.map((seller) => seller.id), <String>[alpha.id]);
+    expect(nameMatches.map((customer) => customer.id), <String>[zeta.id]);
+    expect(phoneMatches.map((customer) => customer.id), <String>[alpha.id]);
   });
 
-  test('unfiltered seller list includes inactive sellers seeded through Drift',
+  test('unfiltered customer list includes inactive customers seeded through Drift',
       () async {
-    final active = await sellersService.createSeller(
-      _sellerInput(name: 'Active Stores', phone: '1111111111'),
+    final active = await customersService.createCustomer(
+      _customerInput(name: 'Active Stores', phone: '1111111111'),
     );
-    await _seedSeller(
+    await _seedCustomer(
       database,
-      id: 'inactive-seller',
+      id: 'inactive-customer',
       name: 'Inactive Stores',
       phone: '2222222222',
       isActive: false,
     );
 
-    final sellers = await sellersService.fetchSellers();
+    final customers = await customersService.fetchCustomers();
 
-    expect(sellers.map((seller) => seller.id), <String>[
+    expect(customers.map((customer) => customer.id), <String>[
       active.id,
-      'inactive-seller',
+      'inactive-customer',
     ]);
-    expect(sellers.map((seller) => seller.isActive), <bool>[true, false]);
+    expect(customers.map((customer) => customer.isActive), <bool>[true, false]);
   });
 
-  test('allows duplicate seller names when phone is omitted', () async {
-    final first = await sellersService.createSeller(
-      _sellerInput(phone: null, address: 'First address'),
+  test('allows duplicate customer names when phone is omitted', () async {
+    final first = await customersService.createCustomer(
+      _customerInput(phone: null, address: 'First address'),
     );
-    final second = await sellersService.createSeller(
-      _sellerInput(phone: null, address: 'Second address'),
+    final second = await customersService.createCustomer(
+      _customerInput(phone: null, address: 'Second address'),
     );
 
     expect(first.name, 'Acme Stores');
     expect(first.phone, isNull);
     expect(second.name, 'Acme Stores');
     expect(second.phone, isNull);
-    expect(await database.select(database.sellers).get(), hasLength(2));
+    expect(await database.select(database.customers).get(), hasLength(2));
   });
 
-  test('rejects duplicate sellers by same name and same non-null phone',
+  test('rejects duplicate customers by same name and same non-null phone',
       () async {
-    await sellersService.createSeller(_sellerInput());
+    await customersService.createCustomer(_customerInput());
 
     await expectLater(
-      () => sellersService.createSeller(
-        _sellerInput(address: 'Different address'),
+      () => customersService.createCustomer(
+        _customerInput(address: 'Different address'),
       ),
-      throwsA(_apiError(code: 'DUPLICATE_SELLER', statusCode: 409)),
+      throwsA(_apiError(code: 'DUPLICATE_CUSTOMER', statusCode: 409)),
     );
-    expect(await database.select(database.sellers).get(), hasLength(1));
+    expect(await database.select(database.customers).get(), hasLength(1));
   });
 
   test('records opening balance and computes pending balance from ledger rows',
       () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await paymentsService.addOpeningBalance(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: OpeningBalanceInput(
         requestId: _uuid(1),
         amount: 1250.5,
@@ -134,11 +134,11 @@ void main() {
       ),
     );
 
-    final sellers = await sellersService.fetchSellers();
+    final customers = await customersService.fetchCustomers();
     final storedTransaction =
-        await database.select(database.sellerTransactions).getSingle();
+        await database.select(database.customerTransactions).getSingle();
 
-    expect(sellers.single.pendingBalance, 1250.5);
+    expect(customers.single.pendingBalance, 1250.5);
     expect(storedTransaction.entryType, 'OPENING_BALANCE');
     expect(storedTransaction.amount, '1250.5');
     expect(storedTransaction.createdByUserId, 'local-system-user');
@@ -148,14 +148,14 @@ void main() {
       () async {
     await database.close();
     database = LocalDatabase.memory();
-    sellersService = LocalSellersService(database: database);
+    customersService = LocalCustomersService(database: database);
     paymentsService = LocalPaymentsService(database: database);
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
-    await paymentsService.recordPayment(
-      RecordPaymentInput(
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
         requestId: _uuid(2),
-        sellerId: seller.id,
+        customerId: customer.id,
         amount: 10,
         occurredOn: '2026-01-03',
       ),
@@ -163,7 +163,7 @@ void main() {
 
     final user = await database.select(database.localUsers).getSingle();
     final transaction =
-        await database.select(database.sellerTransactions).getSingle();
+        await database.select(database.customerTransactions).getSingle();
     expect(user.id, 'local-system-user');
     expect(user.username, 'local-system');
     expect(transaction.createdByUserId, 'local-system-user');
@@ -171,27 +171,27 @@ void main() {
 
   test('records payments and balance adjustments with signed balance effect',
       () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await paymentsService.addOpeningBalance(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: OpeningBalanceInput(
         requestId: _uuid(3),
         amount: 1000,
         occurredOn: '2026-01-01',
       ),
     );
-    await paymentsService.recordPayment(
-      RecordPaymentInput(
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
         requestId: _uuid(4),
-        sellerId: seller.id,
+        customerId: customer.id,
         amount: 250.25,
         occurredOn: '2026-01-03',
         notes: 'Cash received',
       ),
     );
     await paymentsService.addBalanceAdjustment(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: BalanceAdjustmentInput(
         requestId: _uuid(5),
         direction: 'INCREASE',
@@ -200,7 +200,7 @@ void main() {
       ),
     );
     await paymentsService.addBalanceAdjustment(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: BalanceAdjustmentInput(
         requestId: _uuid(6),
         direction: 'DECREASE',
@@ -208,14 +208,14 @@ void main() {
         occurredOn: '2026-01-05',
       ),
     );
-    final ledger = await sellersService.fetchSellerLedger(seller.id);
+    final ledger = await customersService.fetchCustomerLedger(customer.id);
 
-    expect(ledger.seller.pendingBalance, 699.75);
+    expect(ledger.customer.pendingBalance, 699.75);
     expect(
       ledger.transactions.map((transaction) => transaction.entryType),
       <String>[
         'OPENING_BALANCE',
-        'PAYMENT',
+        'COLLECTION',
         'BALANCE_INCREASE_ADJUSTMENT',
         'BALANCE_DECREASE_ADJUSTMENT',
       ],
@@ -226,10 +226,10 @@ void main() {
   });
 
   test('orders ledger by occurred date then creation time', () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await paymentsService.addBalanceAdjustment(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: BalanceAdjustmentInput(
         requestId: _uuid(7),
         direction: 'INCREASE',
@@ -238,7 +238,7 @@ void main() {
       ),
     );
     await paymentsService.addOpeningBalance(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: OpeningBalanceInput(
         requestId: _uuid(8),
         amount: 100,
@@ -246,7 +246,7 @@ void main() {
       ),
     );
     await paymentsService.addBalanceAdjustment(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: BalanceAdjustmentInput(
         requestId: _uuid(9),
         direction: 'DECREASE',
@@ -255,7 +255,7 @@ void main() {
       ),
     );
 
-    final ledger = await sellersService.fetchSellerLedger(seller.id);
+    final ledger = await customersService.fetchCustomerLedger(customer.id);
 
     expect(
       ledger.transactions.map((transaction) => transaction.entryType),
@@ -269,10 +269,10 @@ void main() {
 
   test('rejects duplicate opening balances and idempotency conflicts',
       () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await paymentsService.addOpeningBalance(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: OpeningBalanceInput(
         requestId: _uuid(10),
         amount: 100,
@@ -281,7 +281,7 @@ void main() {
     );
 
     await paymentsService.addOpeningBalance(
-      sellerId: seller.id,
+      customerId: customer.id,
       input: OpeningBalanceInput(
         requestId: _uuid(10),
         amount: 100,
@@ -290,7 +290,7 @@ void main() {
     );
     await expectLater(
       () => paymentsService.addOpeningBalance(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: OpeningBalanceInput(
           requestId: _uuid(11),
           amount: 200,
@@ -301,7 +301,7 @@ void main() {
     );
     await expectLater(
       () => paymentsService.addOpeningBalance(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: OpeningBalanceInput(
           requestId: _uuid(10),
           amount: 150,
@@ -311,27 +311,27 @@ void main() {
       throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),
     );
     expect(
-        await database.select(database.sellerTransactions).get(), hasLength(1));
+        await database.select(database.customerTransactions).get(), hasLength(1));
   });
 
-  test('database rejects a second opening balance for the same seller',
+  test('database rejects a second opening balance for the same customer',
       () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
-    await _seedSellerTransaction(
+    await _seedCustomerTransaction(
       database,
       id: 'opening-1',
-      sellerId: seller.id,
+      customerId: customer.id,
       requestId: _uuid(12),
       entryType: 'OPENING_BALANCE',
       occurredOn: '2026-01-01',
     );
 
     await expectLater(
-      () => _seedSellerTransaction(
+      () => _seedCustomerTransaction(
         database,
         id: 'opening-2',
-        sellerId: seller.id,
+        customerId: customer.id,
         requestId: _uuid(13),
         entryType: 'OPENING_BALANCE',
         occurredOn: '2026-01-02',
@@ -339,15 +339,15 @@ void main() {
       throwsA(anything),
     );
     expect(
-        await database.select(database.sellerTransactions).get(), hasLength(1));
+        await database.select(database.customerTransactions).get(), hasLength(1));
   });
 
   test('rejects non-UUID request IDs without inserting ledger rows', () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await expectLater(
       () => paymentsService.addOpeningBalance(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: const OpeningBalanceInput(
           requestId: 'not-a-uuid',
           amount: 100,
@@ -357,10 +357,10 @@ void main() {
       throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
     );
     await expectLater(
-      () => paymentsService.recordPayment(
-        RecordPaymentInput(
+      () => paymentsService.recordCollection(
+        RecordCollectionInput(
           requestId: 'not-a-uuid',
-          sellerId: seller.id,
+          customerId: customer.id,
           amount: 10,
           occurredOn: '2026-01-01',
         ),
@@ -369,7 +369,7 @@ void main() {
     );
     await expectLater(
       () => paymentsService.addBalanceAdjustment(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: const BalanceAdjustmentInput(
           requestId: 'not-a-uuid',
           direction: 'INCREASE',
@@ -379,16 +379,16 @@ void main() {
       ),
       throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
     );
-    expect(await database.select(database.sellerTransactions).get(), isEmpty);
+    expect(await database.select(database.customerTransactions).get(), isEmpty);
   });
 
   test('rejects invalid occurred dates without inserting ledger rows',
       () async {
-    final seller = await sellersService.createSeller(_sellerInput());
+    final customer = await customersService.createCustomer(_customerInput());
 
     await expectLater(
       () => paymentsService.addOpeningBalance(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: OpeningBalanceInput(
           requestId: _uuid(14),
           amount: 100,
@@ -398,10 +398,10 @@ void main() {
       throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
     );
     await expectLater(
-      () => paymentsService.recordPayment(
-        RecordPaymentInput(
+      () => paymentsService.recordCollection(
+        RecordCollectionInput(
           requestId: _uuid(15),
-          sellerId: seller.id,
+          customerId: customer.id,
           amount: 10,
           occurredOn: '2026-1-1',
         ),
@@ -410,7 +410,7 @@ void main() {
     );
     await expectLater(
       () => paymentsService.addBalanceAdjustment(
-        sellerId: seller.id,
+        customerId: customer.id,
         input: BalanceAdjustmentInput(
           requestId: _uuid(16),
           direction: 'DECREASE',
@@ -420,11 +420,11 @@ void main() {
       ),
       throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
     );
-    expect(await database.select(database.sellerTransactions).get(), isEmpty);
+    expect(await database.select(database.customerTransactions).get(), isEmpty);
   });
 }
 
-CreateSellerInput _sellerInput({
+CreateCustomerInput _customerInput({
   String name = 'Acme Stores',
   String address = '1 Market Road',
   String? phone = '9999999999',
@@ -432,7 +432,7 @@ CreateSellerInput _sellerInput({
   String state = 'Maharashtra',
   String stateCode = '27',
 }) {
-  return CreateSellerInput(
+  return CreateCustomerInput(
     name: name,
     address: address,
     phone: phone,
@@ -467,15 +467,15 @@ Future<void> _seedLocalUser(LocalDatabase database) {
       );
 }
 
-Future<void> _seedSeller(
+Future<void> _seedCustomer(
   LocalDatabase database, {
   required String id,
   required String name,
   required String? phone,
   required bool isActive,
 }) {
-  return database.into(database.sellers).insert(
-        SellersCompanion.insert(
+  return database.into(database.customers).insert(
+        CustomersCompanion.insert(
           id: id,
           name: name,
           address: 'Seeded address',
@@ -487,22 +487,22 @@ Future<void> _seedSeller(
       );
 }
 
-Future<void> _seedSellerTransaction(
+Future<void> _seedCustomerTransaction(
   LocalDatabase database, {
   required String id,
-  required String sellerId,
+  required String customerId,
   required String requestId,
   required String entryType,
   required String occurredOn,
 }) {
-  return database.into(database.sellerTransactions).insert(
-        SellerTransactionsCompanion.insert(
+  return database.into(database.customerTransactions).insert(
+        CustomerTransactionsCompanion.insert(
           id: id,
-          sellerId: sellerId,
+          customerId: customerId,
           requestId: Value(requestId),
           requestHash: const Value('request-hash'),
-          openingBalanceSellerId: Value(
-            entryType == 'OPENING_BALANCE' ? sellerId : null,
+          openingBalanceCustomerId: Value(
+            entryType == 'OPENING_BALANCE' ? customerId : null,
           ),
           entryType: entryType,
           amount: '100',

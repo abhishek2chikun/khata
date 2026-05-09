@@ -72,8 +72,8 @@ def test_adjust_stock_rejects_archived_products(client, auth_headers):
 
 
 def test_opening_balance_payment_adjustment_and_ledger_view(client, auth_headers):
-    seller = client.post(
-        "/sellers",
+    customer = client.post(
+        "/customers",
         headers=auth_headers,
         json={
             "name": "ABC Stores",
@@ -82,10 +82,10 @@ def test_opening_balance_payment_adjustment_and_ledger_view(client, auth_headers
             "gstin": "27BBBBB0000B1Z5",
         },
     )
-    seller_id = seller.json()["id"]
+    customer_id = customer.json()["id"]
 
     opening = client.post(
-        f"/sellers/{seller_id}/opening-balance",
+        f"/customers/{customer_id}/opening-balance",
         headers=auth_headers,
         json={"request_id": str(uuid4()), "amount": "500.00", "occurred_on": "2026-04-19"},
     )
@@ -93,57 +93,57 @@ def test_opening_balance_payment_adjustment_and_ledger_view(client, auth_headers
 
     payment_request_id = str(uuid4())
     payment = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
-        json={"request_id": payment_request_id, "seller_id": seller_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
+        json={"request_id": payment_request_id, "customer_id": customer_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
     )
     assert payment.status_code == 201
 
     payment_repeat = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
-        json={"request_id": payment_request_id, "seller_id": seller_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
+        json={"request_id": payment_request_id, "customer_id": customer_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
     )
     assert payment_repeat.status_code == 201
     assert payment_repeat.json() == payment.json()
 
     payment_conflict = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
-        json={"request_id": payment_request_id, "seller_id": seller_id, "amount": "150.00", "occurred_on": "2026-04-20", "notes": "Changed"},
+        json={"request_id": payment_request_id, "customer_id": customer_id, "amount": "150.00", "occurred_on": "2026-04-20", "notes": "Changed"},
     )
     assert payment_conflict.status_code == 409
 
     adjustment_request_id = str(uuid4())
     adjustment = client.post(
-        f"/sellers/{seller_id}/balance-adjustment",
+        f"/customers/{customer_id}/balance-adjustment",
         headers=auth_headers,
         json={"request_id": adjustment_request_id, "direction": "INCREASE", "amount": "50.00", "occurred_on": "2026-04-21", "notes": "Legacy correction"},
     )
     assert adjustment.status_code == 201
 
     adjustment_repeat = client.post(
-        f"/sellers/{seller_id}/balance-adjustment",
+        f"/customers/{customer_id}/balance-adjustment",
         headers=auth_headers,
         json={"request_id": adjustment_request_id, "direction": "INCREASE", "amount": "50.00", "occurred_on": "2026-04-21", "notes": "Legacy correction"},
     )
     assert adjustment_repeat.status_code == 201
     assert adjustment_repeat.json() == adjustment.json()
 
-    ledger = client.get(f"/sellers/{seller_id}/ledger", headers=auth_headers)
+    ledger = client.get(f"/customers/{customer_id}/ledger", headers=auth_headers)
     assert ledger.status_code == 200
     assert len(ledger.json()["transactions"]) == 3
-    assert ledger.json()["seller"]["pending_balance"] == "450.00"
+    assert ledger.json()["customer"]["pending_balance"] == "450.00"
     assert ledger.json()["invoices"] == []
 
-    seller_detail = client.get(f"/sellers/{seller_id}", headers=auth_headers)
-    assert seller_detail.status_code == 200
-    assert seller_detail.json()["pending_balance"] == "450.00"
+    customer_detail = client.get(f"/customers/{customer_id}", headers=auth_headers)
+    assert customer_detail.status_code == 200
+    assert customer_detail.json()["pending_balance"] == "450.00"
 
 
-def test_opening_balance_and_adjustments_reject_invalid_or_archived_sellers(client, auth_headers):
-    seller = client.post(
-        "/sellers",
+def test_opening_balance_and_adjustments_reject_invalid_or_archived_customers(client, auth_headers):
+    customer = client.post(
+        "/customers",
         headers=auth_headers,
         json={
             "name": "ABC Stores",
@@ -152,10 +152,10 @@ def test_opening_balance_and_adjustments_reject_invalid_or_archived_sellers(clie
             "gstin": "27BBBBB0000B1Z5",
         },
     )
-    seller_id = seller.json()["id"]
+    customer_id = customer.json()["id"]
 
     zero_opening = client.post(
-        f"/sellers/{seller_id}/opening-balance",
+        f"/customers/{customer_id}/opening-balance",
         headers=auth_headers,
         json={"request_id": str(uuid4()), "amount": "0.00", "occurred_on": "2026-04-19"},
     )
@@ -163,14 +163,14 @@ def test_opening_balance_and_adjustments_reject_invalid_or_archived_sellers(clie
 
     first_opening_request_id = str(uuid4())
     first_opening = client.post(
-        f"/sellers/{seller_id}/opening-balance",
+        f"/customers/{customer_id}/opening-balance",
         headers=auth_headers,
         json={"request_id": first_opening_request_id, "amount": "500.00", "occurred_on": "2026-04-19"},
     )
     assert first_opening.status_code == 201
 
     repeat_opening = client.post(
-        f"/sellers/{seller_id}/opening-balance",
+        f"/customers/{customer_id}/opening-balance",
         headers=auth_headers,
         json={"request_id": first_opening_request_id, "amount": "500.00", "occurred_on": "2026-04-19"},
     )
@@ -178,7 +178,7 @@ def test_opening_balance_and_adjustments_reject_invalid_or_archived_sellers(clie
     assert repeat_opening.json() == first_opening.json()
 
     second_opening = client.post(
-        f"/sellers/{seller_id}/opening-balance",
+        f"/customers/{customer_id}/opening-balance",
         headers=auth_headers,
         json={"request_id": str(uuid4()), "amount": "200.00", "occurred_on": "2026-04-20"},
     )
@@ -186,34 +186,34 @@ def test_opening_balance_and_adjustments_reject_invalid_or_archived_sellers(clie
     assert second_opening.json()["error"]["code"] == "OPENING_BALANCE_EXISTS"
 
     zero_payment = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
-        json={"request_id": str(uuid4()), "seller_id": seller_id, "amount": "0.00", "occurred_on": "2026-04-20", "notes": "Cash"},
+        json={"request_id": str(uuid4()), "customer_id": customer_id, "amount": "0.00", "occurred_on": "2026-04-20", "notes": "Cash"},
     )
     assert zero_payment.status_code == 400
 
     zero_adjustment = client.post(
-        f"/sellers/{seller_id}/balance-adjustment",
+        f"/customers/{customer_id}/balance-adjustment",
         headers=auth_headers,
         json={"request_id": str(uuid4()), "direction": "INCREASE", "amount": "0.00", "occurred_on": "2026-04-21", "notes": "Legacy correction"},
     )
     assert zero_adjustment.status_code == 400
 
-    archived = client.delete(f"/sellers/{seller_id}", headers=auth_headers)
+    archived = client.delete(f"/customers/{customer_id}", headers=auth_headers)
     assert archived.status_code == 200
 
     archived_payment = client.post(
-        "/payments",
+        "/collections",
         headers=auth_headers,
-        json={"request_id": str(uuid4()), "seller_id": seller_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
+        json={"request_id": str(uuid4()), "customer_id": customer_id, "amount": "100.00", "occurred_on": "2026-04-20", "notes": "Cash"},
     )
     assert archived_payment.status_code == 400
-    assert archived_payment.json()["error"]["code"] == "SELLER_ARCHIVED"
+    assert archived_payment.json()["error"]["code"] == "CUSTOMER_ARCHIVED"
 
     archived_adjustment = client.post(
-        f"/sellers/{seller_id}/balance-adjustment",
+        f"/customers/{customer_id}/balance-adjustment",
         headers=auth_headers,
         json={"request_id": str(uuid4()), "direction": "INCREASE", "amount": "50.00", "occurred_on": "2026-04-21", "notes": "Legacy correction"},
     )
     assert archived_adjustment.status_code == 400
-    assert archived_adjustment.json()["error"]["code"] == "SELLER_ARCHIVED"
+    assert archived_adjustment.json()["error"]["code"] == "CUSTOMER_ARCHIVED"

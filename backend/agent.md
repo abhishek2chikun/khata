@@ -1,6 +1,6 @@
 # Backend — agent.md
 
-Role: FastAPI + PostgreSQL backend for auth, inventory, sellers, khata ledger, invoicing, and all business-data writes.
+Role: FastAPI + PostgreSQL backend for auth, inventory, customers, khata ledger, invoicing, and all business-data writes.
 
 ## How to use this system
 
@@ -16,10 +16,10 @@ This backend serves a mobile-first internal billing and khata workflow. The live
 
 - auth: login, refresh, logout, current user
 - products: CRUD-ish management plus manual stock adjustment
-- sellers: CRUD-ish management, opening balance, payments, balance adjustment, ledger view
+- customers: CRUD-ish management, opening balance, collections, balance adjustment, ledger view
 - company profile: active company profile read/upsert
 - invoices: quote, create, list, detail, cancel
-- payments: top-level payment creation route backed by seller ledger logic
+- collections: top-level collection creation route backed by customer khata ledger logic
 
 Important live behavior:
 
@@ -72,7 +72,7 @@ backend/
 | Persistence models | Done | `backend/app/models/` | None yet |
 | Request/response schemas | Done | `backend/app/schemas/` | None yet |
 | Products domain | Done | `backend/app/services/product_service.py`, `backend/app/routers/products.py` | None yet |
-| Sellers + ledger domain | Done | `backend/app/services/seller_service.py`, `backend/app/routers/sellers.py` | None yet |
+| Customers + ledger domain | Done | `backend/app/services/customer_service.py`, `backend/app/routers/customers.py` | None yet |
 | Company profile domain | Done | `backend/app/services/company_profile_service.py`, `backend/app/routers/company_profile.py` | None yet |
 | Invoice domain | Done | `backend/app/services/invoice_service.py`, `backend/app/routers/invoices.py` | None yet |
 | CLI commands | Done | `backend/app/commands/` | None yet |
@@ -125,7 +125,7 @@ backend/
 ## Progress
 
 - Auth, session rotation, and secure current-user lookup are live.
-- Products, sellers, company profile, payments, and invoice quote/create/list/detail/cancel are live.
+- Products, customers, company profile, collections, and invoice quote/create/list/detail/cancel are live.
 - Demo seed data now exists for realistic manual testing.
 - Backend test isolation is safer than before because destructive resets are blocked on non-test DB names by default.
 

@@ -7,15 +7,15 @@ import '../models/invoice_detail.dart';
 import '../models/invoice_draft.dart';
 import '../models/invoice_quote.dart';
 import '../models/product.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/invoices_service.dart';
 import '../services/payments_service.dart';
 
 class InvoiceDraftController extends ChangeNotifier {
   InvoiceDraftController(
-      {required InvoicesService invoicesService, Seller? initialSeller})
+      {required InvoicesService invoicesService, Customer? initialCustomer})
       : _invoicesService = invoicesService,
-        _draft = InvoiceDraft(seller: initialSeller);
+        _draft = InvoiceDraft(customer: initialCustomer);
 
   final InvoicesService _invoicesService;
 
@@ -39,8 +39,8 @@ class InvoiceDraftController extends ChangeNotifier {
   String? get submitErrorMessage => _submitErrorMessage;
   String? get requestId => _requestId;
 
-  void updateSeller(Seller? seller) {
-    _updateDraft(_draft.copyWith(seller: seller, clearSeller: seller == null));
+  void updateCustomer(Customer? customer) {
+    _updateDraft(_draft.copyWith(customer: customer, clearCustomer: customer == null));
   }
 
   void updateInvoiceDate(String invoiceDate) {

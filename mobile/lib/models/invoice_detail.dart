@@ -1,11 +1,11 @@
 class InvoiceDetail {
   const InvoiceDetail({
     required this.id,
-    required this.sellerId,
+    required this.customerId,
     required this.invoiceNumber,
     required this.status,
     required this.paymentMode,
-    required this.sellerName,
+    required this.customerName,
     required this.invoiceDate,
     required this.grandTotal,
     required this.notes,
@@ -14,11 +14,11 @@ class InvoiceDetail {
   });
 
   final String id;
-  final String sellerId;
+  final String customerId;
   final String invoiceNumber;
   final String status;
   final String paymentMode;
-  final String sellerName;
+  final String customerName;
   final String invoiceDate;
   final double grandTotal;
   final String? notes;
@@ -28,13 +28,13 @@ class InvoiceDetail {
   factory InvoiceDetail.fromJson(Map<String, dynamic> json) {
     return InvoiceDetail(
       id: json['id'].toString(),
-      sellerId: json['seller_id'].toString(),
+      customerId: json['customer_id'].toString(),
       invoiceNumber: json['invoice_number']?.toString() ?? '',
       status: json['status'] as String? ?? '',
       paymentMode: json['payment_mode'] as String? ?? '',
-      sellerName: (json['seller_snapshot'] as Map<String, dynamic>? ??
+      customerName: (json['customer_snapshot'] as Map<String, dynamic>? ??
               const <String, dynamic>{})['name'] as String? ??
-          json['seller_name'] as String? ??
+          json['customer_name'] as String? ??
           '',
       invoiceDate: json['invoice_date'] as String? ?? '',
       grandTotal: _toDouble(json['grand_total']),

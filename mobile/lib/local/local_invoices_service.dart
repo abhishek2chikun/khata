@@ -10,7 +10,7 @@ import '../models/invoice_quote.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalInvoicesService implements InvoicesService {
   LocalInvoicesService({required LocalDatabase database})
@@ -66,13 +66,13 @@ class LocalInvoicesService implements InvoicesService {
               requestId: requestId,
               requestHash: requestHash,
               invoiceNumber: invoiceNumber,
-              sellerId: prepared.seller.id,
-              sellerName: prepared.seller.name,
-              sellerAddress: prepared.seller.address,
-              sellerState: Value(prepared.seller.state),
-              sellerStateCode: Value(prepared.seller.stateCode),
-              sellerPhone: Value(prepared.seller.phone),
-              sellerGstin: Value(prepared.seller.gstin),
+              customerId: prepared.customer.id,
+              customerName: prepared.customer.name,
+              customerAddress: prepared.customer.address,
+              customerState: Value(prepared.customer.state),
+              customerStateCode: Value(prepared.customer.stateCode),
+              customerPhone: Value(prepared.customer.phone),
+              customerGstin: Value(prepared.customer.gstin),
               placeOfSupplyState: prepared.placeOfSupplyState,
               placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
               companyName: prepared.company.name,
@@ -170,10 +170,10 @@ class LocalInvoicesService implements InvoicesService {
       }
 
       if (draft.paymentMode == 'CREDIT') {
-        await _database.into(_database.sellerTransactions).insert(
-              SellerTransactionsCompanion.insert(
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
-                sellerId: prepared.seller.id,
+                customerId: prepared.customer.id,
                 invoiceId: Value(invoiceId),
                 entryType: 'CREDIT_SALE',
                 amount: _normalizeDecimal(prepared.totals.grandTotal),
@@ -284,10 +284,10 @@ class LocalInvoicesService implements InvoicesService {
             );
       }
       if (invoice.paymentMode == 'CREDIT') {
-        await _database.into(_database.sellerTransactions).insert(
-              SellerTransactionsCompanion.insert(
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
-                sellerId: invoice.sellerId,
+                customerId: invoice.customerId,
                 invoiceId: Value(invoiceId),
                 entryType: 'INVOICE_CANCEL_REVERSAL',
                 amount: invoice.grandTotal,
@@ -304,28 +304,28 @@ class LocalInvoicesService implements InvoicesService {
 
   Future<_PreparedInvoice> _prepareInvoice(InvoiceDraft draft) async {
     _validatePaymentMode(draft.paymentMode);
-    final draftSeller = draft.seller;
-    if (draftSeller == null) {
+    final draftCustomer = draft.customer;
+    if (draftCustomer == null) {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
-        message: 'seller_id is required',
+        message: 'customer_id is required',
         statusCode: 400,
       );
     }
-    final seller = await (_database.select(_database.sellers)
-          ..where((seller) => seller.id.equals(draftSeller.id)))
+    final customer = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(draftCustomer.id)))
         .getSingleOrNull();
-    if (seller == null) {
+    if (customer == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
-        message: 'Seller not found',
+        message: 'Customer not found',
         statusCode: 404,
       );
     }
-    if (!seller.isActive) {
+    if (!customer.isActive) {
       throw const ApiError(
-        code: 'SELLER_ARCHIVED',
-        message: 'Archived seller cannot be invoiced',
+        code: 'CUSTOMER_ARCHIVED',
+        message: 'Archived customer cannot be invoiced',
         statusCode: 400,
       );
     }
@@ -346,17 +346,17 @@ class LocalInvoicesService implements InvoicesService {
       message: 'Company profile state and state_code do not match',
     );
     if (_emptyToNull(draft.placeOfSupplyStateCode) == null &&
-        seller.state != null &&
-        seller.stateCode != null) {
+        customer.state != null &&
+        customer.stateCode != null) {
       _validateStateMetadata(
-        state: seller.state!,
-        stateCode: seller.stateCode!,
-        message: 'Seller state and state_code do not match',
+        state: customer.state!,
+        stateCode: customer.stateCode!,
+        message: 'Customer state and state_code do not match',
       );
     }
 
     final placeOfSupplyStateCode = _resolvePlaceOfSupplyStateCode(
-      seller,
+      customer,
       draft.placeOfSupplyStateCode,
     );
     final placeOfSupplyState = _stateName(placeOfSupplyStateCode);
@@ -425,7 +425,7 @@ class LocalInvoicesService implements InvoicesService {
     }
 
     return _PreparedInvoice(
-      seller: seller,
+      customer: customer,
       company: company,
       placeOfSupplyState: placeOfSupplyState,
       placeOfSupplyStateCode: placeOfSupplyStateCode,
@@ -523,11 +523,11 @@ class LocalInvoicesService implements InvoicesService {
         .get();
     return InvoiceDetail(
       id: invoice.id,
-      sellerId: invoice.sellerId,
+      customerId: invoice.customerId,
       invoiceNumber: invoice.invoiceNumber.toString(),
       status: invoice.status,
       paymentMode: invoice.paymentMode,
-      sellerName: invoice.sellerName,
+      customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
       grandTotal: double.parse(invoice.grandTotal),
       notes: invoice.notes,
@@ -548,8 +548,8 @@ class LocalInvoicesService implements InvoicesService {
     return InvoiceSummary(
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber.toString(),
-      sellerId: invoice.sellerId,
-      sellerName: invoice.sellerName,
+      customerId: invoice.customerId,
+      customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
       status: invoice.status,
       paymentMode: invoice.paymentMode,
@@ -637,12 +637,12 @@ class LocalInvoicesService implements InvoicesService {
     }
   }
 
-  String _resolvePlaceOfSupplyStateCode(Seller seller, String? provided) {
+  String _resolvePlaceOfSupplyStateCode(Customer customer, String? provided) {
     if (provided != null && provided.trim().isNotEmpty) {
       return _normalizeStateCode(provided);
     }
-    if (seller.stateCode != null && seller.stateCode!.isNotEmpty) {
-      return _normalizeStateCode(seller.stateCode!);
+    if (customer.stateCode != null && customer.stateCode!.isNotEmpty) {
+      return _normalizeStateCode(customer.stateCode!);
     }
     throw const ApiError(
       code: 'VALIDATION_ERROR',
@@ -653,7 +653,7 @@ class LocalInvoicesService implements InvoicesService {
 
   String _invoiceRequestHash(InvoiceDraft draft, String resolvedStateCode) {
     final payload = <String, dynamic>{
-      'seller_id': draft.seller?.id,
+      'customer_id': draft.customer?.id,
       'invoice_date': draft.invoiceDate,
       'payment_mode': draft.paymentMode,
       'place_of_supply_state_code': resolvedStateCode,
@@ -792,7 +792,7 @@ class LocalInvoicesService implements InvoicesService {
 
 class _PreparedInvoice {
   const _PreparedInvoice({
-    required this.seller,
+    required this.customer,
     required this.company,
     required this.placeOfSupplyState,
     required this.placeOfSupplyStateCode,
@@ -802,7 +802,7 @@ class _PreparedInvoice {
     required this.totals,
   });
 
-  final Seller seller;
+  final Customer customer;
   final CompanyProfile company;
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;

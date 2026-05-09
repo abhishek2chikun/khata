@@ -3,55 +3,55 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
-import '../models/seller_ledger.dart';
+import '../models/customer.dart';
+import '../models/customer_ledger.dart';
 import '../services/payments_service.dart';
-import '../services/sellers_service.dart';
+import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
 import 'balance_adjustment_screen.dart';
 import 'opening_balance_screen.dart';
 import 'record_payment_screen.dart';
 
-class SellerDetailScreen extends StatefulWidget {
-  const SellerDetailScreen({
+class CustomerDetailScreen extends StatefulWidget {
+  const CustomerDetailScreen({
     super.key,
-    required this.sellerId,
-    required this.sellersService,
+    required this.customerId,
+    required this.customersService,
     required this.paymentsService,
     required this.onCreateInvoice,
   });
 
-  final String sellerId;
-  final SellersService sellersService;
+  final String customerId;
+  final CustomersService customersService;
   final PaymentsService paymentsService;
-  final Future<bool> Function(Seller seller) onCreateInvoice;
+  final Future<bool> Function(Customer customer) onCreateInvoice;
 
   @override
-  State<SellerDetailScreen> createState() => _SellerDetailScreenState();
+  State<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
 }
 
-class _SellerDetailScreenState extends State<SellerDetailScreen> {
-  SellerLedger? _ledger;
+class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+  CustomerLedger? _ledger;
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadSeller();
+    _loadCustomer();
   }
 
   @override
   Widget build(BuildContext context) {
     final ledger = _ledger;
-    final seller = ledger?.seller;
+    final customer = ledger?.customer;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(seller?.name ?? 'Seller detail'),
+        title: Text(customer == null ? 'Customer detail' : 'Customer khata'),
         actions: <Widget>[
           IconButton(
-            onPressed: _isLoading ? null : _loadSeller,
+            onPressed: _isLoading ? null : _loadCustomer,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
@@ -68,17 +68,17 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                     ErrorBanner(message: _errorMessage!),
                     const SizedBox(height: 16),
                   ],
-                  if (seller != null) ...<Widget>[
-                    Text(seller.name, style: Theme.of(context).textTheme.headlineSmall),
+                  if (customer != null) ...<Widget>[
+                    Text(customer.name, style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
-                    Text(seller.address),
-                    if (seller.phone != null && seller.phone!.isNotEmpty) Text('Phone: ${seller.phone}'),
-                    if (seller.gstin != null && seller.gstin!.isNotEmpty) Text('GSTIN: ${seller.gstin}'),
-                    if (seller.state != null && seller.state!.isNotEmpty)
-                      Text('State: ${seller.state} (${seller.stateCode ?? ''})'),
+                    Text(customer.address),
+                    if (customer.phone != null && customer.phone!.isNotEmpty) Text('Phone: ${customer.phone}'),
+                    if (customer.gstin != null && customer.gstin!.isNotEmpty) Text('GSTIN: ${customer.gstin}'),
+                    if (customer.state != null && customer.state!.isNotEmpty)
+                      Text('State: ${customer.state} (${customer.stateCode ?? ''})'),
                     const SizedBox(height: 12),
                     Text(
-                      'Pending balance: ${seller.pendingBalance.toStringAsFixed(2)}',
+                      'Pending balance: ${customer.pendingBalance.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
@@ -87,31 +87,31 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                       runSpacing: 8,
                       children: <Widget>[
                         FilledButton(
-                          key: const Key('recordPaymentActionButton'),
-                          onPressed: () => _openRecordPayment(seller),
-                          child: const Text('Record payment'),
+                          key: const Key('recordCollectionActionButton'),
+                          onPressed: () => _openRecordCollection(customer),
+                          child: const Text('Record collection'),
                         ),
                         FilledButton.tonal(
                           key: const Key('openingBalanceActionButton'),
-                          onPressed: () => _openOpeningBalance(seller),
+                          onPressed: () => _openOpeningBalance(customer),
                           child: const Text('Add opening balance'),
                         ),
                         FilledButton.tonal(
                           key: const Key('balanceAdjustmentActionButton'),
-                          onPressed: () => _openBalanceAdjustment(seller),
+                          onPressed: () => _openBalanceAdjustment(customer),
                           child: const Text('Balance adjustment'),
                         ),
                         OutlinedButton(
                           key: const Key('createInvoiceActionButton'),
-                          onPressed: seller.isActive ? () => _openCreateInvoice(seller) : null,
+                          onPressed: customer.isActive ? () => _openCreateInvoice(customer) : null,
                           child: const Text('Create invoice'),
                         ),
-                        if (!seller.isActive)
-                          const Text('Create invoice unavailable for archived sellers'),
+                        if (!customer.isActive)
+                          const Text('Create invoice unavailable for archived customers'),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text('Ledger timeline', style: Theme.of(context).textTheme.titleLarge),
+                    Text('Khata timeline', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
                     if (ledger!.transactions.isEmpty)
                       const Text('No ledger transactions yet')
@@ -131,7 +131,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     );
   }
 
-  Widget _buildTransactionTile(SellerLedgerTransaction transaction) {
+  Widget _buildTransactionTile(CustomerLedgerTransaction transaction) {
     return Card(
       child: ListTile(
         title: Text(transaction.entryType),
@@ -141,7 +141,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     );
   }
 
-  Widget _buildInvoiceTile(SellerInvoiceHistoryEntry invoice) {
+  Widget _buildInvoiceTile(CustomerInvoiceHistoryEntry invoice) {
     return Card(
       child: ListTile(
         title: Text(invoice.invoiceNumber),
@@ -151,14 +151,14 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     );
   }
 
-  Future<void> _loadSeller() async {
+  Future<void> _loadCustomer() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final ledger = await widget.sellersService.fetchSellerLedger(widget.sellerId);
+      final ledger = await widget.customersService.fetchCustomerLedger(widget.customerId);
       if (!mounted) {
         return;
       }
@@ -181,55 +181,55 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     }
   }
 
-  Future<void> _openRecordPayment(Seller seller) async {
+  Future<void> _openRecordCollection(Customer customer) async {
     final shouldRefresh = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
-            builder: (_) => RecordPaymentScreen(
+            builder: (_) => RecordCollectionScreen(
               paymentsService: widget.paymentsService,
-              seller: seller,
+              customer: customer,
             ),
           ),
         ) ??
         false;
     if (shouldRefresh && mounted) {
-      await _loadSeller();
+      await _loadCustomer();
     }
   }
 
-  Future<void> _openOpeningBalance(Seller seller) async {
+  Future<void> _openOpeningBalance(Customer customer) async {
     final shouldRefresh = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => OpeningBalanceScreen(
               paymentsService: widget.paymentsService,
-              seller: seller,
+              customer: customer,
             ),
           ),
         ) ??
         false;
     if (shouldRefresh && mounted) {
-      await _loadSeller();
+      await _loadCustomer();
     }
   }
 
-  Future<void> _openBalanceAdjustment(Seller seller) async {
+  Future<void> _openBalanceAdjustment(Customer customer) async {
     final shouldRefresh = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => BalanceAdjustmentScreen(
               paymentsService: widget.paymentsService,
-              seller: seller,
+              customer: customer,
             ),
           ),
         ) ??
         false;
     if (shouldRefresh && mounted) {
-      await _loadSeller();
+      await _loadCustomer();
     }
   }
 
-  Future<void> _openCreateInvoice(Seller seller) async {
-    final shouldRefresh = await widget.onCreateInvoice(seller);
+  Future<void> _openCreateInvoice(Customer customer) async {
+    final shouldRefresh = await widget.onCreateInvoice(customer);
     if (shouldRefresh && mounted) {
-      await _loadSeller();
+      await _loadCustomer();
     }
   }
 
@@ -240,6 +240,6 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     if (error is SocketException || error is HttpException) {
       return 'Unable to reach the server';
     }
-    return 'Unable to load seller detail';
+    return 'Unable to load customer detail';
   }
 }

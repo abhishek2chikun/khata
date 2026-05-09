@@ -52,7 +52,7 @@ class Products extends Table {
       ];
 }
 
-class Sellers extends Table {
+class Customers extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get address => text()();
@@ -122,13 +122,13 @@ class Invoices extends Table {
   TextColumn get requestId => text()();
   TextColumn get requestHash => text()();
   IntColumn get invoiceNumber => integer()();
-  TextColumn get sellerId => text().references(Sellers, #id)();
-  TextColumn get sellerName => text()();
-  TextColumn get sellerAddress => text()();
-  TextColumn get sellerState => text().nullable()();
-  TextColumn get sellerStateCode => text().nullable()();
-  TextColumn get sellerPhone => text().nullable()();
-  TextColumn get sellerGstin => text().nullable()();
+  TextColumn get customerId => text().references(Customers, #id)();
+  TextColumn get customerName => text()();
+  TextColumn get customerAddress => text()();
+  TextColumn get customerState => text().nullable()();
+  TextColumn get customerStateCode => text().nullable()();
+  TextColumn get customerPhone => text().nullable()();
+  TextColumn get customerGstin => text().nullable()();
   TextColumn get placeOfSupplyState => text()();
   TextColumn get placeOfSupplyStateCode => text()();
   TextColumn get companyName => text()();
@@ -192,13 +192,13 @@ class StockMovements extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-class SellerTransactions extends Table {
+class CustomerTransactions extends Table {
   TextColumn get id => text()();
-  TextColumn get sellerId => text().references(Sellers, #id)();
+  TextColumn get customerId => text().references(Customers, #id)();
   TextColumn get invoiceId => text().nullable().references(Invoices, #id)();
   TextColumn get requestId => text().nullable()();
   TextColumn get requestHash => text().nullable()();
-  TextColumn get openingBalanceSellerId => text().nullable()();
+  TextColumn get openingBalanceCustomerId => text().nullable()();
   TextColumn get entryType => text()();
   TextColumn get amount => text()();
   TextColumn get occurredOn => text()();
@@ -212,7 +212,7 @@ class SellerTransactions extends Table {
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
         {requestId},
-        {openingBalanceSellerId},
+        {openingBalanceCustomerId},
       ];
 }
 
@@ -312,8 +312,8 @@ class BackupSettings extends Table {
   LocalUsers,
   Products,
   StockMovements,
-  Sellers,
-  SellerTransactions,
+  Customers,
+  CustomerTransactions,
   Buyers,
   BuyerTransactions,
   CompanyProfiles,
@@ -331,7 +331,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -414,9 +414,65 @@ class LocalDatabase extends _$LocalDatabase {
             await m.createTable(buyers);
             await m.createTable(buyerTransactions);
           }
+          if (from < 4) {
+            await customStatement('PRAGMA foreign_keys = OFF');
+            if (await _tableExists('sellers')) {
+              await customStatement('ALTER TABLE sellers RENAME TO customers');
+            }
+            if (await _tableExists('seller_transactions')) {
+              await customStatement('ALTER TABLE seller_transactions RENAME TO customer_transactions');
+            }
+            if (await _columnExists('customer_transactions', 'seller_id')) {
+              await customStatement('ALTER TABLE customer_transactions RENAME COLUMN seller_id TO customer_id');
+            }
+            if (await _columnExists('customer_transactions', 'opening_balance_seller_id')) {
+              await customStatement('ALTER TABLE customer_transactions RENAME COLUMN opening_balance_seller_id TO opening_balance_customer_id');
+            }
+            if (await _columnExists('invoices', 'seller_id')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_id TO customer_id');
+            }
+            if (await _columnExists('invoices', 'seller_name')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_name TO customer_name');
+            }
+            if (await _columnExists('invoices', 'seller_address')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_address TO customer_address');
+            }
+            if (await _columnExists('invoices', 'seller_state')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_state TO customer_state');
+            }
+            if (await _columnExists('invoices', 'seller_state_code')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_state_code TO customer_state_code');
+            }
+            if (await _columnExists('invoices', 'seller_phone')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_phone TO customer_phone');
+            }
+            if (await _columnExists('invoices', 'seller_gstin')) {
+              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_gstin TO customer_gstin');
+            }
+            if (await _tableExists('customer_transactions')) {
+              await customStatement("UPDATE customer_transactions SET entry_type = 'COLLECTION' WHERE entry_type = 'PAYMENT'");
+            }
+            await customStatement('PRAGMA foreign_keys = ON');
+          }
         },
         beforeOpen: (_) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  Future<bool> _tableExists(String tableName) async {
+    final result = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: <Variable<Object>>[Variable<String>(tableName)],
+    ).get();
+    return result.isNotEmpty;
+  }
+
+  Future<bool> _columnExists(String tableName, String columnName) async {
+    if (!await _tableExists(tableName)) {
+      return false;
+    }
+    final result = await customSelect('PRAGMA table_info($tableName)').get();
+    return result.any((row) => row.read<String>('name') == columnName);
+  }
 }

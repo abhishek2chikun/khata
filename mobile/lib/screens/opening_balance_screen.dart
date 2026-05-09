@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
 
@@ -9,11 +9,11 @@ class OpeningBalanceScreen extends StatefulWidget {
   const OpeningBalanceScreen({
     super.key,
     required this.paymentsService,
-    required this.seller,
+    required this.customer,
   });
 
   final PaymentsService paymentsService;
-  final Seller seller;
+  final Customer customer;
 
   @override
   State<OpeningBalanceScreen> createState() => _OpeningBalanceScreenState();
@@ -116,7 +116,7 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
 
     try {
       await widget.paymentsService.addOpeningBalance(
-        sellerId: widget.seller.id,
+        customerId: widget.customer.id,
         input: OpeningBalanceInput(
           requestId: generateRequestId(),
           amount: amount,

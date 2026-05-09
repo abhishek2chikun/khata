@@ -6,7 +6,7 @@ import '../models/api_error.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
 import '../services/products_service.dart';
-import '../services/sellers_service.dart';
+import '../services/customers_service.dart';
 import '../widgets/app_navigation_drawer.dart';
 import '../widgets/error_banner.dart';
 import 'create_invoice_screen.dart';
@@ -17,13 +17,13 @@ class InvoiceListScreen extends StatefulWidget {
     super.key,
     required this.invoicesService,
     required this.productsService,
-    required this.sellersService,
+    required this.customersService,
     required this.drawer,
   });
 
   final InvoicesService invoicesService;
   final ProductsService productsService;
-  final SellersService sellersService;
+  final CustomersService customersService;
   final Widget drawer;
 
   @override
@@ -103,7 +103,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             onTap: () => _openInvoice(invoice),
             title: Text('Invoice #${invoice.invoiceNumber}'),
             subtitle: Text(
-              '${invoice.sellerName} • ${invoice.invoiceDate} • ${invoice.paymentMode}',
+              '${invoice.customerName} • ${invoice.invoiceDate} • ${invoice.paymentMode}',
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +157,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             builder: (_) => CreateInvoiceScreen(
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
-              sellersService: widget.sellersService,
+              customersService: widget.customersService,
             ),
           ),
         ) ??

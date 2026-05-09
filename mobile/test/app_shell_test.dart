@@ -12,14 +12,14 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   testWidgets('BillingApp builds the login shell on startup', (tester) async {
@@ -33,7 +33,7 @@ void main() {
         home: app.BillingApp(
           controller: controller,
           productsService: FakeProductsService(),
-          sellersService: FakeSellersService(),
+          customersService: FakeCustomersService(),
           buyersService: FakeBuyersService(),
           companyProfileService: FakeCompanyProfileService(),
           paymentsService: FakePaymentsService(),
@@ -126,19 +126,19 @@ class FakeProductsService implements ProductsService {
   }
 }
 
-class FakeSellersService implements SellersService {
+class FakeCustomersService implements CustomersService {
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) {
+  Future<List<Customer>> fetchCustomers({String search = ''}) {
     throw UnimplementedError();
   }
 }
@@ -195,18 +195,18 @@ class FakeBuyersService implements BuyersService {
 class FakePaymentsService implements PaymentsService {
   @override
   Future<void> addBalanceAdjustment(
-      {required String sellerId, required BalanceAdjustmentInput input}) {
+      {required String customerId, required BalanceAdjustmentInput input}) {
     throw UnimplementedError();
   }
 
   @override
   Future<void> addOpeningBalance(
-      {required String sellerId, required OpeningBalanceInput input}) {
+      {required String customerId, required OpeningBalanceInput input}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) {
+  Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
 }

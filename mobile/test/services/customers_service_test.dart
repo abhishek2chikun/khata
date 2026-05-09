@@ -6,18 +6,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/services/api_client.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  group('ApiSellersService', () {
-    test('fetch sellers does not send unsupported search query parameter', () async {
+  group('ApiCustomersService', () {
+    test('fetch customers does not send unsupported search query parameter', () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 200,
-          body: '[{"id":"seller-1","name":"ABC Stores","address":"Market Yard","phone":null,"gstin":null,"state":null,"state_code":null,"is_active":true,"pending_balance":"500.00"}]',
+          body: '[{"id":"customer-1","name":"ABC Stores","address":"Market Yard","phone":null,"gstin":null,"state":null,"state_code":null,"is_active":true,"pending_balance":"500.00"}]',
         ),
       );
-      final service = ApiSellersService(
+      final service = ApiCustomersService(
         apiClient: ApiClient(
           baseUri: Uri.parse('http://localhost:8000/'),
           httpClient: httpClient,
@@ -26,10 +26,10 @@ void main() {
         ),
       );
 
-      await service.fetchSellers(search: 'abc');
+      await service.fetchCustomers(search: 'abc');
 
       expect(httpClient.lastMethod, 'GET');
-      expect(httpClient.lastPath, '/sellers');
+      expect(httpClient.lastPath, '/customers');
       expect(httpClient.lastQueryParameters, isEmpty);
     });
   });

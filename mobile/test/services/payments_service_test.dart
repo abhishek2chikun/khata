@@ -23,10 +23,10 @@ void main() {
         ),
       );
 
-      await service.recordPayment(
-        const RecordPaymentInput(
+      await service.recordCollection(
+        const RecordCollectionInput(
           requestId: '11111111-1111-4111-8111-111111111111',
-          sellerId: 'seller-1',
+          customerId: 'customer-1',
           amount: 125.5,
           occurredOn: '2026-04-20',
           notes: 'Cash',
@@ -34,10 +34,10 @@ void main() {
       );
 
       expect(httpClient.lastMethod, 'POST');
-      expect(httpClient.lastPath, '/payments');
+      expect(httpClient.lastPath, '/collections');
       final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(payload['request_id'], '11111111-1111-4111-8111-111111111111');
-      expect(payload['seller_id'], 'seller-1');
+      expect(payload['customer_id'], 'customer-1');
       expect(payload['amount'], 125.5);
       expect(payload['occurred_on'], '2026-04-20');
       expect(payload['notes'], 'Cash');

@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import '../models/api_error.dart';
 import '../services/payments_service.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalPaymentsService implements PaymentsService {
   LocalPaymentsService({required LocalDatabase database})
@@ -18,7 +18,7 @@ class LocalPaymentsService implements PaymentsService {
 
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) async {
     final entryType = switch (input.direction) {
@@ -31,7 +31,7 @@ class LocalPaymentsService implements PaymentsService {
         ),
     };
     await _insertManualTransaction(
-      sellerId: sellerId,
+      customerId: customerId,
       requestId: input.requestId,
       entryType: entryType,
       amount: input.amount,
@@ -43,11 +43,11 @@ class LocalPaymentsService implements PaymentsService {
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) async {
     await _insertManualTransaction(
-      sellerId: sellerId,
+      customerId: customerId,
       requestId: input.requestId,
       entryType: 'OPENING_BALANCE',
       amount: input.amount,
@@ -58,11 +58,11 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) async {
+  Future<void> recordCollection(RecordCollectionInput input) async {
     await _insertManualTransaction(
-      sellerId: input.sellerId,
+      customerId: input.customerId,
       requestId: input.requestId,
-      entryType: 'PAYMENT',
+      entryType: 'COLLECTION',
       amount: input.amount,
       occurredOn: input.occurredOn,
       notes: input.notes,
@@ -71,7 +71,7 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   Future<void> _insertManualTransaction({
-    required String sellerId,
+    required String customerId,
     required String requestId,
     required String entryType,
     required double amount,
@@ -79,17 +79,17 @@ class LocalPaymentsService implements PaymentsService {
     required String? notes,
     required Map<String, dynamic> payload,
   }) async {
-    await _ensureActiveSeller(sellerId);
+    await _ensureActiveCustomer(customerId);
     _validateRequestId(requestId);
     _validateDateOnly(occurredOn);
     _validatePositiveAmount(amount);
 
     final requestHash = _entryHash(<String, dynamic>{
-      'seller_id': sellerId,
+      'customer_id': customerId,
       'entry_type': entryType,
       ...payload,
     });
-    final existing = await (_database.select(_database.sellerTransactions)
+    final existing = await (_database.select(_database.customerTransactions)
           ..where((transaction) => transaction.requestId.equals(requestId)))
         .getSingleOrNull();
     if (existing != null) {
@@ -99,7 +99,7 @@ class LocalPaymentsService implements PaymentsService {
       return;
     }
     if (entryType == 'OPENING_BALANCE' &&
-        await _hasOpeningBalance(sellerId: sellerId)) {
+        await _hasOpeningBalance(customerId: customerId)) {
       throw const ApiError(
         code: 'OPENING_BALANCE_EXISTS',
         message: 'Opening balance already exists',
@@ -109,14 +109,14 @@ class LocalPaymentsService implements PaymentsService {
     await _ensureSystemUser();
 
     try {
-      await _database.into(_database.sellerTransactions).insert(
-            SellerTransactionsCompanion.insert(
+      await _database.into(_database.customerTransactions).insert(
+            CustomerTransactionsCompanion.insert(
               id: generateLocalUuid(),
-              sellerId: sellerId,
+              customerId: customerId,
               requestId: Value(requestId),
               requestHash: Value(requestHash),
-              openingBalanceSellerId: Value(
-                entryType == 'OPENING_BALANCE' ? sellerId : null,
+              openingBalanceCustomerId: Value(
+                entryType == 'OPENING_BALANCE' ? customerId : null,
               ),
               entryType: entryType,
               amount: _normalizeDecimal(amount),
@@ -127,14 +127,14 @@ class LocalPaymentsService implements PaymentsService {
             ),
           );
     } on Object catch (error) {
-      final existing = await (_database.select(_database.sellerTransactions)
+      final existing = await (_database.select(_database.customerTransactions)
             ..where((transaction) => transaction.requestId.equals(requestId)))
           .getSingleOrNull();
       if (existing != null && existing.requestHash == requestHash) {
         return;
       }
       if (entryType == 'OPENING_BALANCE' &&
-          await _hasOpeningBalance(sellerId: sellerId)) {
+          await _hasOpeningBalance(customerId: customerId)) {
         throw const ApiError(
           code: 'OPENING_BALANCE_EXISTS',
           message: 'Opening balance already exists',
@@ -145,31 +145,31 @@ class LocalPaymentsService implements PaymentsService {
     }
   }
 
-  Future<void> _ensureActiveSeller(String sellerId) async {
-    final seller = await (_database.select(_database.sellers)
-          ..where((seller) => seller.id.equals(sellerId)))
+  Future<void> _ensureActiveCustomer(String customerId) async {
+    final customer = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(customerId)))
         .getSingleOrNull();
-    if (seller == null) {
+    if (customer == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
-        message: 'Seller not found',
+        message: 'Customer not found',
         statusCode: 404,
       );
     }
-    if (!seller.isActive) {
+    if (!customer.isActive) {
       throw const ApiError(
-        code: 'SELLER_ARCHIVED',
-        message: 'Archived seller cannot be updated',
+        code: 'CUSTOMER_ARCHIVED',
+        message: 'Archived customer cannot be updated',
         statusCode: 400,
       );
     }
   }
 
-  Future<bool> _hasOpeningBalance({required String sellerId}) async {
-    final openingBalance = await (_database.select(_database.sellerTransactions)
+  Future<bool> _hasOpeningBalance({required String customerId}) async {
+    final openingBalance = await (_database.select(_database.customerTransactions)
           ..where(
             (transaction) =>
-                transaction.sellerId.equals(sellerId) &
+                transaction.customerId.equals(customerId) &
                 transaction.entryType.equals('OPENING_BALANCE'),
           ))
         .getSingleOrNull();

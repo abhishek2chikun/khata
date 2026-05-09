@@ -88,7 +88,7 @@ def test_payment_made_decreases_payable_balance(db_session, seeded_user):
     buyer = buyer_service.create_buyer(db_session, _buyer_payload())
     buyer_service.create_opening_payable(db_session, buyer.id, _entry_payload(amount=Decimal("250.00")), _current_user(seeded_user))
 
-    buyer_service.create_payment_made(db_session, buyer.id, _entry_payload(amount=Decimal("80.00")), _current_user(seeded_user))
+    buyer_service.create_collection_made(db_session, buyer.id, _entry_payload(amount=Decimal("80.00")), _current_user(seeded_user))
 
     assert buyer_service.pending_payable_value(db_session, buyer.id) == Decimal("170.00")
 
@@ -109,7 +109,7 @@ def test_ledger_is_ordered_by_occurred_time_then_created_time(db_session, seeded
     occurred_at = datetime(2026, 5, 9, 9, 0, tzinfo=UTC)
     later_occurred_at = datetime(2026, 5, 10, 9, 0, tzinfo=UTC)
     second = buyer_service.create_purchase_amount(db_session, buyer.id, _entry_payload(amount=Decimal("20.00"), occurred_at=occurred_at), user)
-    third = buyer_service.create_payment_made(db_session, buyer.id, _entry_payload(amount=Decimal("5.00"), occurred_at=later_occurred_at), user)
+    third = buyer_service.create_collection_made(db_session, buyer.id, _entry_payload(amount=Decimal("5.00"), occurred_at=later_occurred_at), user)
     first = buyer_service.create_opening_payable(db_session, buyer.id, _entry_payload(amount=Decimal("10.00"), occurred_at=occurred_at), user)
     db_session.query(BuyerTransaction).filter(BuyerTransaction.id == first.id).update({"created_at": datetime(2026, 5, 9, 10, 0, tzinfo=UTC)})
     db_session.query(BuyerTransaction).filter(BuyerTransaction.id == second.id).update({"created_at": datetime(2026, 5, 9, 10, 0, 1, tzinfo=UTC)})

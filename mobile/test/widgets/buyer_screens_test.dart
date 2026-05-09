@@ -100,7 +100,7 @@ void main() {
                   ),
                   BuyerLedgerTransaction(
                     id: 'txn-2',
-                    entryType: 'PAYMENT_MADE',
+                    entryType: 'COLLECTION_MADE',
                     amount: '100.00',
                     occurredAt: '2026-04-21T10:30:00.000Z',
                     notes: 'UPI',
@@ -117,7 +117,7 @@ void main() {
     expect(find.text('Global Suppliers'), findsWidgets);
     expect(find.textContaining('Pending Payable: 500.00'), findsOneWidget);
     expect(find.text('PURCHASE_AMOUNT'), findsOneWidget);
-    expect(find.text('PAYMENT_MADE'), findsOneWidget);
+    expect(find.text('COLLECTION_MADE'), findsOneWidget);
     expect(find.text('Purchase bill'), findsOneWidget);
   });
 
@@ -144,7 +144,7 @@ void main() {
           transactions: const <BuyerLedgerTransaction>[
             BuyerLedgerTransaction(
               id: 'txn-4',
-              entryType: 'PAYMENT_MADE',
+              entryType: 'COLLECTION_MADE',
               amount: '100.00',
               occurredAt: '2026-04-21T10:30:00.000Z',
               notes: 'Paid',

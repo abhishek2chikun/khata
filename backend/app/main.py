@@ -6,15 +6,15 @@ from app.routers.buyers import router as buyers_router
 from app.routers.company_profile import router as company_profile_router
 from app.routers.invoices import router as invoices_router
 from app.routers.products import router as products_router
-from app.routers.sellers import router as sellers_router
+from app.routers.customers import router as customers_router
 from app.routers.auth import router as auth_router
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.schemas.auth import CurrentUserResponse
-from app.schemas.seller import PaymentRequest, SellerTransactionResponse
-from app.services import seller_service
+from app.schemas.customer import CollectionRequest, CustomerTransactionResponse
+from app.services import customer_service
 
 
 def create_app() -> FastAPI:
@@ -43,14 +43,14 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(buyers_router)
     app.include_router(products_router)
-    app.include_router(sellers_router)
+    app.include_router(customers_router)
     app.include_router(company_profile_router)
     app.include_router(invoices_router)
 
-    @app.post("/payments", response_model=SellerTransactionResponse, status_code=201)
-    def create_payment(payload: PaymentRequest, current_user: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> SellerTransactionResponse:
-        transaction = seller_service.create_payment(session, payload, current_user)
-        return SellerTransactionResponse.model_validate(transaction)
+    @app.post("/collections", response_model=CustomerTransactionResponse, status_code=201)
+    def create_collection(payload: CollectionRequest, current_user: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> CustomerTransactionResponse:
+        transaction = customer_service.create_collection(session, payload, current_user)
+        return CustomerTransactionResponse.model_validate(transaction)
 
     return app
 

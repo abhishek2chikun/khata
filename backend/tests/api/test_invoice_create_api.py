@@ -19,7 +19,7 @@ def _company_payload(state: str = "Maharashtra", state_code: str = "27") -> dict
     }
 
 
-def _seller_payload(state: str | None = None, state_code: str | None = None) -> dict:
+def _customer_payload(state: str | None = None, state_code: str | None = None) -> dict:
     payload = {
         "name": "ABC Stores",
         "address": "Market Yard",
@@ -47,10 +47,10 @@ def _product_payload(item_code: str = "PEN-001", quantity: str = "5.000") -> dic
     }
 
 
-def _invoice_payload(seller_id: str, product_id: str, request_id: str | None = None, **overrides) -> dict:
+def _invoice_payload(customer_id: str, product_id: str, request_id: str | None = None, **overrides) -> dict:
     payload = {
         "request_id": request_id or str(uuid4()),
-        "seller_id": seller_id,
+        "customer_id": customer_id,
         "invoice_date": "2026-04-19",
         "payment_mode": "CREDIT",
         "place_of_supply_state_code": "27",
@@ -73,13 +73,13 @@ def test_quote_requires_company_profile_state_and_returns_totals(client, auth_he
     company = client.put("/company-profile", headers=auth_headers, json=_company_payload())
     assert company.status_code == 200
 
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="27"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="27"))
     product = client.post("/products", headers=auth_headers, json=_product_payload())
 
     response = client.post(
         "/invoices/quote",
         headers=auth_headers,
-        json=_invoice_payload(seller.json()["id"], product.json()["id"]),
+        json=_invoice_payload(customer.json()["id"], product.json()["id"]),
     )
 
     assert response.status_code == 200
@@ -92,10 +92,10 @@ def test_quote_rejects_missing_or_unresolved_tax_state_inputs(client, auth_heade
     company = client.put("/company-profile", headers=auth_headers, json=_company_payload())
     assert company.status_code == 200
 
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload())
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload())
     product = client.post("/products", headers=auth_headers, json=_product_payload())
 
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"])
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"])
     payload.pop("place_of_supply_state_code")
 
     response = client.post("/invoices/quote", headers=auth_headers, json=payload)
@@ -103,12 +103,12 @@ def test_quote_rejects_missing_or_unresolved_tax_state_inputs(client, auth_heade
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
-def test_quote_rejects_inconsistent_seller_state_name_and_code(client, auth_headers):
+def test_quote_rejects_inconsistent_customer_state_name_and_code(client, auth_headers):
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="29"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="29"))
     product = client.post("/products", headers=auth_headers, json=_product_payload())
 
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"])
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"])
     payload.pop("place_of_supply_state_code")
 
     response = client.post("/invoices/quote", headers=auth_headers, json=payload)
@@ -118,10 +118,10 @@ def test_quote_rejects_inconsistent_seller_state_name_and_code(client, auth_head
 
 def test_create_credit_invoice_is_atomic_and_idempotent(client, auth_headers):
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="27"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="27"))
     product = client.post("/products", headers=auth_headers, json=_product_payload())
     request_id = str(uuid4())
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"], request_id=request_id)
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"], request_id=request_id)
 
     first = client.post("/invoices", headers=auth_headers, json=payload)
     second = client.post("/invoices", headers=auth_headers, json=payload)
@@ -133,23 +133,23 @@ def test_create_credit_invoice_is_atomic_and_idempotent(client, auth_headers):
 
 def test_paid_invoice_creates_no_credit_ledger_row(client, auth_headers):
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="27"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="27"))
     product = client.post("/products", headers=auth_headers, json=_product_payload())
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"], payment_mode="PAID")
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"], payment_mode="PAID")
 
     response = client.post("/invoices", headers=auth_headers, json=payload)
     assert response.status_code == 201
 
-    ledger = client.get(f"/sellers/{seller.json()['id']}/ledger", headers=auth_headers)
+    ledger = client.get(f"/customers/{customer.json()['id']}/ledger", headers=auth_headers)
     assert ledger.status_code == 200
     assert ledger.json()["transactions"] == []
 
 
 def test_invoice_create_rolls_back_on_internal_failure(client, auth_headers, monkeypatch):
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="27"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="27"))
     product = client.post("/products", headers=auth_headers, json=_product_payload())
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"])
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"])
 
     def explode(*args, **kwargs):
         raise RuntimeError("boom")
@@ -166,9 +166,9 @@ def test_invoice_create_rolls_back_on_internal_failure(client, auth_headers, mon
 
 def test_negative_stock_warning_is_returned_on_create(client, auth_headers):
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post("/sellers", headers=auth_headers, json=_seller_payload(state="Maharashtra", state_code="27"))
+    customer = client.post("/customers", headers=auth_headers, json=_customer_payload(state="Maharashtra", state_code="27"))
     product = client.post("/products", headers=auth_headers, json=_product_payload(quantity="1.000"))
-    payload = _invoice_payload(seller.json()["id"], product.json()["id"])
+    payload = _invoice_payload(customer.json()["id"], product.json()["id"])
     payload["items"][0]["quantity"] = "999.000"
 
     response = client.post("/invoices", headers=auth_headers, json=payload)
