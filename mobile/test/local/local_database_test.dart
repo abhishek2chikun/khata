@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 2);
+    expect(database.schemaVersion, 3);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -20,6 +20,8 @@ void main() {
           'stock_movements',
           'sellers',
           'seller_transactions',
+          'buyers',
+          'buyer_transactions',
           'company_profiles',
           'invoices',
           'invoice_items',
@@ -55,6 +57,24 @@ void main() {
           'state',
           'state_code',
           'is_active',
+        ]));
+    expect(
+        _columnNames(database, 'buyers'),
+        containsAll(<String>[
+          'state',
+          'state_code',
+          'is_active',
+        ]));
+    expect(
+        _columnNames(database, 'buyer_transactions'),
+        containsAll(<String>[
+          'request_id',
+          'request_hash',
+          'opening_payable_buyer_id',
+          'entry_type',
+          'amount',
+          'occurred_at',
+          'created_by_user_id',
         ]));
     expect(
         _columnNames(database, 'company_profiles'),

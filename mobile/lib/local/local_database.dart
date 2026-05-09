@@ -73,6 +73,27 @@ class Sellers extends Table {
       ];
 }
 
+class Buyers extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get address => text()();
+  TextColumn get state => text().nullable()();
+  TextColumn get stateCode => text().nullable()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get gstin => text().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  TextColumn get createdAt => text()();
+  TextColumn get updatedAt => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {name, phone},
+      ];
+}
+
 class CompanyProfiles extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -195,6 +216,29 @@ class SellerTransactions extends Table {
       ];
 }
 
+class BuyerTransactions extends Table {
+  TextColumn get id => text()();
+  TextColumn get buyerId => text().references(Buyers, #id)();
+  TextColumn get requestId => text().nullable()();
+  TextColumn get requestHash => text().nullable()();
+  TextColumn get openingPayableBuyerId => text().nullable()();
+  TextColumn get entryType => text()();
+  TextColumn get amount => text()();
+  TextColumn get occurredAt => text()();
+  TextColumn get notes => text().nullable()();
+  TextColumn get createdByUserId => text().references(LocalUsers, #id)();
+  TextColumn get createdAt => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+        {requestId},
+        {openingPayableBuyerId},
+      ];
+}
+
 class InvoiceItems extends Table {
   TextColumn get id => text()();
   TextColumn get invoiceId => text().references(Invoices, #id)();
@@ -270,6 +314,8 @@ class BackupSettings extends Table {
   StockMovements,
   Sellers,
   SellerTransactions,
+  Buyers,
+  BuyerTransactions,
   CompanyProfiles,
   Invoices,
   InvoiceItems,
@@ -285,7 +331,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -363,6 +409,10 @@ class LocalDatabase extends _$LocalDatabase {
             await customStatement('DROP TABLE products');
             await customStatement('ALTER TABLE products_v2 RENAME TO products');
             await customStatement('PRAGMA foreign_keys = ON');
+          }
+          if (from < 3) {
+            await m.createTable(buyers);
+            await m.createTable(buyerTransactions);
           }
         },
         beforeOpen: (_) async {

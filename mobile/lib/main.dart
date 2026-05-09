@@ -7,6 +7,7 @@ import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
 import 'models/seller.dart';
+import 'screens/buyer_list_screen.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
@@ -18,6 +19,7 @@ import 'screens/product_form_screen.dart';
 import 'models/product.dart';
 import 'screens/seller_list_screen.dart';
 import 'services/company_profile_service.dart';
+import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
@@ -42,6 +44,7 @@ class BillingApp extends StatefulWidget {
     AuthController? controller,
     ProductsService? productsService,
     SellersService? sellersService,
+    BuyersService? buyersService,
     CompanyProfileService? companyProfileService,
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
@@ -51,6 +54,7 @@ class BillingApp extends StatefulWidget {
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
         sellersService = sellersService ?? dependencies!.sellersService,
+        buyersService = buyersService ?? dependencies!.buyersService,
         companyProfileService =
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
@@ -63,6 +67,7 @@ class BillingApp extends StatefulWidget {
   final AuthController controller;
   final ProductsService productsService;
   final SellersService sellersService;
+  final BuyersService buyersService;
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
@@ -178,6 +183,11 @@ class _BillingAppState extends State<BillingApp> {
             sellersService: widget.sellersService,
             paymentsService: widget.paymentsService,
             onCreateInvoice: _openCreateInvoiceForSeller,
+          );
+        case AppDestination.buyers:
+          return BuyerListScreen(
+            drawer: drawer,
+            buyersService: widget.buyersService,
           );
         case AppDestination.invoices:
           return InvoiceListScreen(

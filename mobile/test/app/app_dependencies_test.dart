@@ -8,9 +8,12 @@ import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
+import 'package:internal_billing_khata_mobile/local/local_buyers_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_sellers_service.dart';
+import 'package:internal_billing_khata_mobile/models/buyer.dart';
+import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
@@ -20,6 +23,7 @@ import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/seller.dart';
 import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
+import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
@@ -46,6 +50,7 @@ void main() {
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<ApiProductsService>());
     expect(dependencies.sellersService, isA<ApiSellersService>());
+    expect(dependencies.buyersService, isA<ApiBuyersService>());
     expect(dependencies.companyProfileService, isA<ApiCompanyProfileService>());
     expect(dependencies.paymentsService, isA<ApiPaymentsService>());
     expect(dependencies.invoicesService, isA<ApiInvoicesService>());
@@ -87,6 +92,7 @@ void main() {
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<LocalProductsService>());
     expect(dependencies.sellersService, isA<LocalSellersService>());
+    expect(dependencies.buyersService, isA<LocalBuyersService>());
     expect(dependencies.paymentsService, isA<LocalPaymentsService>());
     await dependencies.dispose();
   });
@@ -145,6 +151,7 @@ void main() {
       ),
       productsService: _FakeProductsService(),
       sellersService: _FakeSellersService(),
+      buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
@@ -246,6 +253,55 @@ class _FakeSellersService implements SellersService {
 
   @override
   Future<List<Seller>> fetchSellers({String search = ''}) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeBuyersService implements BuyersService {
+  @override
+  Future<void> addOpeningPayable({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPayableAdjustment({
+    required String buyerId,
+    required BuyerPayableAdjustmentInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPaymentMade({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPurchaseAmount({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Buyer> createBuyer(CreateBuyerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Buyer>> fetchBuyers({String search = ''}) {
     throw UnimplementedError();
   }
 }
