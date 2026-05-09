@@ -22,6 +22,7 @@ class Product(Base):
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     buying_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    buying_gst_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
     selling_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     gst_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)

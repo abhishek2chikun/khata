@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.db import get_session_factory
 from app.models.app_user import AppUser
+from app.models.invoice import Invoice
 from app.models.product import Product
 from app.models.seller import Seller
 from app.schemas.auth import CurrentUserResponse
@@ -158,6 +159,18 @@ def _demo_invoice_request_ids() -> dict[str, UUID]:
     }
 
 
+def _legacy_demo_invoice_request_ids() -> dict[str, UUID]:
+    return {
+        "abc_stores_credit": _seed_uuid("invoice", "abc-stores", "credit-1"),
+        "city_books_paid": _seed_uuid("invoice", "city-books", "paid-1"),
+        "karnataka_office_credit": _seed_uuid("invoice", "karnataka-office", "credit-1"),
+    }
+
+
+def _should_create_demo_invoice(invoice_key: str, existing_request_ids: set[UUID]) -> bool:
+    return _demo_invoice_request_ids()[invoice_key] not in existing_request_ids and _legacy_demo_invoice_request_ids()[invoice_key] not in existing_request_ids
+
+
 def seed_demo_data(*, username: str) -> dict[str, int]:
     session = get_session_factory()()
     try:
@@ -203,6 +216,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         products = {item_number: _ensure_product(session, payload, current_user) for item_number, payload in _demo_product_payloads().items()}
         invoice_lines = _demo_invoice_line_payloads(products)
         invoice_request_ids = _demo_invoice_request_ids()
+        existing_invoice_request_ids = set(session.scalars(select(Invoice.request_id)).all())
 
         seller_service.create_opening_balance(
             session,
@@ -226,54 +240,60 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             current_user,
         )
 
-        invoice_service.create_invoice(
-            session,
-            InvoiceCreateRequest(
-                request_id=invoice_request_ids["abc_stores_credit"],
-                seller_id=sellers["abc_stores"].id,
-                invoice_date=date(2026, 4, 19),
-                payment_mode="CREDIT",
-                items=[
-                    invoice_lines["PEN-001"],
-                    invoice_lines["NOTE-001"],
-                ],
-                place_of_supply_state_code="27",
-                notes="Demo credit sale inside Maharashtra",
-            ),
-            current_user,
-        )
+        if _should_create_demo_invoice("abc_stores_credit", existing_invoice_request_ids):
+            invoice_service.create_invoice(
+                session,
+                InvoiceCreateRequest(
+                    request_id=invoice_request_ids["abc_stores_credit"],
+                    seller_id=sellers["abc_stores"].id,
+                    invoice_date=date(2026, 4, 19),
+                    payment_mode="CREDIT",
+                    items=[
+                        invoice_lines["PEN-001"],
+                        invoice_lines["NOTE-001"],
+                    ],
+                    place_of_supply_state_code="27",
+                    notes="Demo credit sale inside Maharashtra",
+                ),
+                current_user,
+            )
+            existing_invoice_request_ids.add(invoice_request_ids["abc_stores_credit"])
 
-        invoice_service.create_invoice(
-            session,
-            InvoiceCreateRequest(
-                request_id=invoice_request_ids["city_books_paid"],
-                seller_id=sellers["city_books"].id,
-                invoice_date=date(2026, 4, 21),
-                payment_mode="PAID",
-                items=[
-                    invoice_lines["FILE-001"],
-                ],
-                place_of_supply_state_code="27",
-                notes="Demo paid invoice",
-            ),
-            current_user,
-        )
+        if _should_create_demo_invoice("city_books_paid", existing_invoice_request_ids):
+            invoice_service.create_invoice(
+                session,
+                InvoiceCreateRequest(
+                    request_id=invoice_request_ids["city_books_paid"],
+                    seller_id=sellers["city_books"].id,
+                    invoice_date=date(2026, 4, 21),
+                    payment_mode="PAID",
+                    items=[
+                        invoice_lines["FILE-001"],
+                    ],
+                    place_of_supply_state_code="27",
+                    notes="Demo paid invoice",
+                ),
+                current_user,
+            )
+            existing_invoice_request_ids.add(invoice_request_ids["city_books_paid"])
 
-        invoice_service.create_invoice(
-            session,
-            InvoiceCreateRequest(
-                request_id=invoice_request_ids["karnataka_office_credit"],
-                seller_id=sellers["karnataka_office"].id,
-                invoice_date=date(2026, 4, 22),
-                payment_mode="CREDIT",
-                items=[
-                    invoice_lines["MRK-001"],
-                ],
-                place_of_supply_state_code="29",
-                notes="Demo interstate credit invoice",
-            ),
-            current_user,
-        )
+        if _should_create_demo_invoice("karnataka_office_credit", existing_invoice_request_ids):
+            invoice_service.create_invoice(
+                session,
+                InvoiceCreateRequest(
+                    request_id=invoice_request_ids["karnataka_office_credit"],
+                    seller_id=sellers["karnataka_office"].id,
+                    invoice_date=date(2026, 4, 22),
+                    payment_mode="CREDIT",
+                    items=[
+                        invoice_lines["MRK-001"],
+                    ],
+                    place_of_supply_state_code="29",
+                    notes="Demo interstate credit invoice",
+                ),
+                current_user,
+            )
+            existing_invoice_request_ids.add(invoice_request_ids["karnataka_office_credit"])
 
         return {
             "sellers": len(sellers),

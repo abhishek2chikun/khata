@@ -55,6 +55,9 @@ def upgrade() -> None:
     # Legacy product prices were stored pre-tax. Product V2 stores inclusive defaults.
     # Null legacy buying prices fall back to 0.00 so buying_price can be made NOT NULL;
     # null GST rates are treated as 0.00, preserving the legacy numeric value.
+    # buying_gst_rate is intentionally retained as an internal migration-compatibility
+    # column because canonical gst_rate comes from legacy default_gst_rate and cannot
+    # losslessly reconstruct legacy buying_price_excl_tax on downgrade.
     op.execute(
         sa.text(
             """
@@ -72,7 +75,6 @@ def upgrade() -> None:
     op.alter_column("products", "gst_rate", existing_type=sa.Numeric(5, 2), nullable=False)
 
     op.drop_column("products", "buying_price_excl_tax")
-    op.drop_column("products", "buying_gst_rate")
     op.drop_column("products", "default_selling_price_excl_tax")
     op.drop_column("products", "default_gst_rate")
 
@@ -86,7 +88,6 @@ def downgrade() -> None:
 
     op.add_column("products", sa.Column("default_gst_rate", sa.Numeric(5, 2), nullable=True))
     op.add_column("products", sa.Column("default_selling_price_excl_tax", sa.Numeric(14, 2), nullable=True))
-    op.add_column("products", sa.Column("buying_gst_rate", sa.Numeric(5, 2), nullable=True))
     op.add_column("products", sa.Column("buying_price_excl_tax", sa.Numeric(14, 2), nullable=True))
 
     op.execute(
@@ -95,10 +96,9 @@ def downgrade() -> None:
             UPDATE products
             SET
                 buying_price_excl_tax = CASE
-                    WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(buying_price, 0.00)
-                    ELSE ROUND(COALESCE(buying_price, 0.00) / (1 + (gst_rate / 100)), 2)
+                    WHEN COALESCE(buying_gst_rate, 0.00) = 0.00 THEN COALESCE(buying_price, 0.00)
+                    ELSE ROUND(COALESCE(buying_price, 0.00) / (1 + (buying_gst_rate / 100)), 2)
                 END,
-                buying_gst_rate = COALESCE(gst_rate, 0.00),
                 default_selling_price_excl_tax = CASE
                     WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(selling_price, 0.00)
                     ELSE ROUND(COALESCE(selling_price, 0.00) / (1 + (gst_rate / 100)), 2)
