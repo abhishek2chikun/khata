@@ -161,7 +161,7 @@ void main() {
 
     final products = await database.select(database.products).get();
 
-    expect(products, hasLength(2));
+    expect(products, hasLength(3));
     final pen = products.singleWhere((product) => product.id == 'product-1');
     expect(pen.id, 'product-1');
     expect(pen.itemNumber, 'PEN-1');
@@ -181,9 +181,14 @@ void main() {
 
     final fallback =
         products.singleWhere((product) => product.id == 'product-2');
-    expect(fallback.buyingPrice, '56');
+    expect(fallback.buyingPrice, '0');
     expect(fallback.sellingPrice, '56');
     expect(fallback.quantityOnHand, '3.250');
+
+    final zeroTax =
+        products.singleWhere((product) => product.id == 'product-3');
+    expect(zeroTax.buyingPrice, '80');
+    expect(zeroTax.sellingPrice, '118');
 
     final movement = await database.customSelect(
       'SELECT product_id FROM stock_movements WHERE id = ?',
@@ -419,6 +424,11 @@ void _seedSchemaV1Database(File file) {
           'product-2', 'Acme', 'Books', 'Ledger Book', 'BOOK-1',
           NULL, NULL, '50', '12', '3.250', '1.000', 0,
           '2026-01-03T00:00:00.000Z', '2026-01-04T00:00:00.000Z'
+        ),
+        (
+          'product-3', 'Beta', 'Pens', 'Red Pen', 'PEN-2',
+          '80', NULL, '100', '18', '4.000', '1.000', 1,
+          '2026-01-05T00:00:00.000Z', '2026-01-06T00:00:00.000Z'
         )
     ''');
     database.execute(
