@@ -31,6 +31,7 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+  final _ledgerDateController = TextEditingController();
   CustomerLedger? _ledger;
   bool _isLoading = true;
   String? _errorMessage;
@@ -38,7 +39,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _ledgerDateController.text =
+        DateTime.now().toIso8601String().substring(0, 10);
     _loadCustomer();
+  }
+
+  @override
+  void dispose() {
+    _ledgerDateController.dispose();
+    super.dispose();
   }
 
   @override
@@ -144,6 +153,18 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     Text('Ledger history',
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('ledgerDateFilterField'),
+                      controller: _ledgerDateController,
+                      enabled: !_isLoading,
+                      decoration: const InputDecoration(
+                        labelText: 'Ledger date',
+                        border: OutlineInputBorder(),
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _loadCustomer(),
+                    ),
+                    const SizedBox(height: 12),
                     if (ledger!.transactions.isEmpty)
                       const Text('No ledger transactions yet')
                     else
@@ -203,8 +224,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     });
 
     try {
-      final ledger =
-          await widget.customersService.fetchCustomerLedger(widget.customerId);
+      final ledger = await widget.customersService.fetchCustomerLedger(
+        widget.customerId,
+        onDate: _ledgerDateController.text.trim(),
+      );
       if (!mounted) {
         return;
       }
