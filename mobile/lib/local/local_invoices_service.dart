@@ -519,67 +519,96 @@ class LocalInvoicesService implements InvoicesService {
     required InvoiceDraft draft,
     required Invoice existing,
   }) async {
-    final invoice = await _buildInvoiceDetail(existing.id);
-    if (!_matchesExistingCreate(draft: draft, invoice: invoice)) {
+    final items = await (_database.select(_database.invoiceItems)
+          ..where((item) => item.invoiceId.equals(existing.id))
+          ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
+        .get();
+    if (!_matchesExistingCreate(
+        draft: draft, invoice: existing, items: items)) {
       throw _idempotencyConflictError();
     }
     return CreateInvoiceResult(
-      invoice: invoice,
+      invoice: await _buildInvoiceDetail(existing.id),
       warnings: const <InvoiceWarning>[],
     );
   }
 
   bool _matchesExistingCreate({
     required InvoiceDraft draft,
-    required InvoiceDetail invoice,
+    required Invoice invoice,
+    required List<InvoiceItem> items,
   }) {
     final draftCustomer = draft.customer;
     if (draftCustomer == null || draftCustomer.id != invoice.customerId) {
       return false;
     }
-    if (_resolveInvoiceDatetime(draft) != invoice.invoiceDatetime) {
+    final draftInvoiceDatetime = _emptyToNull(draft.invoiceDatetime);
+    if (draftInvoiceDatetime != null &&
+        _resolveInvoiceDatetime(draft) != invoice.invoiceDatetime) {
+      return false;
+    }
+    final draftInvoiceDate = _emptyToNull(draft.invoiceDate);
+    if (draftInvoiceDate != null && draftInvoiceDate != invoice.invoiceDate) {
       return false;
     }
     if (_resolvePaymentState(draft) != invoice.paymentState) {
       return false;
     }
     if (_roundMoney(_resolveReplayPaidAmount(draft, invoice)) !=
-        invoice.paidAmount) {
+        double.parse(invoice.paidAmount)) {
+      return false;
+    }
+    final placeOfSupplyStateCode = _emptyToNull(draft.placeOfSupplyStateCode);
+    if (placeOfSupplyStateCode != null &&
+        _normalizeStateCode(placeOfSupplyStateCode) !=
+            invoice.placeOfSupplyStateCode) {
       return false;
     }
     if (_emptyToNull(draft.notes) != _emptyToNull(invoice.notes)) {
       return false;
     }
-    if (draft.items.length != invoice.items.length) {
+    if (draft.items.length != items.length) {
       return false;
     }
     for (var index = 0; index < draft.items.length; index += 1) {
       final draftItem = draft.items[index];
-      final storedItem = invoice.items[index];
+      final storedItem = items[index];
       if (draftItem.product?.id == null ||
           draftItem.product!.id != storedItem.productId) {
         return false;
       }
       if (_normalizeDecimal(draftItem.quantity) !=
-          _normalizeDecimal(storedItem.quantity)) {
+          _normalizeDecimal(double.parse(storedItem.quantity))) {
+        return false;
+      }
+      if (draftItem.pricingMode != storedItem.pricingMode) {
         return false;
       }
       final unitPrice = draftItem.unitPrice;
       if (unitPrice != null &&
           _normalizeDecimal(_roundMoney(unitPrice)) !=
-              _normalizeDecimal(storedItem.sellingPrice)) {
+              _normalizeDecimal(double.parse(storedItem.enteredUnitPrice))) {
+        return false;
+      }
+      if (draftItem.gstRate != null &&
+          _normalizeDecimal(_roundRate(draftItem.gstRate!)) !=
+              _normalizeDecimal(double.parse(storedItem.gstRate))) {
+        return false;
+      }
+      if (_normalizeDecimal(_roundRate(draftItem.discountPercent)) !=
+          _normalizeDecimal(double.parse(storedItem.discountPercent))) {
         return false;
       }
     }
     return true;
   }
 
-  double _resolveReplayPaidAmount(InvoiceDraft draft, InvoiceDetail invoice) {
+  double _resolveReplayPaidAmount(InvoiceDraft draft, Invoice invoice) {
     switch (invoice.paymentState) {
       case 'CREDIT':
         return 0;
       case 'TOTAL_PAID':
-        return invoice.grandTotal;
+        return double.parse(invoice.grandTotal);
       case 'PARTIAL_PAID':
         return draft.paidAmount;
     }

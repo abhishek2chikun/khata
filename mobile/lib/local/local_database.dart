@@ -152,7 +152,7 @@ class Invoices extends Table {
   TextColumn get paymentState => text().customConstraint(
       "NOT NULL DEFAULT 'CREDIT' CHECK (payment_state IN ('CREDIT','TOTAL_PAID','PARTIAL_PAID'))")();
   TextColumn get paidAmount => text().customConstraint(
-      "NOT NULL DEFAULT '0' CHECK (CAST(paid_amount AS REAL) >= 0) CHECK ((payment_state = 'CREDIT' AND CAST(paid_amount AS REAL) = 0) OR (payment_state = 'TOTAL_PAID' AND CAST(paid_amount AS REAL) = CAST(grand_total AS REAL)) OR (payment_state = 'PARTIAL_PAID' AND CAST(paid_amount AS REAL) > 0 AND CAST(paid_amount AS REAL) < CAST(grand_total AS REAL)))")();
+      "NOT NULL DEFAULT '0' CHECK (paid_amount != '' AND paid_amount != '.' AND paid_amount NOT GLOB '*[^0-9.]*' AND paid_amount NOT GLOB '*.*.*') CHECK (CAST(paid_amount AS REAL) >= 0) CHECK ((payment_state = 'CREDIT' AND CAST(paid_amount AS REAL) = 0) OR (payment_state = 'TOTAL_PAID' AND CAST(paid_amount AS REAL) = CAST(grand_total AS REAL)) OR (payment_state = 'PARTIAL_PAID' AND CAST(paid_amount AS REAL) > 0 AND CAST(paid_amount AS REAL) < CAST(grand_total AS REAL)))")();
   TextColumn get paymentMode => text()();
   TextColumn get subtotal => text()();
   TextColumn get discountTotal => text()();
