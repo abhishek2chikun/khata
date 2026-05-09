@@ -12,7 +12,8 @@ import '../services/invoices_service.dart';
 import '../services/payments_service.dart';
 
 class InvoiceDraftController extends ChangeNotifier {
-  InvoiceDraftController({required InvoicesService invoicesService, Seller? initialSeller})
+  InvoiceDraftController(
+      {required InvoicesService invoicesService, Seller? initialSeller})
       : _invoicesService = invoicesService,
         _draft = InvoiceDraft(seller: initialSeller);
 
@@ -72,9 +73,9 @@ class InvoiceDraftController extends ChangeNotifier {
       current.copyWith(
         product: product,
         clearProduct: product == null,
-        unitPrice: product?.defaultSellingPriceExclTax,
+        unitPrice: product?.sellingPrice,
         clearUnitPrice: product == null,
-        gstRate: product?.defaultGstRate,
+        gstRate: product?.gstRate,
         clearGstRate: product == null,
       ),
     );
@@ -91,16 +92,21 @@ class InvoiceDraftController extends ChangeNotifier {
   void updateItemUnitPrice(int index, double? unitPrice) {
     _updateItem(
       index,
-      _draft.items[index].copyWith(unitPrice: unitPrice, clearUnitPrice: unitPrice == null),
+      _draft.items[index]
+          .copyWith(unitPrice: unitPrice, clearUnitPrice: unitPrice == null),
     );
   }
 
   void updateItemGstRate(int index, double? gstRate) {
-    _updateItem(index, _draft.items[index].copyWith(gstRate: gstRate, clearGstRate: gstRate == null));
+    _updateItem(
+        index,
+        _draft.items[index]
+            .copyWith(gstRate: gstRate, clearGstRate: gstRate == null));
   }
 
   void updateItemDiscountPercent(int index, double discountPercent) {
-    _updateItem(index, _draft.items[index].copyWith(discountPercent: discountPercent));
+    _updateItem(
+        index, _draft.items[index].copyWith(discountPercent: discountPercent));
   }
 
   Future<bool> requestQuote() async {
@@ -129,7 +135,8 @@ class InvoiceDraftController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _invoicesService.createInvoice(draft: _draft, requestId: _requestId!);
+      final result = await _invoicesService.createInvoice(
+          draft: _draft, requestId: _requestId!);
       _createdInvoice = result.invoice;
       _createWarnings = result.warnings;
       _requestId = null;
@@ -168,11 +175,15 @@ class InvoiceDraftController extends ChangeNotifier {
       return error.message;
     }
     if (error is SocketException) {
-      return forSubmit ? 'Connect to the server before saving the invoice' : 'Unable to reach the server';
+      return forSubmit
+          ? 'Connect to the server before saving the invoice'
+          : 'Unable to reach the server';
     }
     if (error is HttpException) {
       return 'Unable to reach the server';
     }
-    return forSubmit ? 'Unable to save invoice' : 'Unable to prepare invoice preview';
+    return forSubmit
+        ? 'Unable to save invoice'
+        : 'Unable to prepare invoice preview';
   }
 }

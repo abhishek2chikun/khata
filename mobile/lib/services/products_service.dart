@@ -5,16 +5,14 @@ import 'api_client.dart';
 
 class ProductFilter {
   const ProductFilter({
-    String? companyName,
-    String? company,
+    this.companyName,
     this.category,
     this.search,
     this.active,
     this.lowStockOnly,
-  }) : companyName = companyName ?? company;
+  });
 
   final String? companyName;
-  String? get company => companyName;
   final String? category;
   final String? search;
   final bool? active;
@@ -22,7 +20,6 @@ class ProductFilter {
 
   Map<String, String?> toQueryParameters() {
     return <String, String?>{
-      'company': company,
       'company_name': companyName,
       'category': category,
       'search': search,
@@ -34,39 +31,26 @@ class ProductFilter {
 
 class CreateProductInput {
   const CreateProductInput({
-    String? companyName,
-    String? company,
+    required this.companyName,
     required this.category,
     required this.itemName,
-    String? itemNumber,
-    String? itemCode,
-    double? buyingPrice,
-    double? sellingPrice,
-    double? defaultSellingPriceExclTax,
+    required this.itemNumber,
+    required this.buyingPrice,
+    required this.sellingPrice,
     this.unit,
-    double? gstRate,
-    double? defaultGstRate,
+    required this.gstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
-  })  : companyName = companyName ?? company ?? '',
-        itemNumber = itemNumber ?? itemCode ?? '',
-        buyingPrice =
-            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        gstRate = gstRate ?? defaultGstRate ?? 0;
+  });
 
   final String companyName;
-  String get company => companyName;
   final String category;
   final String itemName;
   final String itemNumber;
-  String get itemCode => itemNumber;
   final double buyingPrice;
   final double sellingPrice;
   final String? unit;
   final double gstRate;
-  double get defaultSellingPriceExclTax => sellingPrice;
-  double get defaultGstRate => gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
 
@@ -88,38 +72,25 @@ class CreateProductInput {
 
 class UpdateProductInput {
   const UpdateProductInput({
-    String? companyName,
-    String? company,
+    required this.companyName,
     required this.category,
     required this.itemName,
-    String? itemNumber,
-    String? itemCode,
-    double? buyingPrice,
-    double? sellingPrice,
-    double? defaultSellingPriceExclTax,
+    required this.itemNumber,
+    required this.buyingPrice,
+    required this.sellingPrice,
     this.unit,
-    double? gstRate,
-    double? defaultGstRate,
+    required this.gstRate,
     required this.lowStockThreshold,
-  })  : companyName = companyName ?? company ?? '',
-        itemNumber = itemNumber ?? itemCode ?? '',
-        buyingPrice =
-            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        gstRate = gstRate ?? defaultGstRate ?? 0;
+  });
 
   final String companyName;
-  String get company => companyName;
   final String category;
   final String itemName;
   final String itemNumber;
-  String get itemCode => itemNumber;
   final double buyingPrice;
   final double sellingPrice;
   final String? unit;
   final double gstRate;
-  double get defaultSellingPriceExclTax => sellingPrice;
-  double get defaultGstRate => gstRate;
   final double lowStockThreshold;
 
   Map<String, dynamic> toJson() {

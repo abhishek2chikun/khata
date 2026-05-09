@@ -127,7 +127,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           }
                         },
                         items: const <DropdownMenuItem<String>>[
-                          DropdownMenuItem(value: 'CREDIT', child: Text('Credit')),
+                          DropdownMenuItem(
+                              value: 'CREDIT', child: Text('Credit')),
                           DropdownMenuItem(value: 'PAID', child: Text('Paid')),
                         ],
                         decoration: const InputDecoration(
@@ -155,7 +156,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text('Items', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Items',
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 12),
                       ProductPicker(
                         fieldKey: const Key('productPickerField-0'),
@@ -163,8 +165,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         selectedProduct: _controller.draft.items.first.product,
                         onSelected: (product) {
                           _controller.updateItemProduct(0, product);
-                          _unitPriceController.text = product.defaultSellingPriceExclTax.toStringAsFixed(2);
-                          _gstRateController.text = product.defaultGstRate.toStringAsFixed(2);
+                          _unitPriceController.text =
+                              product.sellingPrice.toStringAsFixed(2);
+                          _gstRateController.text =
+                              product.gstRate.toStringAsFixed(2);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -172,7 +176,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         fieldKey: const Key('quantityField-0'),
                         controller: _quantityController,
                         label: 'Quantity',
-                        onChanged: (value) => _controller.updateItemQuantity(0, _parseNumber(value) ?? 0),
+                        onChanged: (value) => _controller.updateItemQuantity(
+                            0, _parseNumber(value) ?? 0),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
@@ -183,8 +188,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           }
                         },
                         items: const <DropdownMenuItem<String>>[
-                          DropdownMenuItem(value: 'PRE_TAX', child: Text('Pre tax')),
-                          DropdownMenuItem(value: 'TAX_INCLUSIVE', child: Text('Tax inclusive')),
+                          DropdownMenuItem(
+                              value: 'PRE_TAX', child: Text('Pre tax')),
+                          DropdownMenuItem(
+                              value: 'TAX_INCLUSIVE',
+                              child: Text('Tax inclusive')),
                         ],
                         decoration: const InputDecoration(
                           labelText: 'Pricing mode',
@@ -195,30 +203,36 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       MoneyTextField(
                         controller: _unitPriceController,
                         label: 'Unit price',
-                        onChanged: (value) => _controller.updateItemUnitPrice(0, _parseNumber(value)),
+                        onChanged: (value) => _controller.updateItemUnitPrice(
+                            0, _parseNumber(value)),
                       ),
                       const SizedBox(height: 12),
                       MoneyTextField(
                         controller: _gstRateController,
                         label: 'GST rate',
-                        onChanged: (value) => _controller.updateItemGstRate(0, _parseNumber(value)),
+                        onChanged: (value) => _controller.updateItemGstRate(
+                            0, _parseNumber(value)),
                       ),
                       const SizedBox(height: 12),
                       MoneyTextField(
                         controller: _discountPercentController,
                         label: 'Discount percent',
                         onChanged: (value) =>
-                            _controller.updateItemDiscountPercent(0, _parseNumber(value) ?? 0),
+                            _controller.updateItemDiscountPercent(
+                                0, _parseNumber(value) ?? 0),
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
                         key: const Key('previewInvoiceButton'),
-                        onPressed: _controller.isQuoting || _isLoading ? null : _openPreview,
+                        onPressed: _controller.isQuoting || _isLoading
+                            ? null
+                            : _openPreview,
                         child: _controller.isQuoting
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Text('Preview invoice'),
                       ),
@@ -237,10 +251,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     });
 
     try {
-      final products = await widget.productsService.fetchProducts(filter: const ProductFilter(active: true));
+      final products = await widget.productsService
+          .fetchProducts(filter: const ProductFilter(active: true));
       final sellers = widget.initialSeller != null
           ? <Seller>[widget.initialSeller!]
-          : (await widget.sellersService.fetchSellers()).where((seller) => seller.isActive).toList();
+          : (await widget.sellersService.fetchSellers())
+              .where((seller) => seller.isActive)
+              .toList();
       if (!mounted) {
         return;
       }

@@ -57,12 +57,12 @@ void main() {
 
     expect(productsService.createdInputs, hasLength(1));
     final input = productsService.createdInputs.single;
-    expect(input.company, 'Acme');
+    expect(input.companyName, 'Acme');
     expect(input.category, 'Pens');
     expect(input.itemName, 'Blue Pen');
-    expect(input.itemCode, 'PEN-1');
-    expect(input.defaultSellingPriceExclTax, 10.5);
-    expect(input.defaultGstRate, 18);
+    expect(input.itemNumber, 'PEN-1');
+    expect(input.sellingPrice, 10.5);
+    expect(input.gstRate, 18);
     expect(input.quantityOnHand, 3.25);
     expect(input.lowStockThreshold, 2);
   });
@@ -75,12 +75,13 @@ void main() {
           productsService: FakeProductsService(),
           product: const Product(
             id: '1',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Pens',
             itemName: 'Blue Pen',
-            itemCode: 'PEN-1',
-            defaultSellingPriceExclTax: 10,
-            defaultGstRate: 18,
+            itemNumber: 'PEN-1',
+            buyingPrice: 10,
+            sellingPrice: 10,
+            gstRate: 18,
             quantityOnHand: 5,
             lowStockThreshold: 2,
             isActive: true,
@@ -102,12 +103,14 @@ class FakeProductsService implements ProductsService {
     createdInputs.add(input);
     return Product(
       id: 'product-${createdInputs.length}',
-      company: input.company,
+      companyName: input.companyName,
       category: input.category,
       itemName: input.itemName,
-      itemCode: input.itemCode,
-      defaultSellingPriceExclTax: input.defaultSellingPriceExclTax,
-      defaultGstRate: input.defaultGstRate,
+      itemNumber: input.itemNumber,
+      buyingPrice: input.buyingPrice,
+      sellingPrice: input.sellingPrice,
+      unit: input.unit,
+      gstRate: input.gstRate,
       quantityOnHand: input.quantityOnHand,
       lowStockThreshold: input.lowStockThreshold,
       isActive: true,

@@ -1,27 +1,18 @@
 class Product {
   const Product({
     required this.id,
-    String? companyName,
-    String? company,
+    required this.companyName,
     required this.category,
     required this.itemName,
-    String? itemNumber,
-    String? itemCode,
-    double? buyingPrice,
-    double? sellingPrice,
-    double? defaultSellingPriceExclTax,
+    required this.itemNumber,
+    required this.buyingPrice,
+    required this.sellingPrice,
     this.unit,
-    double? gstRate,
-    double? defaultGstRate,
+    required this.gstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
     required this.isActive,
-  })  : companyName = companyName ?? company ?? '',
-        itemNumber = itemNumber ?? itemCode ?? '',
-        buyingPrice =
-            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
-        gstRate = gstRate ?? defaultGstRate ?? 0;
+  });
 
   final String id;
   final String companyName;
@@ -35,11 +26,6 @@ class Product {
   final double quantityOnHand;
   final double lowStockThreshold;
   final bool isActive;
-
-  String get company => companyName;
-  String get itemCode => itemNumber;
-  double get defaultSellingPriceExclTax => sellingPrice;
-  double get defaultGstRate => gstRate;
 
   bool get isLowStock => quantityOnHand <= lowStockThreshold;
 

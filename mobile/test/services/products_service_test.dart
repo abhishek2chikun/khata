@@ -14,7 +14,8 @@ void main() {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 200,
-          body: '{"id":"p1","company":"Acme","category":"Pens","item_name":"Blue Pen","item_code":"PEN-1","default_selling_price_excl_tax":10,"default_gst_rate":18,"quantity_on_hand":5,"low_stock_threshold":2,"is_active":true}',
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":true}',
         ),
       );
       final service = ApiProductsService(
@@ -28,12 +29,14 @@ void main() {
 
       await service.createProduct(
         const CreateProductInput(
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'pcs',
+          gstRate: 18,
           quantityOnHand: 5,
           lowStockThreshold: 2,
         ),
@@ -45,13 +48,25 @@ void main() {
       final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(payload['quantity_on_hand'], 5);
       expect(payload.containsKey('is_active'), isFalse);
+      expect(payload.containsKey('company'), isFalse);
+      expect(payload.containsKey('item_code'), isFalse);
+      expect(payload.containsKey('default_selling_price_excl_tax'), isFalse);
+      expect(payload.containsKey('default_gst_rate'), isFalse);
+      expect(payload['company_name'], 'Acme');
+      expect(payload['item_number'], 'PEN-1');
+      expect(payload['buying_price'], 8);
+      expect(payload['selling_price'], 10);
+      expect(payload['unit'], 'pcs');
+      expect(payload['gst_rate'], 18);
     });
 
-    test('update payload omits forbidden quantity_on_hand and is_active fields', () async {
+    test('update payload omits forbidden quantity_on_hand and is_active fields',
+        () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 200,
-          body: '{"id":"p1","company":"Acme","category":"Pens","item_name":"Blue Pen","item_code":"PEN-1","default_selling_price_excl_tax":10,"default_gst_rate":18,"quantity_on_hand":5,"low_stock_threshold":2,"is_active":true}',
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":true}',
         ),
       );
       final service = ApiProductsService(
@@ -66,12 +81,14 @@ void main() {
       await service.updateProduct(
         id: 'p1',
         input: const UpdateProductInput(
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'pcs',
+          gstRate: 18,
           lowStockThreshold: 2,
         ),
       );
@@ -82,14 +99,41 @@ void main() {
       final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(payload.containsKey('quantity_on_hand'), isFalse);
       expect(payload.containsKey('is_active'), isFalse);
+      expect(payload.containsKey('company'), isFalse);
+      expect(payload.containsKey('item_code'), isFalse);
+      expect(payload.containsKey('default_selling_price_excl_tax'), isFalse);
+      expect(payload.containsKey('default_gst_rate'), isFalse);
       expect(payload['low_stock_threshold'], 2);
+    });
+
+    test('fetch query emits canonical product filter keys only', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(statusCode: 200, body: '[]'),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      await service.fetchProducts(
+        filter: const ProductFilter(companyName: 'Acme', category: 'Pens'),
+      );
+
+      expect(httpClient.lastQueryParameters, isNot(contains('company')));
+      expect(httpClient.lastQueryParameters['company_name'], 'Acme');
+      expect(httpClient.lastQueryParameters['category'], 'Pens');
     });
   });
 }
 
 class FakeAuthService implements AuthService {
   @override
-  Future<AuthSessionTokens> login({required String username, required String password}) {
+  Future<AuthSessionTokens> login(
+      {required String username, required String password}) {
     throw UnimplementedError();
   }
 
@@ -130,7 +174,19 @@ class RecordingHttpClient implements HttpClient {
   final HttpClientResponse response;
   String? lastMethod;
   String? lastPath;
+  Map<String, String> lastQueryParameters = const <String, String>{};
   String? lastBody;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    lastMethod = 'GET';
+    lastPath = url.path;
+    lastQueryParameters = url.queryParameters;
+    return RecordingHttpRequest(
+      response: response,
+      onClose: (body) => lastBody = body,
+    );
+  }
 
   @override
   Future<HttpClientRequest> postUrl(Uri url) async {
@@ -181,7 +237,8 @@ class RecordingHttpRequest implements HttpClientRequest {
 
 class FakeHttpResponse extends Stream<List<int>> implements HttpClientResponse {
   FakeHttpResponse({required this.statusCode, required String body})
-      : _bodyStream = Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
+      : _bodyStream =
+            Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
 
   final int statusCode;
   final Stream<List<int>> _bodyStream;

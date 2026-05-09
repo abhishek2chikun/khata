@@ -39,16 +39,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   void initState() {
     super.initState();
     final product = widget.product;
-    _companyController = TextEditingController(text: product?.company ?? '');
+    _companyController =
+        TextEditingController(text: product?.companyName ?? '');
     _categoryController = TextEditingController(text: product?.category ?? '');
     _itemNameController = TextEditingController(text: product?.itemName ?? '');
-    _itemCodeController = TextEditingController(text: product?.itemCode ?? '');
+    _itemCodeController =
+        TextEditingController(text: product?.itemNumber ?? '');
     _priceController = TextEditingController(
-      text:
-          product == null ? '' : product.defaultSellingPriceExclTax.toString(),
+      text: product == null ? '' : product.sellingPrice.toString(),
     );
     _gstController = TextEditingController(
-      text: product == null ? '' : product.defaultGstRate.toString(),
+      text: product == null ? '' : product.gstRate.toString(),
     );
     _quantityController = TextEditingController(
       text: product == null ? '' : product.quantityOnHand.toString(),
@@ -153,25 +154,25 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           ? await widget.productsService.updateProduct(
               id: widget.product!.id,
               input: UpdateProductInput(
-                company: _companyController.text.trim(),
+                companyName: _companyController.text.trim(),
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
-                itemCode: _itemCodeController.text.trim(),
-                defaultSellingPriceExclTax:
-                    validation.defaultSellingPriceExclTax,
-                defaultGstRate: validation.defaultGstRate,
+                itemNumber: _itemCodeController.text.trim(),
+                buyingPrice: validation.sellingPrice,
+                sellingPrice: validation.sellingPrice,
+                gstRate: validation.gstRate,
                 lowStockThreshold: validation.lowStockThreshold,
               ),
             )
           : await widget.productsService.createProduct(
               CreateProductInput(
-                company: _companyController.text.trim(),
+                companyName: _companyController.text.trim(),
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
-                itemCode: _itemCodeController.text.trim(),
-                defaultSellingPriceExclTax:
-                    validation.defaultSellingPriceExclTax,
-                defaultGstRate: validation.defaultGstRate,
+                itemNumber: _itemCodeController.text.trim(),
+                buyingPrice: validation.sellingPrice,
+                sellingPrice: validation.sellingPrice,
+                gstRate: validation.gstRate,
                 quantityOnHand: validation.quantityOnHand,
                 lowStockThreshold: validation.lowStockThreshold,
               ),
@@ -240,8 +241,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       return null;
     }
     return _ValidatedProductInput(
-      defaultSellingPriceExclTax: sellingPrice!,
-      defaultGstRate: gstRate!,
+      sellingPrice: sellingPrice!,
+      gstRate: gstRate!,
       quantityOnHand: quantityOnHand!,
       lowStockThreshold: lowStockThreshold!,
     );
@@ -279,14 +280,14 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
 class _ValidatedProductInput {
   const _ValidatedProductInput({
-    required this.defaultSellingPriceExclTax,
-    required this.defaultGstRate,
+    required this.sellingPrice,
+    required this.gstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
   });
 
-  final double defaultSellingPriceExclTax;
-  final double defaultGstRate;
+  final double sellingPrice;
+  final double gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
 }
