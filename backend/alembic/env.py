@@ -6,6 +6,8 @@ from sqlalchemy import engine_from_config, pool
 from app.config import get_settings
 from app.models.app_user import AppUser  # noqa: F401
 from app.models.base import Base
+from app.models.buyer import Buyer  # noqa: F401
+from app.models.buyer_transaction import BuyerTransaction  # noqa: F401
 from app.models.company_profile import CompanyProfile  # noqa: F401
 from app.models.invoice import Invoice  # noqa: F401
 from app.models.invoice_item import InvoiceItem  # noqa: F401

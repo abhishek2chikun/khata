@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,7 +19,7 @@ class Product(Base):
     item_number: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     item_name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(String(255), nullable=False)
-    buyer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    buyer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("buyers.id"), nullable=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     buying_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     selling_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
