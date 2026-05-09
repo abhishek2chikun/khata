@@ -61,6 +61,7 @@ class InvoiceDetail {
 
 class InvoiceDetailItem {
   const InvoiceDetailItem({
+    required this.productId,
     required this.productName,
     this.productItemNumber = '',
     this.productItemName = '',
@@ -74,6 +75,7 @@ class InvoiceDetailItem {
     required this.lineTotal,
   });
 
+  final String productId;
   final String productName;
   final String productItemNumber;
   final String productItemName;
@@ -88,6 +90,7 @@ class InvoiceDetailItem {
 
   factory InvoiceDetailItem.fromJson(Map<String, dynamic> json) {
     return InvoiceDetailItem(
+      productId: json['product_id'] as String? ?? '',
       productName: json['product_name'] as String? ?? '',
       productItemNumber: json['product_item_number'] as String? ?? '',
       productItemName: json['product_item_name'] as String? ?? '',

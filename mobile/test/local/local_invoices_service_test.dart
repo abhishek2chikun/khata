@@ -387,6 +387,57 @@ void main() {
         hasLength(2));
   });
 
+  test('idempotent replay does not reload mutable product state', () async {
+    final draft = _draft(customer: customer, product: product, quantity: 1);
+    final first = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(28),
+    );
+
+    await productsService.updateProduct(
+      id: product.id,
+      input: const UpdateProductInput(
+        companyName: 'Acme',
+        category: 'Pens',
+        itemName: 'Blue Pen',
+        itemNumber: 'PEN-1',
+        buyingPrice: 80,
+        sellingPrice: 236,
+        gstRate: 18,
+        lowStockThreshold: 2,
+      ),
+    );
+    await productsService.archiveProduct(id: product.id);
+
+    final second = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(28),
+    );
+
+    expect(second.invoice.id, first.invoice.id);
+    expect(second.invoice.grandTotal, 118);
+    expect(await database.select(database.invoices).get(), hasLength(1));
+    expect(await database.select(database.stockMovements).get(), hasLength(1));
+  });
+
+  test(
+      'duplicate request insert returns idempotent result without raw DB error',
+      () async {
+    final draft = _draft(customer: customer, product: product, quantity: 1);
+    final first = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(29),
+    );
+
+    final second = await invoicesService.createInvoice(
+      draft: draft,
+      requestId: _uuid(29),
+    );
+
+    expect(second.invoice.id, first.invoice.id);
+    expect(await database.select(database.invoices).get(), hasLength(1));
+  });
+
   test('legacy PAID payment mode resolves to TOTAL_PAID before validation',
       () async {
     final result = await invoicesService.createInvoice(
@@ -673,6 +724,26 @@ void main() {
     expect(quote.items.single.enteredUnitPrice, 1.01);
     expect(quote.items.single.lineTotal, 1.01);
     expect(quote.totals.grandTotal, 1.01);
+  });
+
+  test('inclusive GST decimal edge keeps two-decimal totals stable', () async {
+    final quote = await invoicesService.quoteInvoice(_draftWithItems(
+      customer: customer,
+      items: <InvoiceDraftItem>[
+        InvoiceDraftItem(
+          product: product,
+          quantity: 2.555,
+          unitPrice: 19.995,
+          discountPercent: 12.345,
+        ),
+      ],
+    ));
+
+    // This protects the current double-based half-up shim for known edge input.
+    // A future Decimal rewrite should update this only after backend parity checks.
+    expect(quote.items.single.enteredUnitPrice, 20);
+    expect(quote.items.single.lineTotal, 44.79);
+    expect(quote.totals.grandTotal, 44.79);
   });
 
   test('rejects unsupported payment modes', () async {

@@ -32,74 +32,76 @@ class LocalInvoicesService implements InvoicesService {
     required String requestId,
   }) async {
     _validateRequestId(requestId);
-    final existing = await (_database.select(_database.invoices)
-          ..where((invoice) => invoice.requestId.equals(requestId)))
-        .getSingleOrNull();
-    if (existing != null) {
-      final prepared = await _prepareInvoice(draft);
-      final requestHash = _invoiceRequestHash(draft, prepared);
-      if (existing.requestHash != requestHash) {
-        throw _idempotencyConflictError();
-      }
-      return CreateInvoiceResult(
-        invoice: await _buildInvoiceDetail(existing.id),
-        warnings: const <InvoiceWarning>[],
-      );
-    }
-
-    final prepared = await _prepareInvoice(draft);
-    final requestHash = _invoiceRequestHash(draft, prepared);
-    final invoiceId = generateLocalUuid();
     await _ensureSystemUser();
 
-    await _database.transaction(() async {
+    return _database.transaction(() async {
+      final existing = await (_database.select(_database.invoices)
+            ..where((invoice) => invoice.requestId.equals(requestId)))
+          .getSingleOrNull();
+      if (existing != null) {
+        return _replayExistingCreate(draft: draft, existing: existing);
+      }
+
+      final prepared = await _prepareInvoice(draft);
+      final requestHash = _invoiceRequestHash(draft, prepared);
+      final invoiceId = generateLocalUuid();
       final invoiceNumber = await _nextInvoiceNumber();
       final now = DateTime.now().toUtc().toIso8601String();
-      await _database.into(_database.invoices).insert(
-            InvoicesCompanion.insert(
-              id: invoiceId,
-              requestId: requestId,
-              requestHash: requestHash,
-              invoiceNumber: invoiceNumber,
-              customerId: prepared.customer.id,
-              customerName: prepared.customer.name,
-              customerAddress: prepared.customer.address,
-              customerState: Value(prepared.customer.state),
-              customerStateCode: Value(prepared.customer.stateCode),
-              customerPhone: Value(prepared.customer.phone),
-              customerGstin: Value(prepared.customer.gstin),
-              placeOfSupplyState: prepared.placeOfSupplyState,
-              placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
-              companyName: prepared.company.name,
-              companyAddress: prepared.company.address,
-              companyCity: prepared.company.city,
-              companyState: prepared.company.state,
-              companyStateCode: prepared.company.stateCode,
-              companyGstin: Value(prepared.company.gstin),
-              companyPhone: Value(prepared.company.phone),
-              companyEmail: Value(prepared.company.email),
-              companyBankName: Value(prepared.company.bankName),
-              companyBankAccount: Value(prepared.company.bankAccount),
-              companyBankIfsc: Value(prepared.company.bankIfsc),
-              companyBankBranch: Value(prepared.company.bankBranch),
-              companyJurisdiction: Value(prepared.company.jurisdiction),
-              invoiceDate: prepared.invoiceDate,
-              invoiceDatetime: Value(prepared.invoiceDatetime),
-              taxRegime: prepared.taxRegime,
-              status: 'ACTIVE',
-              paymentState: Value(prepared.paymentState),
-              paidAmount: Value(_normalizeDecimal(prepared.paidAmount)),
-              paymentMode: prepared.paymentState,
-              subtotal: _normalizeDecimal(prepared.totals.subtotal),
-              discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
-              taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
-              gstTotal: _normalizeDecimal(prepared.totals.gstTotal),
-              grandTotal: _normalizeDecimal(prepared.totals.grandTotal),
-              notes: Value(_emptyToNull(draft.notes)),
-              createdByUserId: _systemUserId,
-              createdAt: now,
-            ),
-          );
+      try {
+        await _database.into(_database.invoices).insert(
+              InvoicesCompanion.insert(
+                id: invoiceId,
+                requestId: requestId,
+                requestHash: requestHash,
+                invoiceNumber: invoiceNumber,
+                customerId: prepared.customer.id,
+                customerName: prepared.customer.name,
+                customerAddress: prepared.customer.address,
+                customerState: Value(prepared.customer.state),
+                customerStateCode: Value(prepared.customer.stateCode),
+                customerPhone: Value(prepared.customer.phone),
+                customerGstin: Value(prepared.customer.gstin),
+                placeOfSupplyState: prepared.placeOfSupplyState,
+                placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
+                companyName: prepared.company.name,
+                companyAddress: prepared.company.address,
+                companyCity: prepared.company.city,
+                companyState: prepared.company.state,
+                companyStateCode: prepared.company.stateCode,
+                companyGstin: Value(prepared.company.gstin),
+                companyPhone: Value(prepared.company.phone),
+                companyEmail: Value(prepared.company.email),
+                companyBankName: Value(prepared.company.bankName),
+                companyBankAccount: Value(prepared.company.bankAccount),
+                companyBankIfsc: Value(prepared.company.bankIfsc),
+                companyBankBranch: Value(prepared.company.bankBranch),
+                companyJurisdiction: Value(prepared.company.jurisdiction),
+                invoiceDate: prepared.invoiceDate,
+                invoiceDatetime: Value(prepared.invoiceDatetime),
+                taxRegime: prepared.taxRegime,
+                status: 'ACTIVE',
+                paymentState: Value(prepared.paymentState),
+                paidAmount: Value(_normalizeDecimal(prepared.paidAmount)),
+                paymentMode: prepared.paymentState,
+                subtotal: _normalizeDecimal(prepared.totals.subtotal),
+                discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
+                taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
+                gstTotal: _normalizeDecimal(prepared.totals.gstTotal),
+                grandTotal: _normalizeDecimal(prepared.totals.grandTotal),
+                notes: Value(_emptyToNull(draft.notes)),
+                createdByUserId: _systemUserId,
+                createdAt: now,
+              ),
+            );
+      } on Object catch (error) {
+        final duplicate = await (_database.select(_database.invoices)
+              ..where((invoice) => invoice.requestId.equals(requestId)))
+            .getSingleOrNull();
+        if (duplicate != null) {
+          return _replayExistingCreate(draft: draft, existing: duplicate);
+        }
+        throw error;
+      }
 
       final stockQuantitiesByProductId = <String, double>{};
       for (final line in prepared.lines) {
@@ -205,12 +207,12 @@ class LocalInvoicesService implements InvoicesService {
               ),
             );
       }
-    });
 
-    return CreateInvoiceResult(
-      invoice: await _buildInvoiceDetail(invoiceId),
-      warnings: prepared.warnings,
-    );
+      return CreateInvoiceResult(
+        invoice: await _buildInvoiceDetail(invoiceId),
+        warnings: prepared.warnings,
+      );
+    });
   }
 
   @override
@@ -513,6 +515,77 @@ class LocalInvoicesService implements InvoicesService {
     );
   }
 
+  Future<CreateInvoiceResult> _replayExistingCreate({
+    required InvoiceDraft draft,
+    required Invoice existing,
+  }) async {
+    final invoice = await _buildInvoiceDetail(existing.id);
+    if (!_matchesExistingCreate(draft: draft, invoice: invoice)) {
+      throw _idempotencyConflictError();
+    }
+    return CreateInvoiceResult(
+      invoice: invoice,
+      warnings: const <InvoiceWarning>[],
+    );
+  }
+
+  bool _matchesExistingCreate({
+    required InvoiceDraft draft,
+    required InvoiceDetail invoice,
+  }) {
+    final draftCustomer = draft.customer;
+    if (draftCustomer == null || draftCustomer.id != invoice.customerId) {
+      return false;
+    }
+    if (_resolveInvoiceDatetime(draft) != invoice.invoiceDatetime) {
+      return false;
+    }
+    if (_resolvePaymentState(draft) != invoice.paymentState) {
+      return false;
+    }
+    if (_roundMoney(_resolveReplayPaidAmount(draft, invoice)) !=
+        invoice.paidAmount) {
+      return false;
+    }
+    if (_emptyToNull(draft.notes) != _emptyToNull(invoice.notes)) {
+      return false;
+    }
+    if (draft.items.length != invoice.items.length) {
+      return false;
+    }
+    for (var index = 0; index < draft.items.length; index += 1) {
+      final draftItem = draft.items[index];
+      final storedItem = invoice.items[index];
+      if (draftItem.product?.id == null ||
+          draftItem.product!.id != storedItem.productId) {
+        return false;
+      }
+      if (_normalizeDecimal(draftItem.quantity) !=
+          _normalizeDecimal(storedItem.quantity)) {
+        return false;
+      }
+      final unitPrice = draftItem.unitPrice;
+      if (unitPrice != null &&
+          _normalizeDecimal(_roundMoney(unitPrice)) !=
+              _normalizeDecimal(storedItem.sellingPrice)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  double _resolveReplayPaidAmount(InvoiceDraft draft, InvoiceDetail invoice) {
+    switch (invoice.paymentState) {
+      case 'CREDIT':
+        return 0;
+      case 'TOTAL_PAID':
+        return invoice.grandTotal;
+      case 'PARTIAL_PAID':
+        return draft.paidAmount;
+    }
+    return draft.paidAmount;
+  }
+
   _PreparedLine _normalizeLine({
     required Product product,
     required InvoiceDraftItem item,
@@ -623,6 +696,7 @@ class LocalInvoicesService implements InvoicesService {
       items: items
           .map(
             (item) => InvoiceDetailItem(
+              productId: item.productId,
               productName: item.productName,
               productItemNumber: item.productItemNumber,
               productItemName: item.productItemName,

@@ -191,6 +191,74 @@ void main() {
       expect(result.warnings.single.message,
           'Stock will go negative for Blue Pen');
     });
+
+    test('create serializes legacy PAID as TOTAL_PAID without payment_mode',
+        () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 201,
+          body: jsonEncode(<String, dynamic>{
+            'invoice': <String, dynamic>{
+              'id': 'inv-1',
+              'request_id': 'request-1',
+              'invoice_number': 1001,
+              'customer_id': 'customer-1',
+              'invoice_date': '2026-04-20',
+              'tax_regime': 'INTRA_STATE',
+              'status': 'ACTIVE',
+              'payment_state': 'TOTAL_PAID',
+              'paid_amount': '236.00',
+              'payment_mode': 'TOTAL_PAID',
+              'place_of_supply_state': 'Maharashtra',
+              'place_of_supply_state_code': '27',
+              'subtotal': '200.00',
+              'discount_total': '0.00',
+              'taxable_total': '200.00',
+              'gst_total': '36.00',
+              'grand_total': '236.00',
+              'notes': null,
+              'created_at': '2026-04-20T10:00:00Z',
+              'cancel_request_id': null,
+              'cancel_reason': null,
+              'canceled_at': null,
+              'customer_snapshot': <String, dynamic>{
+                'id': 'customer-1',
+                'name': 'ABC Stores',
+                'address': 'Market Yard',
+                'state': 'Maharashtra',
+                'state_code': '27',
+              },
+              'company_snapshot': <String, dynamic>{
+                'name': 'Acme Traders',
+                'address': 'Main Road',
+                'city': 'Pune',
+                'state': 'Maharashtra',
+                'state_code': '27',
+              },
+              'items': <Map<String, dynamic>>[],
+            },
+            'warnings': <Map<String, dynamic>>[],
+          }),
+        ),
+      );
+      final service = ApiInvoicesService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      await service.createInvoice(
+        draft: _draft.copyWith(paymentMode: 'PAID'),
+        requestId: 'request-1',
+      );
+
+      final body = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
+      expect(body['payment_state'], 'TOTAL_PAID');
+      expect(body.containsKey('payment_mode'), isFalse);
+    });
   });
 }
 

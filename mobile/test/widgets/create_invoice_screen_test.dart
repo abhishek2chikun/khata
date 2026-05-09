@@ -381,6 +381,7 @@ final _invoiceDetail = InvoiceDetail(
   cancelReason: null,
   items: const <InvoiceDetailItem>[
     InvoiceDetailItem(
+      productId: 'product-1',
       productName: 'Blue Pen',
       quantity: 2,
       lineTotal: 236,

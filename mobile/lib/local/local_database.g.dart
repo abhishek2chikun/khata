@@ -1935,7 +1935,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
       'paid_amount', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT \'0\'',
+      $customConstraints:
+          'NOT NULL DEFAULT \'0\' CHECK (CAST(paid_amount AS REAL) >= 0) CHECK ((payment_state = \'CREDIT\' AND CAST(paid_amount AS REAL) = 0) OR (payment_state = \'TOTAL_PAID\' AND CAST(paid_amount AS REAL) = CAST(grand_total AS REAL)) OR (payment_state = \'PARTIAL_PAID\' AND CAST(paid_amount AS REAL) > 0 AND CAST(paid_amount AS REAL) < CAST(grand_total AS REAL)))',
       defaultValue: const CustomExpression('\'0\''));
   static const VerificationMeta _paymentModeMeta =
       const VerificationMeta('paymentMode');

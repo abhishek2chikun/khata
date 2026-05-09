@@ -151,8 +151,8 @@ class Invoices extends Table {
   TextColumn get status => text()();
   TextColumn get paymentState => text().customConstraint(
       "NOT NULL DEFAULT 'CREDIT' CHECK (payment_state IN ('CREDIT','TOTAL_PAID','PARTIAL_PAID'))")();
-  TextColumn get paidAmount =>
-      text().customConstraint("NOT NULL DEFAULT '0'")();
+  TextColumn get paidAmount => text().customConstraint(
+      "NOT NULL DEFAULT '0' CHECK (CAST(paid_amount AS REAL) >= 0) CHECK ((payment_state = 'CREDIT' AND CAST(paid_amount AS REAL) = 0) OR (payment_state = 'TOTAL_PAID' AND CAST(paid_amount AS REAL) = CAST(grand_total AS REAL)) OR (payment_state = 'PARTIAL_PAID' AND CAST(paid_amount AS REAL) > 0 AND CAST(paid_amount AS REAL) < CAST(grand_total AS REAL)))")();
   TextColumn get paymentMode => text()();
   TextColumn get subtotal => text()();
   TextColumn get discountTotal => text()();
@@ -488,9 +488,7 @@ class LocalDatabase extends _$LocalDatabase {
               await customStatement(
                   "UPDATE invoices SET invoice_datetime = invoice_date || 'T00:00:00.000Z' WHERE invoice_datetime = '1970-01-01T00:00:00.000Z'");
               await customStatement(
-                  "UPDATE invoices SET payment_state = CASE WHEN payment_mode = 'PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'TOTAL_PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'PARTIAL_PAID' THEN 'PARTIAL_PAID' ELSE 'CREDIT' END WHERE payment_state = 'CREDIT'");
-              await customStatement(
-                  "UPDATE invoices SET paid_amount = CASE WHEN payment_state = 'TOTAL_PAID' THEN grand_total ELSE '0' END WHERE paid_amount = '0'");
+                  "UPDATE invoices SET payment_state = CASE WHEN payment_mode = 'PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'TOTAL_PAID' THEN 'TOTAL_PAID' WHEN payment_mode = 'PARTIAL_PAID' THEN 'PARTIAL_PAID' ELSE 'CREDIT' END, paid_amount = CASE WHEN payment_mode = 'PAID' OR payment_mode = 'TOTAL_PAID' THEN grand_total ELSE '0' END WHERE payment_state = 'CREDIT' AND paid_amount = '0'");
             }
             if (await _tableExists('invoice_items')) {
               await m.addColumn(invoiceItems, invoiceItems.productItemNumber);

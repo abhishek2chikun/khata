@@ -57,17 +57,27 @@ class InvoiceDraft {
   }
 
   Map<String, dynamic> toJson() {
+    final resolvedPaymentState = _resolvedPaymentState();
     return <String, dynamic>{
       'customer_id': customer?.id,
       'invoice_datetime': _emptyToNull(invoiceDatetime),
       'invoice_date': invoiceDate,
-      'payment_state': paymentState,
+      'payment_state': resolvedPaymentState,
       'paid_amount': paidAmount,
-      'payment_mode': paymentMode,
       'place_of_supply_state_code': _emptyToNull(placeOfSupplyStateCode),
       'notes': _emptyToNull(notes),
       'items': items.map((item) => item.toJson()).toList(),
     };
+  }
+
+  String _resolvedPaymentState() {
+    if (paymentMode == 'PAID') {
+      return 'TOTAL_PAID';
+    }
+    if (paymentMode != paymentState) {
+      return paymentMode;
+    }
+    return paymentState;
   }
 }
 
