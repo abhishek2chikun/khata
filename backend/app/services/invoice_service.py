@@ -483,7 +483,7 @@ def list_invoices(
     to_date: date | None = None,
     customer_id: UUID | None = None,
     status_filter: str | None = None,
-    payment_mode: str | None = None,
+    payment_state: str | None = None,
     invoice_number: int | None = None,
 ) -> InvoiceListResponse:
     query = select(Invoice).order_by(Invoice.invoice_number.desc())
@@ -495,9 +495,8 @@ def list_invoices(
         query = query.where(Invoice.customer_id == customer_id)
     if status_filter is not None:
         query = query.where(Invoice.status == status_filter)
-    if payment_mode is not None:
-        mapped_payment_state = "TOTAL_PAID" if payment_mode == "PAID" else payment_mode
-        query = query.where(Invoice.payment_state == mapped_payment_state)
+    if payment_state is not None:
+        query = query.where(Invoice.payment_state == payment_state)
     if invoice_number is not None:
         query = query.where(Invoice.invoice_number == invoice_number)
     invoices = list(session.scalars(query).all())
