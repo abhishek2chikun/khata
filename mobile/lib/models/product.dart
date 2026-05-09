@@ -5,6 +5,7 @@ class Product {
     required this.category,
     required this.itemName,
     required this.itemNumber,
+    this.buyerId,
     required this.buyingPrice,
     required this.sellingPrice,
     this.unit,
@@ -19,6 +20,7 @@ class Product {
   final String category;
   final String itemName;
   final String itemNumber;
+  final String? buyerId;
   final double buyingPrice;
   final double sellingPrice;
   final String? unit;
@@ -31,24 +33,44 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'].toString(),
+      id: _requireString(json, 'id'),
       companyName: _requireString(json, 'company_name'),
-      category: json['category'] as String? ?? '',
-      itemName: json['item_name'] as String? ?? '',
+      category: _requireString(json, 'category'),
+      itemName: _requireString(json, 'item_name'),
       itemNumber: _requireString(json, 'item_number'),
+      buyerId: _optionalString(json, 'buyer_id'),
       buyingPrice: _requireDouble(json, 'buying_price'),
       sellingPrice: _requireDouble(json, 'selling_price'),
       unit: json['unit'] as String?,
       gstRate: _requireDouble(json, 'gst_rate'),
       quantityOnHand: _requireDouble(json, 'quantity_on_hand'),
       lowStockThreshold: _requireDouble(json, 'low_stock_threshold'),
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: _requireBool(json, 'is_active'),
     );
   }
 
   static String _requireString(Map<String, dynamic> json, String key) {
     final value = json[key];
     if (value is String) {
+      return value;
+    }
+    throw FormatException('Missing required product field: $key');
+  }
+
+  static String? _optionalString(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      return value;
+    }
+    throw FormatException('Invalid product field: $key');
+  }
+
+  static bool _requireBool(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is bool) {
       return value;
     }
     throw FormatException('Missing required product field: $key');
