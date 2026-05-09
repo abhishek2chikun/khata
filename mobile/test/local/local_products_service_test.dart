@@ -18,39 +18,42 @@ void main() {
     await database.close();
   });
 
-  test('creates a product and persists backend-compatible decimal strings',
-      () async {
+  test('creates a product and persists canonical V2 decimal strings', () async {
     final product = await service.createProduct(_createProductInput());
 
     expect(product.id, isNotEmpty);
-    expect(product.company, 'Acme');
+    expect(product.companyName, 'Acme');
     expect(product.category, 'Pens');
     expect(product.itemName, 'Blue Pen');
-    expect(product.itemCode, 'PEN-1');
-    expect(product.defaultSellingPriceExclTax, 10.5);
-    expect(product.defaultGstRate, 18);
+    expect(product.itemNumber, 'PEN-1');
+    expect(product.buyingPrice, 8.25);
+    expect(product.sellingPrice, 10.5);
+    expect(product.unit, 'box');
+    expect(product.gstRate, 18);
     expect(product.quantityOnHand, 3.25);
     expect(product.lowStockThreshold, 2);
     expect(product.isActive, isTrue);
 
     final storedProduct = await database.select(database.products).getSingle();
     expect(storedProduct.id, product.id);
-    expect(storedProduct.defaultSellingPriceExclTax, '10.5');
-    expect(storedProduct.defaultGstRate, '18');
+    expect(storedProduct.companyName, 'Acme');
+    expect(storedProduct.itemNumber, 'PEN-1');
+    expect(storedProduct.buyingPrice, '8.25');
+    expect(storedProduct.sellingPrice, '10.5');
+    expect(storedProduct.unit, 'box');
+    expect(storedProduct.gstRate, '18');
     expect(storedProduct.quantityOnHand, '3.25');
     expect(storedProduct.lowStockThreshold, '2');
-    expect(storedProduct.buyingPriceExclTax, isNull);
-    expect(storedProduct.buyingGstRate, isNull);
   });
 
   test(
       'unfiltered list includes active and inactive products ordered by item name',
       () async {
     final marker = await service.createProduct(
-      _createProductInput(itemName: 'Marker', itemCode: 'MRK-1'),
+      _createProductInput(itemName: 'Marker', itemNumber: 'MRK-1'),
     );
     final pen = await service.createProduct(
-      _createProductInput(itemName: 'Blue Pen', itemCode: 'PEN-1'),
+      _createProductInput(itemName: 'Blue Pen', itemNumber: 'PEN-1'),
     );
     await database.customStatement(
       "UPDATE products SET is_active = 0 WHERE id = '${marker.id}'",
@@ -65,10 +68,10 @@ void main() {
   test('active filter returns active or inactive products when provided',
       () async {
     final inactive = await service.createProduct(
-      _createProductInput(itemName: 'Marker', itemCode: 'MRK-1'),
+      _createProductInput(itemName: 'Marker', itemNumber: 'MRK-1'),
     );
     final active = await service.createProduct(
-      _createProductInput(itemName: 'Blue Pen', itemCode: 'PEN-1'),
+      _createProductInput(itemName: 'Blue Pen', itemNumber: 'PEN-1'),
     );
     await database.customStatement(
       "UPDATE products SET is_active = 0 WHERE id = '${inactive.id}'",
@@ -86,13 +89,13 @@ void main() {
         inactiveProducts.map((product) => product.id), <String>[inactive.id]);
   });
 
-  test('searches active products by item name and item code case-insensitively',
+  test('searches products by item name and item number case-insensitively',
       () async {
     final pen = await service.createProduct(
-      _createProductInput(itemName: 'Blue Pen', itemCode: 'PEN-1'),
+      _createProductInput(itemName: 'Blue Pen', itemNumber: 'PEN-1'),
     );
     await service.createProduct(
-      _createProductInput(itemName: 'A5 Notebook', itemCode: 'NOTE-1'),
+      _createProductInput(itemName: 'A5 Notebook', itemNumber: 'NOTE-1'),
     );
 
     final nameMatches = await service.fetchProducts(
@@ -108,15 +111,16 @@ void main() {
 
   test('filters active products by company and category', () async {
     final expected = await service.createProduct(
-      _createProductInput(company: 'Acme', category: 'Pens', itemCode: 'PEN-1'),
+      _createProductInput(
+          companyName: 'Acme', category: 'Pens', itemNumber: 'PEN-1'),
     );
     await service.createProduct(
       _createProductInput(
-          company: 'Acme', category: 'Files', itemCode: 'FILE-1'),
+          companyName: 'Acme', category: 'Files', itemNumber: 'FILE-1'),
     );
     await service.createProduct(
       _createProductInput(
-          company: 'Globex', category: 'Pens', itemCode: 'PEN-2'),
+          companyName: 'Globex', category: 'Pens', itemNumber: 'PEN-2'),
     );
 
     final products = await service.fetchProducts(
@@ -130,7 +134,7 @@ void main() {
     final lowStock = await service.createProduct(
       _createProductInput(
         itemName: 'Blue Pen',
-        itemCode: 'PEN-1',
+        itemNumber: 'PEN-1',
         quantityOnHand: 2,
         lowStockThreshold: 2,
       ),
@@ -138,7 +142,7 @@ void main() {
     await service.createProduct(
       _createProductInput(
         itemName: 'Marker',
-        itemCode: 'MRK-1',
+        itemNumber: 'MRK-1',
         quantityOnHand: 5,
         lowStockThreshold: 2,
       ),
@@ -157,29 +161,35 @@ void main() {
     final updated = await service.updateProduct(
       id: product.id,
       input: const UpdateProductInput(
-        company: 'Acme Updated',
+        companyName: 'Acme Updated',
         category: 'Markers',
         itemName: 'Permanent Marker',
-        itemCode: 'MRK-1',
-        defaultSellingPriceExclTax: 22.75,
-        defaultGstRate: 12,
+        itemNumber: 'MRK-1',
+        buyingPrice: 18.25,
+        sellingPrice: 22.75,
+        unit: 'pcs',
+        gstRate: 12,
         lowStockThreshold: 4,
       ),
     );
 
     expect(updated.id, product.id);
-    expect(updated.company, 'Acme Updated');
+    expect(updated.companyName, 'Acme Updated');
     expect(updated.category, 'Markers');
     expect(updated.itemName, 'Permanent Marker');
-    expect(updated.itemCode, 'MRK-1');
-    expect(updated.defaultSellingPriceExclTax, 22.75);
-    expect(updated.defaultGstRate, 12);
+    expect(updated.itemNumber, 'MRK-1');
+    expect(updated.buyingPrice, 18.25);
+    expect(updated.sellingPrice, 22.75);
+    expect(updated.unit, 'pcs');
+    expect(updated.gstRate, 12);
     expect(updated.quantityOnHand, 3.25);
     expect(updated.lowStockThreshold, 4);
 
     final storedProduct = await database.select(database.products).getSingle();
-    expect(storedProduct.defaultSellingPriceExclTax, '22.75');
-    expect(storedProduct.defaultGstRate, '12');
+    expect(storedProduct.buyingPrice, '18.25');
+    expect(storedProduct.sellingPrice, '22.75');
+    expect(storedProduct.unit, 'pcs');
+    expect(storedProduct.gstRate, '12');
     expect(storedProduct.quantityOnHand, '3.25');
     expect(storedProduct.lowStockThreshold, '4');
   });
@@ -191,45 +201,57 @@ void main() {
     final updated = await service.updateProduct(
       id: 'inactive-product',
       input: const UpdateProductInput(
-        company: 'Acme Updated',
+        companyName: 'Acme Updated',
         category: 'Markers',
         itemName: 'Permanent Marker',
-        itemCode: 'MRK-1',
-        defaultSellingPriceExclTax: 22.75,
-        defaultGstRate: 12,
+        itemNumber: 'MRK-1',
+        buyingPrice: 18.25,
+        sellingPrice: 22.75,
+        unit: null,
+        gstRate: 12,
         lowStockThreshold: 4,
       ),
     );
 
     expect(updated.id, 'inactive-product');
-    expect(updated.company, 'Acme Updated');
+    expect(updated.companyName, 'Acme Updated');
     expect(updated.category, 'Markers');
     expect(updated.itemName, 'Permanent Marker');
-    expect(updated.itemCode, 'MRK-1');
-    expect(updated.defaultSellingPriceExclTax, 22.75);
-    expect(updated.defaultGstRate, 12);
+    expect(updated.itemNumber, 'MRK-1');
+    expect(updated.buyingPrice, 18.25);
+    expect(updated.sellingPrice, 22.75);
+    expect(updated.unit, isNull);
+    expect(updated.gstRate, 12);
     expect(updated.quantityOnHand, 0);
     expect(updated.lowStockThreshold, 4);
     expect(updated.isActive, isFalse);
 
     final storedProduct = await database.select(database.products).getSingle();
-    expect(storedProduct.defaultSellingPriceExclTax, '22.75');
-    expect(storedProduct.defaultGstRate, '12');
+    expect(storedProduct.buyingPrice, '18.25');
+    expect(storedProduct.sellingPrice, '22.75');
+    expect(storedProduct.unit, isNull);
+    expect(storedProduct.gstRate, '12');
     expect(storedProduct.quantityOnHand, '0');
     expect(storedProduct.lowStockThreshold, '4');
     expect(storedProduct.isActive, isFalse);
   });
 
-  test('rejects duplicate product identity and duplicate item code', () async {
+  test('rejects duplicate company/name/category', () async {
     await service.createProduct(_createProductInput());
 
     await expectLater(
-      () => service.createProduct(_createProductInput(itemCode: 'PEN-2')),
+      () => service.createProduct(_createProductInput(itemNumber: 'PEN-2')),
       throwsA(_duplicateProductError()),
     );
+    expect(await database.select(database.products).get(), hasLength(1));
+  });
+
+  test('rejects duplicate item number', () async {
+    await service.createProduct(_createProductInput());
+
     await expectLater(
       () => service.createProduct(
-        _createProductInput(itemName: 'Black Pen', itemCode: 'PEN-1'),
+        _createProductInput(itemName: 'Black Pen', itemNumber: 'PEN-1'),
       ),
       throwsA(_duplicateProductError()),
     );
@@ -241,12 +263,12 @@ void main() {
     await _seedInactiveProduct(database);
 
     await expectLater(
-      () => service.createProduct(_createProductInput(itemCode: 'PEN-2')),
+      () => service.createProduct(_createProductInput(itemNumber: 'PEN-2')),
       throwsA(_duplicateProductError()),
     );
     await expectLater(
       () => service.createProduct(
-        _createProductInput(itemName: 'Black Pen', itemCode: 'PEN-1'),
+        _createProductInput(itemName: 'Black Pen', itemNumber: 'PEN-1'),
       ),
       throwsA(_duplicateProductError()),
     );
@@ -257,10 +279,10 @@ void main() {
     await _seedInactiveProduct(database);
     final product = await service.createProduct(
       _createProductInput(
-        company: 'Globex',
+        companyName: 'Globex',
         category: 'Markers',
         itemName: 'Marker',
-        itemCode: 'MRK-1',
+        itemNumber: 'MRK-1',
       ),
     );
 
@@ -268,12 +290,14 @@ void main() {
       () => service.updateProduct(
         id: product.id,
         input: const UpdateProductInput(
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'MRK-2',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'MRK-2',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'box',
+          gstRate: 18,
           lowStockThreshold: 2,
         ),
       ),
@@ -283,12 +307,14 @@ void main() {
       () => service.updateProduct(
         id: product.id,
         input: const UpdateProductInput(
-          company: 'Globex',
+          companyName: 'Globex',
           category: 'Markers',
           itemName: 'Marker',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'box',
+          gstRate: 18,
           lowStockThreshold: 2,
         ),
       ),
@@ -298,22 +324,26 @@ void main() {
 }
 
 CreateProductInput _createProductInput({
-  String company = 'Acme',
+  String companyName = 'Acme',
   String category = 'Pens',
   String itemName = 'Blue Pen',
-  String itemCode = 'PEN-1',
-  double defaultSellingPriceExclTax = 10.5,
-  double defaultGstRate = 18,
+  String itemNumber = 'PEN-1',
+  double buyingPrice = 8.25,
+  double sellingPrice = 10.5,
+  String? unit = 'box',
+  double gstRate = 18,
   double quantityOnHand = 3.25,
   double lowStockThreshold = 2,
 }) {
   return CreateProductInput(
-    company: company,
+    companyName: companyName,
     category: category,
     itemName: itemName,
-    itemCode: itemCode,
-    defaultSellingPriceExclTax: defaultSellingPriceExclTax,
-    defaultGstRate: defaultGstRate,
+    itemNumber: itemNumber,
+    buyingPrice: buyingPrice,
+    sellingPrice: sellingPrice,
+    unit: unit,
+    gstRate: gstRate,
     quantityOnHand: quantityOnHand,
     lowStockThreshold: lowStockThreshold,
   );
@@ -329,12 +359,14 @@ Future<void> _seedInactiveProduct(LocalDatabase database) {
   return database.into(database.products).insert(
         ProductsCompanion.insert(
           id: 'inactive-product',
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: '10',
-          defaultGstRate: '18',
+          itemNumber: 'PEN-1',
+          buyingPrice: '8',
+          sellingPrice: '10',
+          unit: const Value('box'),
+          gstRate: '18',
           quantityOnHand: '0',
           lowStockThreshold: '2',
           isActive: const Value(false),

@@ -112,8 +112,8 @@ class LocalInvoicesService implements InvoicesService {
                 productId: line.product.id,
                 lineNumber: line.lineNumber,
                 productName: line.product.itemName,
-                productCode: line.product.itemCode,
-                company: line.product.company,
+                productCode: line.product.itemNumber,
+                company: line.product.companyName,
                 category: line.product.category,
                 quantity: _normalizeDecimal(line.item.quantity),
                 pricingMode: line.item.pricingMode,
@@ -449,10 +449,9 @@ class LocalInvoicesService implements InvoicesService {
     required int lineNumber,
   }) {
     final enteredUnitPrice = _roundMoney(
-      item.unitPrice ?? double.parse(product.defaultSellingPriceExclTax),
+      item.unitPrice ?? double.parse(product.sellingPrice),
     );
-    final gstRate =
-        _roundRate(item.gstRate ?? double.parse(product.defaultGstRate));
+    final gstRate = _roundRate(item.gstRate ?? double.parse(product.gstRate));
     final discountPercent = _roundRate(item.discountPercent);
     late final double unitPriceExclTax;
     late final double unitPriceInclTax;

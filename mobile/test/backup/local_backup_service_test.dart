@@ -39,7 +39,12 @@ void main() {
     final items = await target.select(target.invoiceItems).get();
 
     expect(products.single.id, 'product-0001');
-    expect(products.single.defaultSellingPriceExclTax, '123.4500');
+    expect(products.single.itemNumber, 'PEN-product-0001');
+    expect(products.single.companyName, 'Acme');
+    expect(products.single.buyingPrice, '99.9900');
+    expect(products.single.sellingPrice, '123.4500');
+    expect(products.single.unit, 'box');
+    expect(products.single.gstRate, '18.000');
     expect(products.single.quantityOnHand, '7.500');
     expect(sellers.single.id, 'seller-0001');
     expect(invoices.single.id, 'invoice-0001');
@@ -266,12 +271,14 @@ Future<void> _seedRoundTripData(
   await database.into(database.products).insert(
         db.ProductsCompanion.insert(
           id: productId,
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-$productId',
-          defaultSellingPriceExclTax: '123.4500',
-          defaultGstRate: '18.000',
+          itemNumber: 'PEN-$productId',
+          buyingPrice: '99.9900',
+          sellingPrice: '123.4500',
+          unit: const Value('box'),
+          gstRate: '18.000',
           quantityOnHand: '7.500',
           lowStockThreshold: '2.00',
           createdAt: '2026-01-01T00:00:00.000Z',

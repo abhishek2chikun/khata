@@ -16,10 +16,10 @@ class LocalProductsService implements ProductsService {
   @override
   Future<product_model.Product> createProduct(CreateProductInput input) async {
     await _throwIfDuplicate(
-      company: input.company,
+      companyName: input.companyName,
       category: input.category,
       itemName: input.itemName,
-      itemCode: input.itemCode,
+      itemNumber: input.itemNumber,
     );
 
     final now = DateTime.now().toUtc().toIso8601String();
@@ -28,13 +28,14 @@ class LocalProductsService implements ProductsService {
       await _database.into(_database.products).insert(
             ProductsCompanion.insert(
               id: id,
-              company: input.company,
+              companyName: input.companyName,
               category: input.category,
               itemName: input.itemName,
-              itemCode: input.itemCode,
-              defaultSellingPriceExclTax:
-                  _normalizeDecimal(input.defaultSellingPriceExclTax),
-              defaultGstRate: _normalizeDecimal(input.defaultGstRate),
+              itemNumber: input.itemNumber,
+              buyingPrice: _normalizeDecimal(input.buyingPrice),
+              sellingPrice: _normalizeDecimal(input.sellingPrice),
+              unit: Value(input.unit),
+              gstRate: _normalizeDecimal(input.gstRate),
               quantityOnHand: _normalizeDecimal(input.quantityOnHand),
               lowStockThreshold: _normalizeDecimal(input.lowStockThreshold),
               createdAt: now,
@@ -43,10 +44,10 @@ class LocalProductsService implements ProductsService {
           );
     } on Object catch (error) {
       if (await _hasDuplicate(
-        company: input.company,
+        companyName: input.companyName,
         category: input.category,
         itemName: input.itemName,
-        itemCode: input.itemCode,
+        itemNumber: input.itemNumber,
       )) {
         throw _duplicateProductError();
       }
@@ -66,8 +67,8 @@ class LocalProductsService implements ProductsService {
     if (filter?.active case final active?) {
       query.where((product) => product.isActive.equals(active));
     }
-    if (filter?.company case final company? when company.isNotEmpty) {
-      query.where((product) => product.company.equals(company));
+    if (filter?.companyName case final company? when company.isNotEmpty) {
+      query.where((product) => product.companyName.equals(company));
     }
     if (filter?.category case final category? when category.isNotEmpty) {
       query.where((product) => product.category.equals(category));
@@ -83,7 +84,7 @@ class LocalProductsService implements ProductsService {
           .where(
             (product) =>
                 product.itemName.toLowerCase().contains(normalizedSearch) ||
-                product.itemCode.toLowerCase().contains(normalizedSearch),
+                product.itemNumber.toLowerCase().contains(normalizedSearch),
           )
           .toList();
     }
@@ -110,10 +111,10 @@ class LocalProductsService implements ProductsService {
     }
 
     await _throwIfDuplicate(
-      company: input.company,
+      companyName: input.companyName,
       category: input.category,
       itemName: input.itemName,
-      itemCode: input.itemCode,
+      itemNumber: input.itemNumber,
       excludeId: id,
     );
 
@@ -122,23 +123,24 @@ class LocalProductsService implements ProductsService {
             ..where((product) => product.id.equals(id)))
           .write(
         ProductsCompanion(
-          company: Value(input.company),
+          companyName: Value(input.companyName),
           category: Value(input.category),
           itemName: Value(input.itemName),
-          itemCode: Value(input.itemCode),
-          defaultSellingPriceExclTax:
-              Value(_normalizeDecimal(input.defaultSellingPriceExclTax)),
-          defaultGstRate: Value(_normalizeDecimal(input.defaultGstRate)),
+          itemNumber: Value(input.itemNumber),
+          buyingPrice: Value(_normalizeDecimal(input.buyingPrice)),
+          sellingPrice: Value(_normalizeDecimal(input.sellingPrice)),
+          unit: Value(input.unit),
+          gstRate: Value(_normalizeDecimal(input.gstRate)),
           lowStockThreshold: Value(_normalizeDecimal(input.lowStockThreshold)),
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
     } on Object catch (error) {
       if (await _hasDuplicate(
-        company: input.company,
+        companyName: input.companyName,
         category: input.category,
         itemName: input.itemName,
-        itemCode: input.itemCode,
+        itemNumber: input.itemNumber,
         excludeId: id,
       )) {
         throw _duplicateProductError();
@@ -153,17 +155,17 @@ class LocalProductsService implements ProductsService {
   }
 
   Future<void> _throwIfDuplicate({
-    required String company,
+    required String companyName,
     required String category,
     required String itemName,
-    required String itemCode,
+    required String itemNumber,
     String? excludeId,
   }) async {
     if (await _hasDuplicate(
-      company: company,
+      companyName: companyName,
       category: category,
       itemName: itemName,
-      itemCode: itemCode,
+      itemNumber: itemNumber,
       excludeId: excludeId,
     )) {
       throw _duplicateProductError();
@@ -171,19 +173,19 @@ class LocalProductsService implements ProductsService {
   }
 
   Future<bool> _hasDuplicate({
-    required String company,
+    required String companyName,
     required String category,
     required String itemName,
-    required String itemCode,
+    required String itemNumber,
     String? excludeId,
   }) async {
     final duplicate = await (_database.select(_database.products)
           ..where(
             (product) =>
-                product.company.equals(company) &
+                product.companyName.equals(companyName) &
                     product.category.equals(category) &
                     product.itemName.equals(itemName) |
-                product.itemCode.equals(itemCode),
+                product.itemNumber.equals(itemNumber),
           ))
         .get();
     return duplicate.any((product) => product.id != excludeId);
@@ -200,13 +202,14 @@ class LocalProductsService implements ProductsService {
   product_model.Product _toProduct(Product product) {
     return product_model.Product(
       id: product.id,
-      company: product.company,
+      companyName: product.companyName,
       category: product.category,
       itemName: product.itemName,
-      itemCode: product.itemCode,
-      defaultSellingPriceExclTax:
-          double.parse(product.defaultSellingPriceExclTax),
-      defaultGstRate: double.parse(product.defaultGstRate),
+      itemNumber: product.itemNumber,
+      buyingPrice: double.parse(product.buyingPrice),
+      sellingPrice: double.parse(product.sellingPrice),
+      unit: product.unit,
+      gstRate: double.parse(product.gstRate),
       quantityOnHand: double.parse(product.quantityOnHand),
       lowStockThreshold: double.parse(product.lowStockThreshold),
       isActive: product.isActive,
