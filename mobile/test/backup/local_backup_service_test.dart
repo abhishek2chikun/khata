@@ -29,9 +29,13 @@ void main() {
     );
 
     expect(package.version, LocalBackupPackage.currentVersion);
-    expect(payload.schemaVersion, 3);
+    expect(payload.schemaVersion, 4);
     expect(payload.tables, contains('buyers'));
     expect(payload.tables, contains('buyer_transactions'));
+    expect(payload.tables, contains('customers'));
+    expect(payload.tables, contains('customer_transactions'));
+    expect(payload.tables, isNot(contains('sellers')));
+    expect(payload.tables, isNot(contains('seller_transactions')));
     expect(package.payloadCiphertext, isNot(contains('product-0001')));
     expect(package.payloadCiphertext, isNot(contains('123.4500')));
 
