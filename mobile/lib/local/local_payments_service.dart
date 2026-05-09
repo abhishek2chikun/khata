@@ -166,13 +166,14 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   Future<bool> _hasOpeningBalance({required String customerId}) async {
-    final openingBalance = await (_database.select(_database.customerTransactions)
-          ..where(
-            (transaction) =>
-                transaction.customerId.equals(customerId) &
-                transaction.entryType.equals('OPENING_BALANCE'),
-          ))
-        .getSingleOrNull();
+    final openingBalance =
+        await (_database.select(_database.customerTransactions)
+              ..where(
+                (transaction) =>
+                    transaction.customerId.equals(customerId) &
+                    transaction.entryType.equals('OPENING_BALANCE'),
+              ))
+            .getSingleOrNull();
     return openingBalance != null;
   }
 
@@ -200,10 +201,18 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   void _validatePositiveAmount(double amount) {
-    if (!amount.isFinite || amount <= 0) {
+    if (!amount.isFinite || amount <= 0 || amount > 999999999999.99) {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
         message: 'amount must be greater than zero',
+        statusCode: 422,
+      );
+    }
+    final scaledAmount = amount * 100;
+    if ((scaledAmount - scaledAmount.round()).abs() > 0.000001) {
+      throw const ApiError(
+        code: 'VALIDATION_ERROR',
+        message: 'amount must have at most two decimal places',
         statusCode: 422,
       );
     }
@@ -264,9 +273,6 @@ class LocalPaymentsService implements PaymentsService {
     if (!value.isFinite) {
       throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
     }
-    if (value == value.truncateToDouble()) {
-      return value.toInt().toString();
-    }
-    return value.toString();
+    return value.toStringAsFixed(2);
   }
 }
