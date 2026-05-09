@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/invoice_quote.dart';
+import '../models/product.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
 
@@ -28,8 +29,14 @@ class InvoicePreviewScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 if (quote != null) ...<Widget>[
+                  Text('Customer: ${controller.draft.customer?.name ?? ''}',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  Text('Date: ${controller.draft.invoiceDate}'),
                   Text('Tax regime: ${quote.taxRegime}'),
                   Text('Place of supply: ${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})'),
+                  const SizedBox(height: 8),
+                  _buildPaymentStateSection(context),
                   const SizedBox(height: 12),
                   ...quote.warnings.map(
                     (warning) => Padding(
@@ -37,24 +44,15 @@ class InvoicePreviewScreen extends StatelessWidget {
                       child: Text(warning.message),
                     ),
                   ),
-                  ...quote.items.map(
-                    (item) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(_labelForQuoteItem(item)),
-                      subtitle: Text('Qty ${item.quantity}'),
-                      trailing: Text(item.lineTotal.toStringAsFixed(2)),
-                    ),
-                  ),
                   const Divider(),
-                  Text('Subtotal: ${quote.totals.subtotal.toStringAsFixed(2)}'),
-                  Text('Discount: ${quote.totals.discountTotal.toStringAsFixed(2)}'),
-                  Text('Taxable total: ${quote.totals.taxableTotal.toStringAsFixed(2)}'),
-                  Text('GST total: ${quote.totals.gstTotal.toStringAsFixed(2)}'),
-                  Text('Grand total: ${quote.totals.grandTotal.toStringAsFixed(2)}'),
+                  _buildItemsTable(context, quote),
+                  const Divider(),
+                  _buildTotals(context, quote),
                 ],
                 if (createdInvoice != null) ...<Widget>[
                   const SizedBox(height: 16),
-                  Text('Invoice created', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Invoice created',
+                      style: Theme.of(context).textTheme.titleMedium),
                   Text('Invoice #${createdInvoice.invoiceNumber}'),
                   ...controller.createWarnings.map(
                     (warning) => Padding(
@@ -74,7 +72,8 @@ class InvoicePreviewScreen extends StatelessWidget {
                     onPressed: controller.isSubmitting
                         ? null
                         : () async {
-                            final created = await controller.submitInvoice();
+                            final created =
+                                await controller.submitInvoice();
                             if (!context.mounted || !created) {
                               return;
                             }
@@ -96,18 +95,108 @@ class InvoicePreviewScreen extends StatelessWidget {
     );
   }
 
-  String _labelForQuoteItem(InvoiceQuoteItem item) {
-    final draftProduct = controller.draft.items
-        .map((draftItem) => draftItem.product)
-        .whereType<Object>()
-        .cast<dynamic>()
-        .firstWhere(
-          (product) => product.id == item.productId,
-          orElse: () => null,
-        );
-    if (draftProduct != null) {
-      return draftProduct.itemName as String;
+  Widget _buildPaymentStateSection(BuildContext context) {
+    final state = controller.draft.paymentState;
+    final paidAmount = controller.draft.paidAmount;
+    final label = _paymentStateLabel(state);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(key: const Key('paymentStateLabel'), 'Payment: $label'),
+        if (state != 'CREDIT')
+          Text(
+            key: const Key('paidAmountLabel'),
+            'Paid: ${paidAmount.toStringAsFixed(2)}',
+          ),
+      ],
+    );
+  }
+
+  String _paymentStateLabel(String state) {
+    switch (state) {
+      case 'TOTAL_PAID':
+        return 'Total Paid';
+      case 'PARTIAL_PAID':
+        return 'Partial Paid';
+      default:
+        return 'Credit';
     }
-    return item.productId.isEmpty ? 'Item' : 'Item ${item.productId}';
+  }
+
+  Widget _buildItemsTable(BuildContext context, InvoiceQuote quote) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text('Items', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        ...List.generate(quote.items.length, (index) {
+          final item = quote.items[index];
+          return _buildItemRow(context, item, index);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildItemRow(BuildContext context, InvoiceQuoteItem item, int index) {
+    final draftItem = controller.draft.items
+        .where((di) => di.product?.id == item.productId)
+        .firstOrNull;
+    final productName = draftItem?.product?.itemName ?? item.productItemName;
+    final productItemNumber = draftItem?.product?.itemNumber ?? item.productItemNumber;
+    final productCategory = draftItem?.product?.category ?? item.productCategory;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  productName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                key: Key('lineTotal-$index'),
+                item.lineTotal.toStringAsFixed(2),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text('$productItemNumber | $productCategory'),
+          Row(
+            children: <Widget>[
+              Text(key: Key('quantity-$index'), '${item.unit ?? 'PCS'} x ${item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 2)}'),
+              const SizedBox(width: 16),
+              Text(key: Key('pricePerUnit-$index'), '@ ${item.enteredUnitPrice.toStringAsFixed(2)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotals(BuildContext context, InvoiceQuote quote) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        Text('Subtotal: ${quote.totals.subtotal.toStringAsFixed(2)}'),
+        Text('Discount: ${quote.totals.discountTotal.toStringAsFixed(2)}'),
+        Text('Taxable total: ${quote.totals.taxableTotal.toStringAsFixed(2)}'),
+        Text(
+          key: const Key('gstTotal'),
+          'GST total: ${quote.totals.gstTotal.toStringAsFixed(2)}',
+        ),
+        Text(
+          key: const Key('grandTotal'),
+          'Grand total: ${quote.totals.grandTotal.toStringAsFixed(2)}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
   }
 }

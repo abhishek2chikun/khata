@@ -42,14 +42,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-        find.byKey(const Key('invoiceDateField')), '2026-04-20');
-    await tester.enterText(
-        find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
+
     await tester.enterText(find.byKey(const Key('quantityField-0')), '2');
 
     await tester.ensureVisible(find.byKey(const Key('previewInvoiceButton')));
@@ -92,14 +89,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
-    await tester.enterText(
-        find.byKey(const Key('invoiceDateField')), '2026-04-20');
-    await tester.enterText(
-        find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
+
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
+
     await tester.enterText(find.byKey(const Key('quantityField-0')), '2');
 
     await tester.ensureVisible(find.byKey(const Key('previewInvoiceButton')));
@@ -108,7 +103,6 @@ void main() {
 
     expect(find.text('Quote failed'), findsOneWidget);
     expect(find.text('Invoice preview'), findsNothing);
-    expect(find.text('2026-04-20'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });
 
@@ -191,7 +185,6 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    expect(find.text('2026-04-20'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('ABC Stores'), findsWidgets);
   });
@@ -264,6 +257,354 @@ void main() {
 
     expect(find.text('Unable to reach the server'), findsOneWidget);
   });
+
+  testWidgets('quick-add customer popup creates new customer and selects it',
+      (tester) async {
+    final customersService =
+        FakeCustomersService(customers: <Customer>[_customer]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService: customersService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('addCustomerButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Customer'), findsOneWidget);
+
+    await tester.enterText(
+        find.byKey(const Key('customerNameField')), 'New Customer');
+    await tester.enterText(
+        find.byKey(const Key('customerAddressField')), 'New Address');
+
+    await tester.tap(find.byKey(const Key('saveCustomerButton')));
+    await tester.pumpAndSettle();
+
+    expect(customersService.createdInputs, hasLength(1));
+    expect(customersService.createdInputs.single.name, 'New Customer');
+    expect(customersService.createdInputs.single.address, 'New Address');
+    expect(find.text('New Customer'), findsWidgets);
+  });
+
+  testWidgets('quick-add product popup creates new product and selects it',
+      (tester) async {
+    final productsService = FakeProductsService(products: <Product>[_product]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: productsService,
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('addProductButton')));
+    await tester.tap(find.byKey(const Key('addProductButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Product'), findsOneWidget);
+
+    await tester.enterText(
+        find.byKey(const Key('productItemNameField')), 'New Product');
+    await tester.enterText(
+        find.byKey(const Key('productItemNumberField')), 'NP-1');
+    await tester.enterText(
+        find.byKey(const Key('productCompanyNameField')), 'NewCo');
+    await tester.enterText(
+        find.byKey(const Key('productCategoryField')), 'General');
+    await tester.enterText(
+        find.byKey(const Key('productSellingPriceField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('productGstRateField')), '18');
+
+    await tester.tap(find.byKey(const Key('saveProductButton')));
+    await tester.pumpAndSettle();
+
+    expect(productsService.createdInputs, hasLength(1));
+    expect(productsService.createdInputs.single.itemName, 'New Product');
+    expect(productsService.createdInputs.single.itemNumber, 'NP-1');
+  });
+
+  testWidgets('editable selling price per line updates unit price field',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue Pen').last);
+    await tester.pumpAndSettle();
+
+    final unitPriceField = find.byKey(const Key('unitPriceField-0'));
+    expect(unitPriceField, findsOneWidget);
+
+    await tester.enterText(unitPriceField, '150');
+    await tester.pump();
+
+    expect(find.text('150'), findsOneWidget);
+  });
+
+  testWidgets('editable GST per line updates gst rate field', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue Pen').last);
+    await tester.pumpAndSettle();
+
+    final gstRateField = find.byKey(const Key('gstRateField-0'));
+    expect(gstRateField, findsOneWidget);
+
+    await tester.enterText(gstRateField, '12');
+    await tester.pump();
+
+    expect(find.text('12'), findsOneWidget);
+  });
+
+  testWidgets('apply GST to all lines control updates all items',
+      (tester) async {
+    final invoicesService = FakeInvoicesService(
+      quoteResponse: _quoteWithTwoItems,
+      createResult: CreateInvoiceResult(
+          invoice: _invoiceDetail, warnings: const <InvoiceWarning>[]),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: invoicesService,
+          productsService:
+              FakeProductsService(products: <Product>[_product, _product2]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue Pen').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('addItemButton')));
+    await tester.tap(find.byKey(const Key('addItemButton')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productPickerField-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Red Pen').last);
+    await tester.pumpAndSettle();
+
+    final applyGstField = find.byKey(const Key('applyGstToAllField'));
+    expect(applyGstField, findsOneWidget);
+
+    await tester.enterText(applyGstField, '5');
+    await tester.pump();
+
+    final gstField0 = find.byKey(const Key('gstRateField-0'));
+    final gstField1 = find.byKey(const Key('gstRateField-1'));
+
+    expect(tester.widget<TextField>(gstField0).controller?.text, '5.00');
+    expect(tester.widget<TextField>(gstField1).controller?.text, '5.00');
+  });
+
+  testWidgets(
+      'payment state selection shows Credit Total Paid Partial Paid options',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final paymentStateDropdown = find.byKey(const Key('paymentStateField'));
+    expect(paymentStateDropdown, findsOneWidget);
+
+    await tester.tap(paymentStateDropdown);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Credit'), findsWidgets);
+    expect(find.text('Total Paid'), findsOneWidget);
+    expect(find.text('Partial Paid'), findsOneWidget);
+  });
+
+  testWidgets(
+      'partial paid amount field appears only when Partial Paid is selected',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('paidAmountField')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('paymentStateField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Partial Paid').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('paidAmountField')), findsOneWidget);
+  });
+
+  testWidgets('date/time picker defaults to current date/time', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dateTimeField = find.byKey(const Key('invoiceDatetimeField'));
+    expect(dateTimeField, findsOneWidget);
+
+    final controller = tester.widget<TextField>(dateTimeField).controller;
+    expect(controller?.text, isNotEmpty);
+  });
+
+  testWidgets('add item button adds new product line', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService:
+              FakeProductsService(products: <Product>[_product, _product2]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('productPickerField-0')), findsOneWidget);
+    expect(find.byKey(const Key('productPickerField-1')), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('addItemButton')));
+    await tester.tap(find.byKey(const Key('addItemButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('productPickerField-1')), findsOneWidget);
+    expect(find.byKey(const Key('quantityField-1')), findsOneWidget);
+  });
+
+  testWidgets('remove item button removes product line', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService:
+              FakeProductsService(products: <Product>[_product, _product2]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('addItemButton')));
+    await tester.tap(find.byKey(const Key('addItemButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('productPickerField-1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('removeItemButton-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('productPickerField-1')), findsNothing);
+    expect(find.byKey(const Key('productPickerField-0')), findsOneWidget);
+  });
+
+  testWidgets('no overflow in narrow mobile viewport', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: FakeInvoicesService(quoteResponse: _quote),
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+  });
 }
 
 Future<void> _fillDraft(WidgetTester tester) async {
@@ -271,14 +612,12 @@ Future<void> _fillDraft(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('ABC Stores').last);
   await tester.pumpAndSettle();
-  await tester.enterText(
-      find.byKey(const Key('invoiceDateField')), '2026-04-20');
-  await tester.enterText(
-      find.byKey(const Key('placeOfSupplyStateCodeField')), '27');
+
   await tester.tap(find.byKey(const Key('productPickerField-0')));
   await tester.pumpAndSettle();
   await tester.tap(find.text('Blue Pen').last);
   await tester.pumpAndSettle();
+
   await tester.enterText(find.byKey(const Key('quantityField-0')), '2');
 }
 
@@ -320,8 +659,22 @@ const _product = Product(
   isActive: true,
 );
 
-const _archivedProduct = Product(
+const _product2 = Product(
   id: 'product-2',
+  companyName: 'Acme',
+  category: 'Pens',
+  itemName: 'Red Pen',
+  itemNumber: 'PEN-2',
+  buyingPrice: 80,
+  sellingPrice: 80,
+  gstRate: 18,
+  quantityOnHand: 10,
+  lowStockThreshold: 2,
+  isActive: true,
+);
+
+const _archivedProduct = Product(
+  id: 'product-3',
   companyName: 'Acme',
   category: 'Pens',
   itemName: 'Red Pen',
@@ -353,8 +706,17 @@ const _quote = InvoiceQuote(
   items: <InvoiceQuoteItem>[
     InvoiceQuoteItem(
       productId: 'product-1',
+      productItemName: 'Blue Pen',
+      productItemNumber: 'PEN-1',
+      productCategory: 'Pens',
+      unit: 'PCS',
       quantity: 2,
+      sellingPrice: 100,
+      enteredUnitPrice: 100,
       unitPriceExclTax: 100,
+      unitPriceInclTax: 118,
+      gstRate: 18,
+      gstAmount: 36,
       lineTotal: 236,
     ),
   ],
@@ -368,11 +730,58 @@ const _quote = InvoiceQuote(
   warnings: <InvoiceWarning>[],
 );
 
+const _quoteWithTwoItems = InvoiceQuote(
+  placeOfSupplyState: 'Maharashtra',
+  placeOfSupplyStateCode: '27',
+  taxRegime: 'INTRA_STATE',
+  items: <InvoiceQuoteItem>[
+    InvoiceQuoteItem(
+      productId: 'product-1',
+      productItemName: 'Blue Pen',
+      productItemNumber: 'PEN-1',
+      productCategory: 'Pens',
+      unit: 'PCS',
+      quantity: 2,
+      sellingPrice: 100,
+      enteredUnitPrice: 100,
+      unitPriceExclTax: 100,
+      unitPriceInclTax: 118,
+      gstRate: 18,
+      gstAmount: 36,
+      lineTotal: 236,
+    ),
+    InvoiceQuoteItem(
+      productId: 'product-2',
+      productItemName: 'Red Pen',
+      productItemNumber: 'PEN-2',
+      productCategory: 'Pens',
+      unit: 'PCS',
+      quantity: 1,
+      sellingPrice: 80,
+      enteredUnitPrice: 80,
+      unitPriceExclTax: 80,
+      unitPriceInclTax: 94.4,
+      gstRate: 18,
+      gstAmount: 14.4,
+      lineTotal: 94.4,
+    ),
+  ],
+  totals: InvoiceTotals(
+    subtotal: 280,
+    discountTotal: 0,
+    taxableTotal: 280,
+    gstTotal: 50.4,
+    grandTotal: 330.4,
+  ),
+  warnings: <InvoiceWarning>[],
+);
+
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
   customerId: 'customer-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
+  paymentState: 'CREDIT',
   paymentMode: 'CREDIT',
   customerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
@@ -383,6 +792,10 @@ final _invoiceDetail = InvoiceDetail(
     InvoiceDetailItem(
       productId: 'product-1',
       productName: 'Blue Pen',
+      productItemName: 'Blue Pen',
+      productItemNumber: 'PEN-1',
+      productCategory: 'Pens',
+      unit: 'PCS',
       quantity: 2,
       lineTotal: 236,
     ),
@@ -447,10 +860,25 @@ class FakeProductsService implements ProductsService {
   final List<Product> products;
   final Object? error;
   final List<ProductFilter?> fetchFilters = <ProductFilter?>[];
+  final List<CreateProductInput> createdInputs = <CreateProductInput>[];
 
   @override
-  Future<Product> createProduct(CreateProductInput input) {
-    throw UnimplementedError();
+  Future<Product> createProduct(CreateProductInput input) async {
+    createdInputs.add(input);
+    return Product(
+      id: 'product-${products.length + createdInputs.length}',
+      companyName: input.companyName,
+      category: input.category,
+      itemName: input.itemName,
+      itemNumber: input.itemNumber,
+      buyingPrice: input.buyingPrice,
+      sellingPrice: input.sellingPrice,
+      unit: input.unit,
+      gstRate: input.gstRate,
+      quantityOnHand: input.quantityOnHand,
+      lowStockThreshold: input.lowStockThreshold,
+      isActive: true,
+    );
   }
 
   @override
@@ -492,10 +920,22 @@ class FakeCustomersService implements CustomersService {
 
   final List<Customer> customers;
   final Object? error;
+  final List<CreateCustomerInput> createdInputs = <CreateCustomerInput>[];
 
   @override
-  Future<Customer> createCustomer(CreateCustomerInput input) {
-    throw UnimplementedError();
+  Future<Customer> createCustomer(CreateCustomerInput input) async {
+    createdInputs.add(input);
+    return Customer(
+      id: 'customer-${customers.length + createdInputs.length}',
+      name: input.name,
+      address: input.address,
+      phone: input.phone,
+      gstin: input.gstin,
+      state: input.state,
+      stateCode: input.stateCode,
+      isActive: true,
+      pendingBalance: 0,
+    );
   }
 
   @override
