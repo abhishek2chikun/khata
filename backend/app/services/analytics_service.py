@@ -53,7 +53,7 @@ def _revenue_by_buyer(session: Session, active_invoice_ids) -> list[dict]:
         .group_by(Buyer.name)
         .order_by(Buyer.name)
     ).all()
-    return [{"buyer_name": r.buyer_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
+    return [{"name": r.buyer_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
 
 
 def _profit_by_buyer(session: Session, active_invoice_ids) -> list[dict]:
@@ -67,7 +67,7 @@ def _profit_by_buyer(session: Session, active_invoice_ids) -> list[dict]:
         .group_by(Buyer.name)
         .order_by(Buyer.name)
     ).all()
-    return [{"buyer_name": r.buyer_name, "profit": Decimal(r.profit or 0)} for r in rows]
+    return [{"name": r.buyer_name, "profit": Decimal(r.profit or 0)} for r in rows]
 
 
 def _revenue_by_company(session: Session, active_invoice_ids) -> list[dict]:
@@ -80,7 +80,7 @@ def _revenue_by_company(session: Session, active_invoice_ids) -> list[dict]:
         .group_by(InvoiceItem.product_company_name)
         .order_by(InvoiceItem.product_company_name)
     ).all()
-    return [{"company_name": r.company_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
+    return [{"name": r.company_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
 
 
 def _profit_by_company(session: Session, active_invoice_ids) -> list[dict]:
@@ -93,7 +93,7 @@ def _profit_by_company(session: Session, active_invoice_ids) -> list[dict]:
         .group_by(InvoiceItem.product_company_name)
         .order_by(InvoiceItem.product_company_name)
     ).all()
-    return [{"company_name": r.company_name, "profit": Decimal(r.profit or 0)} for r in rows]
+    return [{"name": r.company_name, "profit": Decimal(r.profit or 0)} for r in rows]
 
 
 def _revenue_by_customer(session: Session, active_invoice_ids) -> list[dict]:
@@ -106,7 +106,7 @@ def _revenue_by_customer(session: Session, active_invoice_ids) -> list[dict]:
         .group_by(Invoice.customer_name)
         .order_by(Invoice.customer_name)
     ).all()
-    return [{"customer_name": r.customer_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
+    return [{"name": r.customer_name, "revenue": Decimal(r.revenue or 0)} for r in rows]
 
 
 def _customer_khata_balances(session: Session) -> list[dict]:

@@ -157,6 +157,151 @@ class TestAnalyticsServiceFunctionSignature:
 
 
 @pytest.mark.no_db
+class TestServiceSchemaKeyAlignment:
+    def test_populated_service_output_constructs_valid_dashboard_response(self):
+        from unittest.mock import MagicMock
+        from app.services.analytics_service import get_dashboard
+
+        buyer_row = MagicMock()
+        buyer_row.buyer_name = "Buyer A"
+        buyer_row.revenue = Decimal("100.00")
+        buyer_row.profit = Decimal("50.00")
+
+        company_row = MagicMock()
+        company_row.company_name = "Acme Corp"
+        company_row.revenue = Decimal("200.00")
+        company_row.profit = Decimal("80.00")
+
+        customer_rev_row = MagicMock()
+        customer_rev_row.customer_name = "Customer X"
+        customer_rev_row.revenue = Decimal("300.00")
+
+        customer_khata_row = MagicMock()
+        customer_khata_row.customer_name = "Customer X"
+        customer_khata_row.balance = Decimal("150.00")
+
+        buyer_payable_row = MagicMock()
+        buyer_payable_row.buyer_name = "Buyer A"
+        buyer_payable_row.payable = Decimal("400.00")
+
+        product_qty_row = MagicMock()
+        product_qty_row.product_name = "Widget"
+        product_qty_row.quantity = Decimal("5.000")
+
+        product_rev_row = MagicMock()
+        product_rev_row.product_name = "Widget"
+        product_rev_row.revenue = Decimal("250.00")
+
+        product_profit_row = MagicMock()
+        product_profit_row.product_name = "Widget"
+        product_profit_row.profit = Decimal("100.00")
+
+        low_stock_row = MagicMock()
+        low_stock_row.Product = MagicMock()
+        low_stock_row.Product.item_name = "Widget"
+        low_stock_row.Product.quantity_on_hand = Decimal("1.000")
+        low_stock_row.Product.low_stock_threshold = Decimal("5.000")
+
+        row_sequences = [
+            [buyer_row], [buyer_row],
+            [company_row], [company_row],
+            [customer_rev_row],
+            [customer_khata_row],
+            [buyer_payable_row],
+            [product_qty_row],
+            [product_rev_row],
+            [product_profit_row],
+            [low_stock_row],
+        ]
+
+        mock_session = MagicMock()
+        call_count = 0
+
+        def mock_execute(*args, **kwargs):
+            nonlocal call_count
+            seq = row_sequences[call_count] if call_count < len(row_sequences) else []
+            call_count += 1
+            return MagicMock(all=MagicMock(return_value=seq))
+
+        mock_session.execute = mock_execute
+
+        result = get_dashboard(mock_session)
+        resp = DashboardResponse(**result)
+
+        assert resp.revenue_by_buyer[0].name == "Buyer A"
+        assert resp.revenue_by_buyer[0].revenue == Decimal("100.00")
+        assert resp.profit_by_buyer[0].name == "Buyer A"
+        assert resp.revenue_by_company[0].name == "Acme Corp"
+        assert resp.profit_by_company[0].name == "Acme Corp"
+        assert resp.revenue_by_customer[0].name == "Customer X"
+        assert resp.customer_khata_balances[0].customer_name == "Customer X"
+        assert resp.customer_khata_balances[0].balance == Decimal("150.00")
+        assert resp.buyer_pending_payables[0].buyer_name == "Buyer A"
+        assert resp.buyer_pending_payables[0].payable == Decimal("400.00")
+        assert resp.top_products_by_quantity[0].product_name == "Widget"
+        assert resp.top_products_by_revenue[0].revenue == Decimal("250.00")
+        assert resp.top_products_by_profit[0].profit == Decimal("100.00")
+        assert resp.low_stock[0].quantity_on_hand == Decimal("1.000")
+
+    def test_revenue_by_buyer_dicts_use_name_key(self):
+        self._assert_section_key("revenue_by_buyer", "name", "revenue", "Buyer A", Decimal("99.00"))
+
+    def test_profit_by_buyer_dicts_use_name_key(self):
+        self._assert_section_key("profit_by_buyer", "name", "profit", "Buyer A", Decimal("40.00"))
+
+    def test_revenue_by_company_dicts_use_name_key(self):
+        self._assert_section_key("revenue_by_company", "name", "revenue", "Acme", Decimal("50.00"))
+
+    def test_profit_by_company_dicts_use_name_key(self):
+        self._assert_section_key("profit_by_company", "name", "profit", "Acme", Decimal("20.00"))
+
+    def test_revenue_by_customer_dicts_use_name_key(self):
+        self._assert_section_key("revenue_by_customer", "name", "revenue", "Cust A", Decimal("77.00"))
+
+    @staticmethod
+    def _assert_section_key(section, name_key, value_key, name_val, value_val):
+        from app.schemas.analytics import DashboardResponse
+        entry = {name_key: name_val, value_key: str(value_val)}
+        kwargs = {
+            "revenue_by_buyer": [], "profit_by_buyer": [],
+            "revenue_by_company": [], "profit_by_company": [],
+            "revenue_by_customer": [], "customer_khata_balances": [],
+            "buyer_pending_payables": [], "top_products_by_quantity": [],
+            "top_products_by_revenue": [], "top_products_by_profit": [],
+            "low_stock": [],
+        }
+        kwargs[section] = [entry]
+        resp = DashboardResponse(**kwargs)
+        items = getattr(resp, section)
+        assert len(items) == 1
+        assert items[0].model_dump()[name_key] == name_val
+        assert items[0].model_dump()[value_key] == value_val
+
+
+@pytest.mark.no_db
+class TestSnapshotIndependence:
+    def test_invoice_item_model_stores_buying_price_snapshot_not_product_reference(self):
+        from app.models.invoice_item import InvoiceItem
+        import inspect
+        source = inspect.getsource(InvoiceItem)
+        assert "buying_price" in source
+        assert "buying_amount" in source
+        assert "profit_amount" in source
+        assert "revenue_amount" in source
+
+    def test_analytics_queries_reference_invoice_item_not_product_for_revenue(self):
+        import inspect
+        from app.services import analytics_service
+        source = inspect.getsource(analytics_service)
+        for func_name in ["_revenue_by_buyer", "_profit_by_buyer", "_revenue_by_company", "_profit_by_company", "_top_products_by_revenue", "_top_products_by_profit"]:
+            assert func_name in source
+        assert "InvoiceItem.revenue_amount" in source
+        assert "InvoiceItem.profit_amount" in source
+        assert "Product.buying_price" not in source
+        assert "Product.selling_price" not in source
+
+
+@pytest.mark.no_db
 class TestAnalyticsRouter:
     def test_analytics_router_has_dashboard_endpoint(self):
         from app.routers.analytics import router

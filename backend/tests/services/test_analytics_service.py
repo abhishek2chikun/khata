@@ -126,7 +126,7 @@ def test_revenue_by_buyer_groups_invoice_items(db_session):
 
     result = get_dashboard(db_session)
 
-    by_buyer = {b["buyer_name"]: b for b in result["revenue_by_buyer"]}
+    by_buyer = {b["name"]: b for b in result["revenue_by_buyer"]}
     assert by_buyer["Buyer A"]["revenue"] == Decimal("100.00")
     assert by_buyer["Buyer B"]["revenue"] == Decimal("100.00")
 
@@ -161,7 +161,7 @@ def test_profit_by_buyer_uses_buying_price_snapshot(db_session):
 
     result = get_dashboard(db_session)
 
-    by_buyer = {b["buyer_name"]: b for b in result["profit_by_buyer"]}
+    by_buyer = {b["name"]: b for b in result["profit_by_buyer"]}
     assert by_buyer["Profit Buyer"]["profit"] == Decimal("100.00")
 
 
@@ -195,7 +195,7 @@ def test_profit_by_company_aggregates_across_buyers(db_session):
 
     result = get_dashboard(db_session)
 
-    by_company = {c["company_name"]: c for c in result["profit_by_company"]}
+    by_company = {c["name"]: c for c in result["profit_by_company"]}
     assert by_company["Acme Corp"]["profit"] == Decimal("40.00")
 
 
@@ -228,7 +228,7 @@ def test_revenue_by_customer_aggregates_invoice_totals(db_session):
 
     result = get_dashboard(db_session)
 
-    by_customer = {c["customer_name"]: c for c in result["revenue_by_customer"]}
+    by_customer = {c["name"]: c for c in result["revenue_by_customer"]}
     assert by_customer["Cust A"]["revenue"] == Decimal("150.00")
     assert by_customer["Cust B"]["revenue"] == Decimal("300.00")
 
