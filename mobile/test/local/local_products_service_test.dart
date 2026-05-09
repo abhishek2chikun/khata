@@ -310,6 +310,77 @@ void main() {
     expect(await database.select(database.stockMovements).get(), hasLength(1));
   });
 
+  test('adjust stock rejects inactive products locally', () async {
+    final product = await service.createProduct(_createProductInput());
+    await service.archiveProduct(id: product.id);
+
+    await expectLater(
+      () => service.adjustStock(
+        id: product.id,
+        input: const AdjustStockInput(
+          requestId: 'stock-adjust-archived',
+          quantityDelta: 1,
+        ),
+      ),
+      throwsA(
+        isA<ApiError>()
+            .having((error) => error.code, 'code', 'PRODUCT_ARCHIVED')
+            .having((error) => error.statusCode, 'statusCode', 400),
+      ),
+    );
+  });
+
+  test('adjust stock rejects zero quantity delta locally', () async {
+    final product = await service.createProduct(_createProductInput());
+
+    await expectLater(
+      () => service.adjustStock(
+        id: product.id,
+        input: const AdjustStockInput(
+          requestId: 'stock-adjust-zero',
+          quantityDelta: 0,
+        ),
+      ),
+      throwsA(
+        isA<ApiError>()
+            .having((error) => error.code, 'code', 'VALIDATION_ERROR')
+            .having((error) => error.statusCode, 'statusCode', 400),
+      ),
+    );
+    expect(await database.select(database.stockMovements).get(), isEmpty);
+  });
+
+  test('duplicate stock adjustment request rejects conflicting payload',
+      () async {
+    final product = await service.createProduct(_createProductInput());
+
+    await service.adjustStock(
+      id: product.id,
+      input: const AdjustStockInput(
+        requestId: 'stock-adjust-1',
+        quantityDelta: 1,
+        reason: 'Count correction',
+      ),
+    );
+
+    await expectLater(
+      () => service.adjustStock(
+        id: product.id,
+        input: const AdjustStockInput(
+          requestId: 'stock-adjust-1',
+          quantityDelta: 2,
+          reason: 'Count correction',
+        ),
+      ),
+      throwsA(
+        isA<ApiError>()
+            .having((error) => error.code, 'code', 'IDEMPOTENCY_CONFLICT')
+            .having((error) => error.statusCode, 'statusCode', 409),
+      ),
+    );
+    expect(await database.select(database.stockMovements).get(), hasLength(1));
+  });
+
   test('rejects duplicate company/name/category', () async {
     await service.createProduct(_createProductInput());
 

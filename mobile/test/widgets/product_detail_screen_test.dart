@@ -12,7 +12,7 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: FakeProductsService(product: _product),
-          onEditProduct: (_) async => false,
+          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -48,7 +48,7 @@ void main() {
           productsService: FakeProductsService(product: _product),
           onEditProduct: (product) async {
             editedProduct = product;
-            return false;
+            return null;
           },
           supportsProductReactivation: true,
         ),
@@ -60,6 +60,43 @@ void main() {
     await tester.pump();
 
     expect(editedProduct?.id, _product.id);
+  });
+
+  testWidgets('edit returns updated product from callback', (tester) async {
+    Product? returnedProduct;
+    final updatedProduct = _product.copyWith(itemName: 'Blue Pen Updated');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                returnedProduct = await Navigator.of(context).push<Product>(
+                  MaterialPageRoute<Product>(
+                    builder: (_) => ProductDetailScreen(
+                      product: _product,
+                      productsService: FakeProductsService(product: _product),
+                      onEditProduct: (_) async => updatedProduct,
+                      supportsProductReactivation: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Open detail'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open detail'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('editProductButton')));
+    await tester.tap(find.byKey(const Key('editProductButton')));
+    await tester.pumpAndSettle();
+
+    expect(returnedProduct?.itemName, 'Blue Pen Updated');
   });
 
   testWidgets('archive marks product inactive and returns refresh result',
@@ -78,7 +115,7 @@ void main() {
                     builder: (_) => ProductDetailScreen(
                       product: _product,
                       productsService: service,
-                      onEditProduct: (_) async => false,
+                      onEditProduct: (_) async => null,
                       supportsProductReactivation: true,
                     ),
                   ),
@@ -112,7 +149,7 @@ void main() {
         home: ProductDetailScreen(
           product: archived,
           productsService: service,
-          onEditProduct: (_) async => false,
+          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -136,7 +173,7 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: service,
-          onEditProduct: (_) async => false,
+          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -162,6 +199,52 @@ void main() {
     expect(find.text('Stock adjusted'), findsOneWidget);
   });
 
+  testWidgets('archived detail hides stock adjustment action', (tester) async {
+    final archived = _product.copyWith(isActive: false);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductDetailScreen(
+          product: archived,
+          productsService: FakeProductsService(product: archived),
+          onEditProduct: (_) async => null,
+          supportsProductReactivation: true,
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('adjustStockButton')), findsNothing);
+  });
+
+  testWidgets('zero stock adjustment is rejected before service call',
+      (tester) async {
+    final service = FakeProductsService(product: _product);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductDetailScreen(
+          product: _product,
+          productsService: service,
+          onEditProduct: (_) async => null,
+          supportsProductReactivation: true,
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('adjustStockButton')));
+    await tester.tap(find.byKey(const Key('adjustStockButton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('stockAdjustmentField')), '0');
+    await tester.tap(find.text('Apply adjustment'));
+    await tester.pumpAndSettle();
+
+    expect(service.stockAdjustments, isEmpty);
+    expect(find.text('Quantity change must be non-zero.'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('archived detail explains invoice guard', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -170,7 +253,7 @@ void main() {
           productsService: FakeProductsService(
             product: _product.copyWith(isActive: false),
           ),
-          onEditProduct: (_) async => false,
+          onEditProduct: (_) async => null,
           supportsProductReactivation: false,
         ),
       ),
@@ -191,7 +274,7 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: service,
-          onEditProduct: (_) async => false,
+          onEditProduct: (_) async => null,
           supportsProductReactivation: false,
         ),
       ),
@@ -224,12 +307,12 @@ const _product = Product(
 );
 
 extension on Product {
-  Product copyWith({bool? isActive, double? quantityOnHand}) {
+  Product copyWith({String? itemName, bool? isActive, double? quantityOnHand}) {
     return Product(
       id: id,
       companyName: companyName,
       category: category,
-      itemName: itemName,
+      itemName: itemName ?? this.itemName,
       itemNumber: itemNumber,
       buyerId: buyerId,
       buyingPrice: buyingPrice,
