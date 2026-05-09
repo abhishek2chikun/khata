@@ -58,9 +58,83 @@ void main() {
     expect(find.text('Increase balance'), findsOneWidget);
     expect(find.text('Decrease balance'), findsOneWidget);
     expect(find.text('Ledger history'), findsOneWidget);
-    expect(find.text('2026-04-20 10:30'), findsOneWidget);
+    expect(
+        find.text(_dateTimeString(
+            DateTime.parse('2026-04-20T10:30:00.000Z').toLocal())),
+        findsOneWidget);
     expect(find.text('Cash collection'), findsOneWidget);
     expect(find.text('1001'), findsOneWidget);
+  });
+
+  testWidgets('customer detail parses timezone-aware ledger timestamps',
+      (tester) async {
+    const createdAt = '2026-04-20T10:30:00+05:30';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[
+                  CustomerLedgerTransaction(
+                    id: 'txn-offset',
+                    entryType: 'COLLECTION',
+                    amount: 100,
+                    occurredOn: '2026-04-20',
+                    createdAt: createdAt,
+                    notes: 'Offset timestamp',
+                  ),
+                ],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
+              ),
+            ],
+          ),
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_dateTimeString(DateTime.parse(createdAt).toLocal())),
+        findsOneWidget);
+  });
+
+  testWidgets('customer detail does not falsely format invalid timestamps',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[
+                  CustomerLedgerTransaction(
+                    id: 'txn-invalid-time',
+                    entryType: 'COLLECTION',
+                    amount: 100,
+                    occurredOn: '2026-04-19',
+                    createdAt: '2026-04-20T10:30-not-a-real-time',
+                    notes: 'Invalid timestamp',
+                  ),
+                ],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
+              ),
+            ],
+          ),
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-04-20 10:30'), findsNothing);
+    expect(find.text('2026-04-19'), findsOneWidget);
   });
 
   testWidgets('customer detail payment forms default occurred date to today',
@@ -532,6 +606,10 @@ const _customer = Customer(
 
 String _dateString(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+}
+
+String _dateTimeString(DateTime value) {
+  return '${_dateString(value)} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 }
 
 class FakeCustomersService implements CustomersService {

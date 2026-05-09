@@ -1,9 +1,25 @@
 import uuid
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
+
+MONEY_QUANT = Decimal("0.01")
+MAX_MONEY = Decimal("999999999999.99")
+
+
+def validate_money_amount(value: Decimal) -> Decimal:
+    if value <= 0:
+        raise ValueError("amount must be greater than zero")
+    if value > MAX_MONEY:
+        raise ValueError("amount exceeds maximum supported value")
+    try:
+        if value != value.quantize(MONEY_QUANT):
+            raise ValueError("amount must have at most two decimal places")
+    except InvalidOperation as exc:
+        raise ValueError("amount must have at most two decimal places") from exc
+    return value
 
 
 class CustomerCreateRequest(BaseModel):
@@ -46,9 +62,7 @@ class OpeningBalanceRequest(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_positive_amount(cls, value: Decimal) -> Decimal:
-        if value <= 0:
-            raise ValueError("amount must be greater than zero")
-        return value
+        return validate_money_amount(value)
 
 
 class CollectionRequest(BaseModel):
@@ -61,9 +75,7 @@ class CollectionRequest(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_positive_amount(cls, value: Decimal) -> Decimal:
-        if value <= 0:
-            raise ValueError("amount must be greater than zero")
-        return value
+        return validate_money_amount(value)
 
 
 class BalanceAdjustmentRequest(BaseModel):
@@ -76,9 +88,7 @@ class BalanceAdjustmentRequest(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_positive_amount(cls, value: Decimal) -> Decimal:
-        if value <= 0:
-            raise ValueError("amount must be greater than zero")
-        return value
+        return validate_money_amount(value)
 
 
 class CustomerTransactionResponse(BaseModel):

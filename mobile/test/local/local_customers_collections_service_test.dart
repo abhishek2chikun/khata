@@ -36,7 +36,8 @@ void main() {
     expect(customer.isActive, isTrue);
     expect(customer.pendingBalance, 0);
 
-    final storedCustomer = await database.select(database.customers).getSingle();
+    final storedCustomer =
+        await database.select(database.customers).getSingle();
     expect(storedCustomer.id, customer.id);
     expect(storedCustomer.name, 'Acme Stores');
     expect(storedCustomer.phone, '9999999999');
@@ -71,7 +72,8 @@ void main() {
     expect(phoneMatches.map((customer) => customer.id), <String>[alpha.id]);
   });
 
-  test('unfiltered customer list includes inactive customers seeded through Drift',
+  test(
+      'unfiltered customer list includes inactive customers seeded through Drift',
       () async {
     final active = await customersService.createCustomer(
       _customerInput(name: 'Active Stores', phone: '1111111111'),
@@ -140,7 +142,7 @@ void main() {
 
     expect(customers.single.pendingBalance, 1250.5);
     expect(storedTransaction.entryType, 'OPENING_BALANCE');
-    expect(storedTransaction.amount, '1250.5');
+    expect(storedTransaction.amount, '1250.50');
     expect(storedTransaction.createdByUserId, 'local-system-user');
   });
 
@@ -310,8 +312,8 @@ void main() {
       ),
       throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),
     );
-    expect(
-        await database.select(database.customerTransactions).get(), hasLength(1));
+    expect(await database.select(database.customerTransactions).get(),
+        hasLength(1));
   });
 
   test('database rejects a second opening balance for the same customer',
@@ -338,8 +340,8 @@ void main() {
       ),
       throwsA(anything),
     );
-    expect(
-        await database.select(database.customerTransactions).get(), hasLength(1));
+    expect(await database.select(database.customerTransactions).get(),
+        hasLength(1));
   });
 
   test('rejects non-UUID request IDs without inserting ledger rows', () async {
@@ -421,6 +423,66 @@ void main() {
       throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
     );
     expect(await database.select(database.customerTransactions).get(), isEmpty);
+  });
+
+  test('rejects customer ledger money precision and overflow locally',
+      () async {
+    final customer = await customersService.createCustomer(_customerInput());
+
+    await expectLater(
+      () => paymentsService.addOpeningBalance(
+        customerId: customer.id,
+        input: OpeningBalanceInput(
+          requestId: _uuid(17),
+          amount: 1.001,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.recordCollection(
+        RecordCollectionInput(
+          requestId: _uuid(18),
+          customerId: customer.id,
+          amount: 1000000000000,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    await expectLater(
+      () => paymentsService.addBalanceAdjustment(
+        customerId: customer.id,
+        input: BalanceAdjustmentInput(
+          requestId: _uuid(19),
+          direction: 'INCREASE',
+          amount: -0.01,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+
+    expect(await database.select(database.customerTransactions).get(), isEmpty);
+  });
+
+  test('stores valid customer ledger money with two decimal places locally',
+      () async {
+    final customer = await customersService.createCustomer(_customerInput());
+
+    await paymentsService.recordCollection(
+      RecordCollectionInput(
+        requestId: _uuid(20),
+        customerId: customer.id,
+        amount: 125.5,
+        occurredOn: '2026-01-01',
+      ),
+    );
+
+    final transaction =
+        await database.select(database.customerTransactions).getSingle();
+    expect(transaction.amount, '125.50');
   });
 }
 

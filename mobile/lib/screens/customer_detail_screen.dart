@@ -345,10 +345,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   String _formatCreatedAt(String value) {
-    if (value.length < 16) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
       return '';
     }
-    return value.substring(0, 16).replaceFirst('T', ' ');
+    final local = parsed.toLocal();
+    return '${_dateString(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 
   String _dateString(DateTime value) {
