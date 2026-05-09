@@ -15,6 +15,8 @@ from app.db import get_engine, get_session_factory
 from app.main import create_app
 from app.models.app_user import AppUser
 from app.models.base import Base
+from app.models.buyer import Buyer  # noqa: F401
+from app.models.buyer_transaction import BuyerTransaction  # noqa: F401
 from app.models.invoice import Invoice  # noqa: F401
 from app.models.invoice_item import InvoiceItem  # noqa: F401
 from app.services.auth_service import bootstrap_user
