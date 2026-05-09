@@ -59,10 +59,18 @@ def normalize_line(
     else:
         raise ValueError(f"Unsupported pricing mode: {pricing_mode}")
 
-    line_subtotal = _round_money(normalized_quantity * unit_price_excl_tax)
-    discount_amount = _round_money(line_subtotal * (normalized_discount_percent / Decimal("100")))
-    taxable_amount = _round_money(line_subtotal - discount_amount)
-    gst_amount = _round_money(taxable_amount * (normalized_gst_rate / Decimal("100")))
+    if pricing_mode == "TAX_INCLUSIVE":
+        gross_line_total = _round_money(normalized_quantity * unit_price_incl_tax)
+        discount_amount = _round_money(gross_line_total * (normalized_discount_percent / Decimal("100")))
+        line_total = _round_money(gross_line_total - discount_amount)
+        taxable_amount = _round_money(line_total / (Decimal("1") + (normalized_gst_rate / Decimal("100"))))
+        gst_amount = _round_money(line_total - taxable_amount)
+    else:
+        line_subtotal = _round_money(normalized_quantity * unit_price_excl_tax)
+        discount_amount = _round_money(line_subtotal * (normalized_discount_percent / Decimal("100")))
+        taxable_amount = _round_money(line_subtotal - discount_amount)
+        gst_amount = _round_money(taxable_amount * (normalized_gst_rate / Decimal("100")))
+        line_total = _round_money(taxable_amount + gst_amount)
 
     cgst_rate, sgst_rate, igst_rate = split_gst_rate(normalized_gst_rate, tax_regime)
     if tax_regime == "INTER_STATE":
@@ -74,7 +82,6 @@ def normalize_line(
         sgst_amount = _round_money(gst_amount - cgst_amount)
         igst_amount = Decimal("0.00")
 
-    line_total = _round_money(taxable_amount + gst_amount)
     return NormalizedLine(
         quantity=normalized_quantity,
         pricing_mode=pricing_mode,
