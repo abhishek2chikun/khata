@@ -145,8 +145,11 @@ class Invoices extends Table {
   TextColumn get companyBankBranch => text().nullable()();
   TextColumn get companyJurisdiction => text().nullable()();
   TextColumn get invoiceDate => text()();
+  TextColumn get invoiceDatetime => text().withDefault(const Constant(''))();
   TextColumn get taxRegime => text()();
   TextColumn get status => text()();
+  TextColumn get paymentState => text().withDefault(const Constant(''))();
+  TextColumn get paidAmount => text().withDefault(const Constant(''))();
   TextColumn get paymentMode => text()();
   TextColumn get subtotal => text()();
   TextColumn get discountTotal => text()();
@@ -246,6 +249,14 @@ class InvoiceItems extends Table {
   IntColumn get lineNumber => integer()();
   TextColumn get productName => text()();
   TextColumn get productCode => text()();
+  TextColumn get productItemNumber => text().withDefault(const Constant(''))();
+  TextColumn get productItemName => text().withDefault(const Constant(''))();
+  TextColumn get productCategory => text().withDefault(const Constant(''))();
+  TextColumn get productBuyerId => text().nullable()();
+  TextColumn get productCompanyName => text().withDefault(const Constant(''))();
+  TextColumn get buyingPrice => text().withDefault(const Constant(''))();
+  TextColumn get sellingPrice => text().withDefault(const Constant(''))();
+  TextColumn get unit => text().nullable()();
   TextColumn get company => text()();
   TextColumn get category => text()();
   TextColumn get quantity => text()();
@@ -331,7 +342,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -420,39 +431,86 @@ class LocalDatabase extends _$LocalDatabase {
               await customStatement('ALTER TABLE sellers RENAME TO customers');
             }
             if (await _tableExists('seller_transactions')) {
-              await customStatement('ALTER TABLE seller_transactions RENAME TO customer_transactions');
+              await customStatement(
+                  'ALTER TABLE seller_transactions RENAME TO customer_transactions');
             }
             if (await _columnExists('customer_transactions', 'seller_id')) {
-              await customStatement('ALTER TABLE customer_transactions RENAME COLUMN seller_id TO customer_id');
+              await customStatement(
+                  'ALTER TABLE customer_transactions RENAME COLUMN seller_id TO customer_id');
             }
-            if (await _columnExists('customer_transactions', 'opening_balance_seller_id')) {
-              await customStatement('ALTER TABLE customer_transactions RENAME COLUMN opening_balance_seller_id TO opening_balance_customer_id');
+            if (await _columnExists(
+                'customer_transactions', 'opening_balance_seller_id')) {
+              await customStatement(
+                  'ALTER TABLE customer_transactions RENAME COLUMN opening_balance_seller_id TO opening_balance_customer_id');
             }
             if (await _columnExists('invoices', 'seller_id')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_id TO customer_id');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_id TO customer_id');
             }
             if (await _columnExists('invoices', 'seller_name')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_name TO customer_name');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_name TO customer_name');
             }
             if (await _columnExists('invoices', 'seller_address')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_address TO customer_address');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_address TO customer_address');
             }
             if (await _columnExists('invoices', 'seller_state')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_state TO customer_state');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_state TO customer_state');
             }
             if (await _columnExists('invoices', 'seller_state_code')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_state_code TO customer_state_code');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_state_code TO customer_state_code');
             }
             if (await _columnExists('invoices', 'seller_phone')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_phone TO customer_phone');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_phone TO customer_phone');
             }
             if (await _columnExists('invoices', 'seller_gstin')) {
-              await customStatement('ALTER TABLE invoices RENAME COLUMN seller_gstin TO customer_gstin');
+              await customStatement(
+                  'ALTER TABLE invoices RENAME COLUMN seller_gstin TO customer_gstin');
             }
             if (await _tableExists('customer_transactions')) {
-              await customStatement("UPDATE customer_transactions SET entry_type = 'COLLECTION' WHERE entry_type = 'PAYMENT'");
+              await customStatement(
+                  "UPDATE customer_transactions SET entry_type = 'COLLECTION' WHERE entry_type = 'PAYMENT'");
             }
             await customStatement('PRAGMA foreign_keys = ON');
+          }
+          if (from < 5) {
+            if (await _tableExists('invoices')) {
+              await m.addColumn(invoices, invoices.invoiceDatetime);
+              await m.addColumn(invoices, invoices.paymentState);
+              await m.addColumn(invoices, invoices.paidAmount);
+              await customStatement(
+                  "UPDATE invoices SET invoice_datetime = invoice_date || 'T00:00:00.000Z' WHERE invoice_datetime = ''");
+              await customStatement(
+                  "UPDATE invoices SET payment_state = CASE WHEN payment_mode = 'PAID' THEN 'TOTAL_PAID' ELSE payment_mode END WHERE payment_state = ''");
+              await customStatement(
+                  "UPDATE invoices SET paid_amount = CASE WHEN payment_state = 'TOTAL_PAID' THEN grand_total ELSE '0' END WHERE paid_amount = ''");
+            }
+            if (await _tableExists('invoice_items')) {
+              await m.addColumn(invoiceItems, invoiceItems.productItemNumber);
+              await m.addColumn(invoiceItems, invoiceItems.productItemName);
+              await m.addColumn(invoiceItems, invoiceItems.productCategory);
+              await m.addColumn(invoiceItems, invoiceItems.productBuyerId);
+              await m.addColumn(invoiceItems, invoiceItems.productCompanyName);
+              await m.addColumn(invoiceItems, invoiceItems.buyingPrice);
+              await m.addColumn(invoiceItems, invoiceItems.sellingPrice);
+              await m.addColumn(invoiceItems, invoiceItems.unit);
+              await customStatement(
+                  "UPDATE invoice_items SET product_item_number = product_code WHERE product_item_number = ''");
+              await customStatement(
+                  "UPDATE invoice_items SET product_item_name = product_name WHERE product_item_name = ''");
+              await customStatement(
+                  "UPDATE invoice_items SET product_category = category WHERE product_category = ''");
+              await customStatement(
+                  "UPDATE invoice_items SET product_company_name = company WHERE product_company_name = ''");
+              await customStatement(
+                  "UPDATE invoice_items SET buying_price = '0' WHERE buying_price = ''");
+              await customStatement(
+                  "UPDATE invoice_items SET selling_price = unit_price_incl_tax WHERE selling_price = ''");
+            }
           }
         },
         beforeOpen: (_) async {

@@ -6,6 +6,7 @@ class InvoiceSummary {
     required this.customerName,
     required this.invoiceDate,
     required this.status,
+    this.paymentState = 'CREDIT',
     required this.paymentMode,
     required this.grandTotal,
   });
@@ -16,6 +17,7 @@ class InvoiceSummary {
   final String customerName;
   final String invoiceDate;
   final String status;
+  final String paymentState;
   final String paymentMode;
   final double grandTotal;
 
@@ -27,6 +29,9 @@ class InvoiceSummary {
       customerName: json['customer_name'] as String? ?? '',
       invoiceDate: json['invoice_date'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      paymentState: json['payment_state'] as String? ??
+          json['payment_mode'] as String? ??
+          '',
       paymentMode: json['payment_mode'] as String? ?? '',
       grandTotal: _toDouble(json['grand_total']),
     );

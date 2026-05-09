@@ -39,13 +39,11 @@ void main() {
     await database.close();
   });
 
-  test('quotes invoices with backend-aligned tax totals and stock warnings',
-      () async {
+  test('quote uses line selling price inclusive of GST', () async {
     final quote = await invoicesService.quoteInvoice(_draft(
       customer: customer,
       product: product,
-      quantity: 6,
-      discountPercent: 10,
+      quantity: 2,
     ));
 
     expect(quote.placeOfSupplyState, 'Maharashtra');
@@ -53,19 +51,111 @@ void main() {
     expect(quote.taxRegime, 'INTRA_STATE');
     expect(quote.items, hasLength(1));
     expect(quote.items.single.productId, product.id);
-    expect(quote.items.single.quantity, 6);
+    expect(quote.items.single.productItemNumber, 'PEN-1');
+    expect(quote.items.single.productItemName, 'Blue Pen');
+    expect(quote.items.single.productCategory, 'Pens');
+    expect(quote.items.single.productCompanyName, 'Acme');
+    expect(quote.items.single.buyingPrice, 80);
+    expect(quote.items.single.sellingPrice, 118);
+    expect(quote.items.single.quantity, 2);
+    expect(quote.items.single.pricingMode, 'TAX_INCLUSIVE');
+    expect(quote.items.single.enteredUnitPrice, 118);
     expect(quote.items.single.unitPriceExclTax, 100);
+    expect(quote.items.single.unitPriceInclTax, 118);
+    expect(quote.items.single.gstRate, 18);
+    expect(quote.items.single.lineTotal, 236);
+    expect(quote.totals.subtotal, 200);
+    expect(quote.totals.discountTotal, 0);
+    expect(quote.totals.taxableTotal, 200);
+    expect(quote.totals.gstTotal, 36);
+    expect(quote.totals.grandTotal, 236);
+  });
+
+  test('quote allows edited selling price', () async {
+    final quote = await invoicesService.quoteInvoice(_draftWithItems(
+      customer: customer,
+      items: <InvoiceDraftItem>[
+        InvoiceDraftItem(
+          product: product,
+          quantity: 2,
+          unitPrice: 236,
+        ),
+      ],
+    ));
+
+    expect(quote.items.single.enteredUnitPrice, 236);
+    expect(quote.items.single.unitPriceExclTax, 200);
+    expect(quote.items.single.lineTotal, 472);
+    expect(quote.totals.grandTotal, 472);
+  });
+
+  test('quote allows edited line GST rate', () async {
+    final quote = await invoicesService.quoteInvoice(_draftWithItems(
+      customer: customer,
+      items: <InvoiceDraftItem>[
+        InvoiceDraftItem(
+          product: product,
+          quantity: 2,
+          gstRate: 12,
+        ),
+      ],
+    ));
+
+    expect(quote.items.single.enteredUnitPrice, 118);
+    expect(quote.items.single.gstRate, 12);
+    expect(quote.items.single.unitPriceExclTax, 105.36);
+    expect(quote.items.single.gstAmount, 25.29);
+    expect(quote.items.single.lineTotal, 236);
+    expect(quote.totals.grandTotal, 236);
+  });
+
+  test('quote stores product, buyer, and company snapshots', () async {
+    final quote = await invoicesService.quoteInvoice(_draft(
+      customer: customer,
+      product: product,
+      quantity: 1,
+    ));
+
+    final line = quote.items.single;
+    expect(line.productItemNumber, 'PEN-1');
+    expect(line.productItemName, 'Blue Pen');
+    expect(line.productCategory, 'Pens');
+    expect(line.productBuyerId, isNull);
+    expect(line.productCompanyName, 'Acme');
+    expect(line.buyingPrice, 80);
+    expect(line.sellingPrice, 118);
+  });
+
+  test('quote supports optional unit', () async {
+    final boxedProduct = await productsService.createProduct(
+      _productInput(
+          itemNumber: 'PEN-BOX', itemName: 'Blue Pen Box', unit: 'box'),
+    );
+
+    final quote = await invoicesService.quoteInvoice(_draft(
+      customer: customer,
+      product: boxedProduct,
+      quantity: 1,
+    ));
+
+    expect(quote.items.single.unit, 'box');
+  });
+
+  test('quote warns when inclusive sale would make stock negative', () async {
+    final quote = await invoicesService.quoteInvoice(_draft(
+      customer: customer,
+      product: product,
+      quantity: 6,
+      discountPercent: 10,
+    ));
+
     expect(quote.items.single.lineTotal, 637.2);
-    expect(quote.totals.subtotal, 600);
-    expect(quote.totals.discountTotal, 60);
-    expect(quote.totals.taxableTotal, 540);
-    expect(quote.totals.gstTotal, 97.2);
     expect(quote.totals.grandTotal, 637.2);
+    expect(quote.warnings, hasLength(1));
     expect(quote.warnings.single.code, 'NEGATIVE_STOCK');
   });
 
-  test('creates invoices with snapshots, stock reduction, and ledger debit',
-      () async {
+  test('CREDIT creates full customer khata debit', () async {
     final result = await invoicesService.createInvoice(
       draft: _draft(customer: customer, product: product, quantity: 2),
       requestId: _uuid(1),
@@ -75,11 +165,21 @@ void main() {
     expect(result.invoice.id, isNotEmpty);
     expect(result.invoice.invoiceNumber, '1');
     expect(result.invoice.status, 'ACTIVE');
+    expect(result.invoice.paymentState, 'CREDIT');
     expect(result.invoice.paymentMode, 'CREDIT');
+    expect(result.invoice.paidAmount, 0);
     expect(result.invoice.customerName, 'Acme Stores');
     expect(result.invoice.invoiceDate, '2026-01-10');
+    expect(result.invoice.invoiceDatetime, '2026-01-10T15:30:00.000Z');
     expect(result.invoice.grandTotal, 236);
     expect(result.invoice.items.single.productName, 'Blue Pen');
+    expect(result.invoice.items.single.productItemNumber, 'PEN-1');
+    expect(result.invoice.items.single.productItemName, 'Blue Pen');
+    expect(result.invoice.items.single.productCategory, 'Pens');
+    expect(result.invoice.items.single.productCompanyName, 'Acme');
+    expect(result.invoice.items.single.buyingPrice, 80);
+    expect(result.invoice.items.single.sellingPrice, 118);
+    expect(result.invoice.items.single.unit, isNull);
     expect(result.invoice.items.single.quantity, 2);
     expect(result.invoice.items.single.lineTotal, 236);
 
@@ -106,6 +206,64 @@ void main() {
     expect(storedInvoice.customerName, 'Acme Stores');
     expect(storedInvoice.companyName, 'Khata Traders');
     expect(storedInvoice.companyStateCode, '27');
+    expect(storedInvoice.paymentState, 'CREDIT');
+    expect(storedInvoice.paidAmount, '0');
+    expect(storedInvoice.invoiceDatetime, '2026-01-10T15:30:00.000Z');
+
+    final storedItem = await database.select(database.invoiceItems).getSingle();
+    expect(storedItem.productItemNumber, 'PEN-1');
+    expect(storedItem.productItemName, 'Blue Pen');
+    expect(storedItem.productCategory, 'Pens');
+    expect(storedItem.productBuyerId, isNull);
+    expect(storedItem.productCompanyName, 'Acme');
+    expect(storedItem.buyingPrice, '80');
+    expect(storedItem.sellingPrice, '118');
+    expect(storedItem.unit, isNull);
+  });
+
+  test('TOTAL_PAID creates full debit and full collection', () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        paymentState: 'TOTAL_PAID',
+      ),
+      requestId: _uuid(21),
+    );
+
+    expect(result.invoice.paymentState, 'TOTAL_PAID');
+    expect(result.invoice.paidAmount, 236);
+    final transactions =
+        await database.select(database.customerTransactions).get();
+    expect(
+      transactions
+          .map((transaction) => (transaction.entryType, transaction.amount)),
+      <(String, String)>[('CREDIT_SALE', '236'), ('COLLECTION', '236')],
+    );
+  });
+
+  test('PARTIAL_PAID creates full debit and partial collection', () async {
+    final result = await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        paymentState: 'PARTIAL_PAID',
+        paidAmount: 100,
+      ),
+      requestId: _uuid(22),
+    );
+
+    expect(result.invoice.paymentState, 'PARTIAL_PAID');
+    expect(result.invoice.paidAmount, 100);
+    final transactions =
+        await database.select(database.customerTransactions).get();
+    expect(
+      transactions
+          .map((transaction) => (transaction.entryType, transaction.amount)),
+      <(String, String)>[('CREDIT_SALE', '236'), ('COLLECTION', '100')],
+    );
   });
 
   test('accumulates stock reduction for duplicate product lines', () async {
@@ -116,16 +274,12 @@ void main() {
           InvoiceDraftItem(
             product: product,
             quantity: 1.5,
-            pricingMode: 'PRE_TAX',
-            unitPrice: 100,
-            gstRate: 18,
+            unitPrice: 118,
           ),
           InvoiceDraftItem(
             product: product,
             quantity: 2,
-            pricingMode: 'PRE_TAX',
-            unitPrice: 100,
-            gstRate: 18,
+            unitPrice: 118,
           ),
         ],
       ),
@@ -150,16 +304,12 @@ void main() {
           InvoiceDraftItem(
             product: product,
             quantity: 1.5,
-            pricingMode: 'PRE_TAX',
-            unitPrice: 100,
-            gstRate: 18,
+            unitPrice: 118,
           ),
           InvoiceDraftItem(
             product: product,
             quantity: 2,
-            pricingMode: 'PRE_TAX',
-            unitPrice: 100,
-            gstRate: 18,
+            unitPrice: 118,
           ),
         ],
       ),
@@ -282,25 +432,11 @@ void main() {
     );
 
     expect(await database.select(database.stockMovements).get(), hasLength(2));
-    expect(
-        await database.select(database.customerTransactions).get(), hasLength(2));
+    expect(await database.select(database.customerTransactions).get(),
+        hasLength(2));
     expect(
         (await database.select(database.products).getSingle()).quantityOnHand,
         '5');
-  });
-
-  test('does not write ledger rows for paid invoices', () async {
-    await invoicesService.createInvoice(
-      draft: _draft(
-        customer: customer,
-        product: product,
-        quantity: 1,
-        paymentMode: 'PAID',
-      ),
-      requestId: _uuid(7),
-    );
-
-    expect(await database.select(database.customerTransactions).get(), isEmpty);
   });
 
   test('rejects unsupported payment modes', () async {
@@ -434,14 +570,21 @@ CreateCustomerInput _customerInput({
   );
 }
 
-CreateProductInput _productInput() {
-  return const CreateProductInput(
-    companyName: 'Acme',
-    category: 'Pens',
-    itemName: 'Blue Pen',
-    itemNumber: 'PEN-1',
-    buyingPrice: 100,
-    sellingPrice: 100,
+CreateProductInput _productInput({
+  String companyName = 'Acme',
+  String category = 'Pens',
+  String itemName = 'Blue Pen',
+  String itemNumber = 'PEN-1',
+  String? unit,
+}) {
+  return CreateProductInput(
+    companyName: companyName,
+    category: category,
+    itemName: itemName,
+    itemNumber: itemNumber,
+    buyingPrice: 80,
+    sellingPrice: 118,
+    unit: unit,
     gstRate: 18,
     quantityOnHand: 5,
     lowStockThreshold: 2,
@@ -452,22 +595,25 @@ InvoiceDraft _draft({
   required Customer customer,
   required Product product,
   required double quantity,
-  String paymentMode = 'CREDIT',
+  String paymentState = 'CREDIT',
+  double paidAmount = 0,
+  String? paymentMode,
   double discountPercent = 0,
   String? placeOfSupplyStateCode,
 }) {
   return _draftWithItems(
     customer: customer,
     invoiceDate: '2026-01-10',
+    invoiceDatetime: '2026-01-10T15:30:00.000Z',
+    paymentState: paymentState,
+    paidAmount: paidAmount,
     paymentMode: paymentMode,
     placeOfSupplyStateCode: placeOfSupplyStateCode,
     items: <InvoiceDraftItem>[
       InvoiceDraftItem(
         product: product,
         quantity: quantity,
-        pricingMode: 'PRE_TAX',
-        unitPrice: 100,
-        gstRate: 18,
+        unitPrice: 118,
         discountPercent: discountPercent,
       ),
     ],
@@ -478,12 +624,18 @@ InvoiceDraft _draftWithItems({
   required Customer customer,
   required List<InvoiceDraftItem> items,
   String invoiceDate = '2026-01-10',
-  String paymentMode = 'CREDIT',
+  String? invoiceDatetime = '2026-01-10T15:30:00.000Z',
+  String paymentState = 'CREDIT',
+  double paidAmount = 0,
+  String? paymentMode,
   String? placeOfSupplyStateCode,
 }) {
   return InvoiceDraft(
     customer: customer,
     invoiceDate: invoiceDate,
+    invoiceDatetime: invoiceDatetime,
+    paymentState: paymentState,
+    paidAmount: paidAmount,
     paymentMode: paymentMode,
     placeOfSupplyStateCode: placeOfSupplyStateCode,
     items: items,

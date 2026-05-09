@@ -69,7 +69,7 @@ class LocalBackupPayload {
     required this.tables,
   });
 
-  static const currentSchemaVersion = 4;
+  static const currentSchemaVersion = 5;
   static const currentBackendCompatibilityVersion = 'local-v1';
 
   final int schemaVersion;

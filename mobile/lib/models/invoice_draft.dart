@@ -4,15 +4,26 @@ import 'customer.dart';
 class InvoiceDraft {
   const InvoiceDraft({
     this.customer,
+    this.invoiceDatetime,
     this.invoiceDate = '',
-    this.paymentMode = 'CREDIT',
+    String paymentState = 'CREDIT',
+    this.paidAmount = 0,
+    String? paymentMode,
     this.placeOfSupplyStateCode,
     this.notes,
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
-  });
+  })  : paymentState = paymentMode == null
+            ? paymentState
+            : paymentState == 'CREDIT' && paymentMode == 'PAID'
+                ? 'TOTAL_PAID'
+                : paymentMode,
+        paymentMode = paymentMode ?? paymentState;
 
   final Customer? customer;
+  final String? invoiceDatetime;
   final String invoiceDate;
+  final String paymentState;
+  final double paidAmount;
   final String paymentMode;
   final String? placeOfSupplyStateCode;
   final String? notes;
@@ -21,7 +32,11 @@ class InvoiceDraft {
   InvoiceDraft copyWith({
     Customer? customer,
     bool clearCustomer = false,
+    String? invoiceDatetime,
+    bool clearInvoiceDatetime = false,
     String? invoiceDate,
+    String? paymentState,
+    double? paidAmount,
     String? paymentMode,
     String? placeOfSupplyStateCode,
     bool clearPlaceOfSupplyStateCode = false,
@@ -31,7 +46,11 @@ class InvoiceDraft {
   }) {
     return InvoiceDraft(
       customer: clearCustomer ? null : customer ?? this.customer,
+      invoiceDatetime:
+          clearInvoiceDatetime ? null : invoiceDatetime ?? this.invoiceDatetime,
       invoiceDate: invoiceDate ?? this.invoiceDate,
+      paymentState: paymentState ?? this.paymentState,
+      paidAmount: paidAmount ?? this.paidAmount,
       paymentMode: paymentMode ?? this.paymentMode,
       placeOfSupplyStateCode: clearPlaceOfSupplyStateCode
           ? null
@@ -44,7 +63,10 @@ class InvoiceDraft {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'customer_id': customer?.id,
+      'invoice_datetime': _emptyToNull(invoiceDatetime),
       'invoice_date': invoiceDate,
+      'payment_state': paymentState,
+      'paid_amount': paidAmount,
       'payment_mode': paymentMode,
       'place_of_supply_state_code': _emptyToNull(placeOfSupplyStateCode),
       'notes': _emptyToNull(notes),
@@ -57,7 +79,7 @@ class InvoiceDraftItem {
   const InvoiceDraftItem({
     this.product,
     this.quantity = 1,
-    this.pricingMode = 'PRE_TAX',
+    this.pricingMode = 'TAX_INCLUSIVE',
     this.unitPrice,
     this.gstRate,
     this.discountPercent = 0,
