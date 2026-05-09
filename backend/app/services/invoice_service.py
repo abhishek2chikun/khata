@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.idempotency import canonical_request_hash
-from app.core.pricing import NormalizedLine, normalize_line
+from app.core.pricing import NormalizedLine, _round_money, normalize_line
 from app.core.state_codes import get_state_name, normalize_state_code
 from app.core.tax import derive_tax_regime
 from app.models.company_profile import CompanyProfile
@@ -92,7 +92,7 @@ def _lock_or_load_products(session: Session, product_ids: list[UUID], lock: bool
     return {product.id: product for product in products}
 
 
-def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str) -> str:
+def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str, invoice_datetime: datetime) -> str:
     def money(value: Decimal) -> str:
         return f"{Decimal(value):.2f}"
 
@@ -101,8 +101,9 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
 
     normalized_payload = {
         "customer_id": str(payload.customer_id),
-        "invoice_date": payload.invoice_date.isoformat(),
-        "payment_mode": payload.payment_mode,
+        "invoice_datetime": invoice_datetime.isoformat(),
+        "payment_state": payload.resolved_payment_state(),
+        "paid_amount": money(payload.paid_amount),
         "place_of_supply_state_code": resolved_state_code,
         "notes": payload.notes,
         "items": [
@@ -110,8 +111,8 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
                 "product_id": str(item.product_id),
                 "quantity": quantity(item.quantity),
                 "pricing_mode": item.pricing_mode,
-                "unit_price": money(item.unit_price),
-                "gst_rate": money(item.gst_rate),
+                "unit_price": None if item.unit_price is None else money(item.unit_price),
+                "gst_rate": None if item.gst_rate is None else money(item.gst_rate),
                 "discount_percent": money(item.discount_percent),
             }
             for item in payload.items
@@ -153,9 +154,9 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
 
         normalized_line = normalize_line(
             quantity=item.quantity,
-            unit_price=item.unit_price,
+            unit_price=item.unit_price if item.unit_price is not None else product.selling_price,
             pricing_mode=item.pricing_mode,
-            gst_rate=item.gst_rate,
+            gst_rate=item.gst_rate if item.gst_rate is not None else product.gst_rate,
             discount_percent=item.discount_percent,
             tax_regime=tax_regime,
         )
@@ -205,6 +206,14 @@ def build_quote(session: Session, payload: InvoiceQuoteRequest) -> InvoiceQuoteR
         items=[
             InvoiceLineQuoteResponse(
                 product_id=line.product.id,
+                product_item_number=line.product.item_number,
+                product_item_name=line.product.item_name,
+                product_category=line.product.category,
+                product_buyer_id=line.product.buyer_id,
+                product_company_name=line.product.company_name,
+                buying_price=line.product.buying_price,
+                selling_price=line.product.selling_price,
+                unit=line.product.unit,
                 quantity=line.normalized_line.quantity,
                 pricing_mode=line.normalized_line.pricing_mode,
                 entered_unit_price=line.normalized_line.entered_unit_price,
@@ -222,6 +231,9 @@ def build_quote(session: Session, payload: InvoiceQuoteRequest) -> InvoiceQuoteR
                 sgst_amount=line.normalized_line.sgst_amount,
                 igst_amount=line.normalized_line.igst_amount,
                 line_total=line.normalized_line.line_total,
+                revenue_amount=line.normalized_line.taxable_amount,
+                buying_amount=_round_money(line.normalized_line.quantity * line.product.buying_price),
+                profit_amount=_round_money(line.normalized_line.taxable_amount - _round_money(line.normalized_line.quantity * line.product.buying_price)),
             )
             for line in prepared.lines
         ],
@@ -237,20 +249,28 @@ def _insert_invoice_items(session: Session, invoice: Invoice, prepared: Prepared
             invoice_id=invoice.id,
             product_id=line.product.id,
             line_number=line.line_number,
+            product_item_number=line.product.item_number,
+            product_item_name=line.product.item_name,
+            product_category=line.product.category,
+            product_buyer_id=line.product.buyer_id,
+            product_company_name=line.product.company_name,
+            buying_price=line.product.buying_price,
+            selling_price=line.product.selling_price,
+            unit=line.product.unit,
             product_name=line.product.item_name,
             product_code=line.product.item_number,
             company=line.product.company_name,
             category=line.product.category,
             quantity=line.request_item.quantity,
-            pricing_mode=line.request_item.pricing_mode,
-            entered_unit_price=line.request_item.unit_price,
+            pricing_mode=line.normalized_line.pricing_mode,
+            entered_unit_price=line.normalized_line.entered_unit_price,
             unit_price_excl_tax=line.normalized_line.unit_price_excl_tax,
             unit_price_incl_tax=line.normalized_line.unit_price_incl_tax,
             gst_rate=line.normalized_line.gst_rate,
             cgst_rate=line.normalized_line.cgst_rate,
             sgst_rate=line.normalized_line.sgst_rate,
             igst_rate=line.normalized_line.igst_rate,
-            discount_percent=line.request_item.discount_percent,
+            discount_percent=line.normalized_line.discount_percent,
             discount_amount=line.normalized_line.discount_amount,
             taxable_amount=line.normalized_line.taxable_amount,
             gst_amount=line.normalized_line.gst_amount,
@@ -258,6 +278,9 @@ def _insert_invoice_items(session: Session, invoice: Invoice, prepared: Prepared
             sgst_amount=line.normalized_line.sgst_amount,
             igst_amount=line.normalized_line.igst_amount,
             line_total=line.normalized_line.line_total,
+            revenue_amount=line.normalized_line.taxable_amount,
+            buying_amount=_round_money(line.normalized_line.quantity * line.product.buying_price),
+            profit_amount=_round_money(line.normalized_line.taxable_amount - _round_money(line.normalized_line.quantity * line.product.buying_price)),
         )
         session.add(item)
         items.append(item)
@@ -279,18 +302,43 @@ def _apply_stock_and_ledger(session: Session, invoice: Invoice, prepared: Prepar
         )
         line.product.quantity_on_hand -= line.request_item.quantity
 
-    if invoice.payment_mode == "CREDIT":
+    session.add(
+        CustomerTransaction(
+            customer_id=invoice.customer_id,
+            invoice_id=invoice.id,
+            entry_type="CREDIT_SALE",
+            amount=invoice.grand_total,
+            occurred_on=invoice.invoice_date,
+            notes=f"Invoice {invoice.invoice_number}",
+            created_by_user_id=current_user.id,
+        )
+    )
+    if invoice.paid_amount > 0:
         session.add(
             CustomerTransaction(
                 customer_id=invoice.customer_id,
                 invoice_id=invoice.id,
-                entry_type="CREDIT_SALE",
-                amount=invoice.grand_total,
+                entry_type="COLLECTION",
+                amount=invoice.paid_amount,
                 occurred_on=invoice.invoice_date,
-                notes=f"Invoice {invoice.invoice_number}",
+                notes=f"Invoice {invoice.invoice_number} collection",
                 created_by_user_id=current_user.id,
             )
         )
+
+
+def _resolve_paid_amount(payment_state: str, paid_amount: Decimal, grand_total: Decimal) -> Decimal:
+    if payment_state == "CREDIT":
+        if paid_amount != Decimal("0.00"):
+            raise _validation_error("paid_amount must be 0.00 for CREDIT invoices")
+        return Decimal("0.00")
+    if payment_state == "TOTAL_PAID":
+        if paid_amount not in {Decimal("0.00"), grand_total}:
+            raise _validation_error("paid_amount must equal grand_total for TOTAL_PAID invoices")
+        return grand_total
+    if paid_amount <= 0 or paid_amount >= grand_total:
+        raise _validation_error("paid_amount must be greater than zero and less than grand_total for PARTIAL_PAID invoices")
+    return _round_money(paid_amount)
 
 
 def _build_invoice_detail(session: Session, invoice: Invoice) -> InvoiceDetailResponse:
@@ -301,9 +349,12 @@ def _build_invoice_detail(session: Session, invoice: Invoice) -> InvoiceDetailRe
         invoice_number=invoice.invoice_number,
         customer_id=invoice.customer_id,
         invoice_date=invoice.invoice_date,
+        invoice_datetime=invoice.invoice_datetime,
         tax_regime=invoice.tax_regime,
         status=invoice.status,
-        payment_mode=invoice.payment_mode,
+        payment_state=invoice.payment_state,
+        payment_mode=invoice.payment_state,
+        paid_amount=invoice.paid_amount,
         place_of_supply_state=invoice.place_of_supply_state,
         place_of_supply_state_code=invoice.place_of_supply_state_code,
         subtotal=invoice.subtotal,
@@ -352,13 +403,16 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
     try:
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code)
+            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime)
             if existing.request_hash != request_hash:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}})
             return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
 
         prepared = _prepare_invoice(session, payload, lock_products=True)
-        request_hash = _build_invoice_request_hash(payload, prepared.place_of_supply_state_code)
+        invoice_datetime = payload.resolved_invoice_datetime()
+        request_hash = _build_invoice_request_hash(payload, prepared.place_of_supply_state_code, invoice_datetime)
+        payment_state = payload.resolved_payment_state()
+        paid_amount = _resolve_paid_amount(payment_state, payload.paid_amount, prepared.totals.grand_total)
 
         invoice = Invoice(
             request_id=payload.request_id,
@@ -384,10 +438,12 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
             company_bank_ifsc=prepared.company.bank_ifsc,
             company_bank_branch=prepared.company.bank_branch,
             company_jurisdiction=prepared.company.jurisdiction,
-            invoice_date=payload.invoice_date,
+            invoice_date=invoice_datetime.date(),
+            invoice_datetime=invoice_datetime,
             tax_regime=prepared.tax_regime,
             status="ACTIVE",
-            payment_mode=payload.payment_mode,
+            payment_state=payment_state,
+            paid_amount=paid_amount,
             subtotal=prepared.totals.subtotal,
             discount_total=prepared.totals.discount_total,
             taxable_total=prepared.totals.taxable_total,
@@ -410,7 +466,7 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
         session.rollback()
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code)
+            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime)
             if existing.request_hash == request_hash:
                 return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}}) from exc
@@ -440,7 +496,8 @@ def list_invoices(
     if status_filter is not None:
         query = query.where(Invoice.status == status_filter)
     if payment_mode is not None:
-        query = query.where(Invoice.payment_mode == payment_mode)
+        mapped_payment_state = "TOTAL_PAID" if payment_mode == "PAID" else payment_mode
+        query = query.where(Invoice.payment_state == mapped_payment_state)
     if invoice_number is not None:
         query = query.where(Invoice.invoice_number == invoice_number)
     invoices = list(session.scalars(query).all())
@@ -453,7 +510,8 @@ def list_invoices(
                 customer_name=invoice.customer_name,
                 invoice_date=invoice.invoice_date,
                 status=invoice.status,
-                payment_mode=invoice.payment_mode,
+                payment_state=invoice.payment_state,
+                payment_mode=invoice.payment_state,
                 grand_total=invoice.grand_total,
             )
             for invoice in invoices
@@ -509,15 +567,26 @@ def cancel_invoice(session: Session, invoice_id: UUID, payload: InvoiceCancelReq
                 )
             )
 
-        if invoice.payment_mode == "CREDIT":
+        session.add(
+            CustomerTransaction(
+                customer_id=invoice.customer_id,
+                invoice_id=invoice.id,
+                entry_type="INVOICE_CANCEL_REVERSAL",
+                amount=invoice.grand_total,
+                occurred_on=cancellation_date,
+                notes=f"Cancel invoice {invoice.invoice_number}",
+                created_by_user_id=current_user.id,
+            )
+        )
+        if invoice.paid_amount > 0:
             session.add(
                 CustomerTransaction(
                     customer_id=invoice.customer_id,
                     invoice_id=invoice.id,
-                    entry_type="INVOICE_CANCEL_REVERSAL",
-                    amount=invoice.grand_total,
+                    entry_type="COLLECTION_REVERSAL",
+                    amount=invoice.paid_amount,
                     occurred_on=cancellation_date,
-                    notes=f"Cancel invoice {invoice.invoice_number}",
+                    notes=f"Cancel invoice {invoice.invoice_number} collection",
                     created_by_user_id=current_user.id,
                 )
             )

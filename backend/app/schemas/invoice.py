@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -8,9 +8,9 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class InvoiceLineRequest(BaseModel):
     product_id: uuid.UUID
     quantity: Decimal
-    pricing_mode: str
-    unit_price: Decimal
-    gst_rate: Decimal
+    pricing_mode: str = "TAX_INCLUSIVE"
+    unit_price: Decimal | None = None
+    gst_rate: Decimal | None = None
     discount_percent: Decimal = Decimal("0.00")
 
     @field_validator("quantity")
@@ -23,18 +23,45 @@ class InvoiceLineRequest(BaseModel):
 
 class InvoiceQuoteRequest(BaseModel):
     customer_id: uuid.UUID
-    invoice_date: date
-    payment_mode: str
+    invoice_datetime: datetime | None = None
+    invoice_date: date | None = None
+    payment_state: str | None = None
+    payment_mode: str | None = None
+    paid_amount: Decimal = Decimal("0.00")
     place_of_supply_state_code: str | None = None
     notes: str | None = None
     items: list[InvoiceLineRequest]
 
+    @field_validator("payment_state")
+    @classmethod
+    def validate_payment_state(cls, value: str | None) -> str | None:
+        if value is not None and value not in {"CREDIT", "TOTAL_PAID", "PARTIAL_PAID"}:
+            raise ValueError("payment_state must be CREDIT, TOTAL_PAID, or PARTIAL_PAID")
+        return value
+
     @field_validator("payment_mode")
     @classmethod
-    def validate_payment_mode(cls, value: str) -> str:
-        if value not in {"PAID", "CREDIT"}:
+    def validate_legacy_payment_mode(cls, value: str | None) -> str | None:
+        if value is not None and value not in {"PAID", "CREDIT"}:
             raise ValueError("payment_mode must be PAID or CREDIT")
         return value
+
+    def resolved_payment_state(self) -> str:
+        if self.payment_state is not None:
+            return self.payment_state
+        if self.payment_mode == "PAID":
+            return "TOTAL_PAID"
+        return "CREDIT"
+
+    def resolved_invoice_datetime(self) -> datetime:
+        if self.invoice_datetime is not None:
+            return self.invoice_datetime
+        if self.invoice_date is not None:
+            return datetime.combine(self.invoice_date, datetime.min.time(), tzinfo=UTC)
+        return datetime.now(UTC)
+
+    def resolved_invoice_date(self) -> date:
+        return self.resolved_invoice_datetime().date()
 
 
 class InvoiceCreateRequest(InvoiceQuoteRequest):
@@ -61,6 +88,14 @@ class InvoiceTotalsResponse(BaseModel):
 
 class InvoiceLineQuoteResponse(BaseModel):
     product_id: uuid.UUID
+    product_item_number: str
+    product_item_name: str
+    product_category: str
+    product_buyer_id: uuid.UUID | None
+    product_company_name: str
+    buying_price: Decimal
+    selling_price: Decimal
+    unit: str | None
     quantity: Decimal
     pricing_mode: str
     entered_unit_price: Decimal
@@ -78,6 +113,9 @@ class InvoiceLineQuoteResponse(BaseModel):
     sgst_amount: Decimal
     igst_amount: Decimal
     line_total: Decimal
+    revenue_amount: Decimal
+    buying_amount: Decimal
+    profit_amount: Decimal
 
 
 class InvoiceQuoteResponse(BaseModel):
@@ -121,6 +159,14 @@ class InvoiceItemResponse(BaseModel):
     id: uuid.UUID
     product_id: uuid.UUID
     line_number: int
+    product_item_number: str
+    product_item_name: str
+    product_category: str
+    product_buyer_id: uuid.UUID | None
+    product_company_name: str
+    buying_price: Decimal
+    selling_price: Decimal
+    unit: str | None
     product_name: str
     product_code: str
     company: str
@@ -142,6 +188,9 @@ class InvoiceItemResponse(BaseModel):
     sgst_amount: Decimal
     igst_amount: Decimal
     line_total: Decimal
+    revenue_amount: Decimal
+    buying_amount: Decimal
+    profit_amount: Decimal
 
 
 class InvoiceDetailResponse(BaseModel):
@@ -150,9 +199,12 @@ class InvoiceDetailResponse(BaseModel):
     invoice_number: int
     customer_id: uuid.UUID
     invoice_date: date
+    invoice_datetime: datetime
     tax_regime: str
     status: str
+    payment_state: str
     payment_mode: str
+    paid_amount: Decimal
     place_of_supply_state: str
     place_of_supply_state_code: str
     subtotal: Decimal
@@ -182,6 +234,7 @@ class InvoiceListItemResponse(BaseModel):
     customer_name: str
     invoice_date: date
     status: str
+    payment_state: str
     payment_mode: str
     grand_total: Decimal
 

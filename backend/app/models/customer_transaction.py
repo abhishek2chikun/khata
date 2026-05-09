@@ -15,7 +15,7 @@ class CustomerTransaction(Base):
         CheckConstraint("amount > 0", name="ck_customer_transactions_amount_positive"),
         CheckConstraint(
             "(entry_type IN ('OPENING_BALANCE','COLLECTION','BALANCE_INCREASE_ADJUSTMENT','BALANCE_DECREASE_ADJUSTMENT') AND invoice_id IS NULL AND request_id IS NOT NULL AND request_hash IS NOT NULL) OR "
-            "(entry_type IN ('CREDIT_SALE','INVOICE_CANCEL_REVERSAL') AND invoice_id IS NOT NULL AND request_id IS NULL AND request_hash IS NULL)",
+            "(entry_type IN ('CREDIT_SALE','COLLECTION','INVOICE_CANCEL_REVERSAL','COLLECTION_REVERSAL') AND invoice_id IS NOT NULL AND request_id IS NULL AND request_hash IS NULL)",
             name="ck_customer_transactions_shape",
         ),
         Index("uq_customer_transactions_opening_balance", "customer_id", unique=True, postgresql_where=text("entry_type = 'OPENING_BALANCE'")),

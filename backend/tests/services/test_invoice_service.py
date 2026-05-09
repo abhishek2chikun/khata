@@ -1,14 +1,80 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from sqlalchemy import select
+
+from app.models.buyer import Buyer
 from app.models.company_profile import CompanyProfile
 from app.models.invoice import Invoice
+from app.models.invoice_item import InvoiceItem
 from app.models.product import Product
 from app.models.customer import Customer
-from app.schemas.invoice import InvoiceCreateRequest, InvoiceQuoteRequest
+from app.models.customer_transaction import CustomerTransaction
+from app.schemas.invoice import InvoiceCancelRequest, InvoiceCreateRequest, InvoiceQuoteRequest
 from app.services import invoice_service
 
 from app.core.idempotency import canonical_request_hash
+
+
+def _seed_invoice_v2_graph(db_session):
+    company = CompanyProfile(
+        name="Acme Traders",
+        address="Main Road",
+        city="Pune",
+        state="Maharashtra",
+        state_code="27",
+    )
+    customer = Customer(name=f"ABC Stores {uuid4()}", address="Market Yard", state="Maharashtra", state_code="27")
+    buyer = Buyer(name=f"Camlin Supplier {uuid4()}", address="Supplier Lane")
+    product = Product(
+        company_name="Camlin",
+        category="Pens",
+        item_name=f"Blue Pen {uuid4()}",
+        item_number=f"PEN-{uuid4()}",
+        buyer_id=buyer.id,
+        buying_price=Decimal("70.00"),
+        selling_price=Decimal("118.00"),
+        unit="box",
+        gst_rate=Decimal("18.00"),
+        quantity_on_hand=Decimal("5.000"),
+        low_stock_threshold=Decimal("2.000"),
+    )
+    db_session.add_all([company, customer, buyer, product])
+    db_session.commit()
+    return customer, buyer, product
+
+
+def _v2_line(product, **overrides):
+    line = {
+        "product_id": product.id,
+        "quantity": Decimal("2.000"),
+        "discount_percent": Decimal("0.00"),
+    }
+    line.update(overrides)
+    return line
+
+
+def _v2_create_payload(customer, product, **overrides):
+    payload = {
+        "request_id": uuid4(),
+        "customer_id": customer.id,
+        "invoice_datetime": datetime(2026, 4, 19, 15, 30, tzinfo=timezone.utc),
+        "payment_state": "CREDIT",
+        "paid_amount": Decimal("0.00"),
+        "place_of_supply_state_code": "27",
+        "items": [_v2_line(product)],
+    }
+    payload.update(overrides)
+    return InvoiceCreateRequest(**payload)
+
+
+def _ledger_entries(db_session, invoice_id):
+    return list(
+        db_session.scalars(
+            select(CustomerTransaction).where(CustomerTransaction.invoice_id == invoice_id).order_by(CustomerTransaction.created_at, CustomerTransaction.id)
+        ).all()
+    )
 
 
 def test_invoice_request_hash_changes_when_item_order_changes():
@@ -74,6 +140,143 @@ def test_build_quote_returns_expected_totals(db_session):
 
     assert quote.totals.grand_total == Decimal("236.00")
     assert quote.place_of_supply_state == "Maharashtra"
+
+
+def test_quote_defaults_to_product_selling_price_inclusive_of_gst(db_session):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+
+    quote = invoice_service.build_quote(
+        db_session,
+        InvoiceQuoteRequest(
+            customer_id=customer.id,
+            payment_state="CREDIT",
+            place_of_supply_state_code="27",
+            items=[_v2_line(product)],
+        ),
+    )
+
+    assert quote.items[0].pricing_mode == "TAX_INCLUSIVE"
+    assert quote.items[0].entered_unit_price == Decimal("118.00")
+    assert quote.items[0].unit_price_excl_tax == Decimal("100.00")
+    assert quote.totals.grand_total == Decimal("236.00")
+
+
+def test_quote_can_override_line_selling_price(db_session):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+
+    quote = invoice_service.build_quote(
+        db_session,
+        InvoiceQuoteRequest(
+            customer_id=customer.id,
+            payment_state="CREDIT",
+            place_of_supply_state_code="27",
+            items=[_v2_line(product, unit_price=Decimal("236.00"))],
+        ),
+    )
+
+    assert quote.items[0].entered_unit_price == Decimal("236.00")
+    assert quote.items[0].unit_price_excl_tax == Decimal("200.00")
+    assert quote.totals.grand_total == Decimal("472.00")
+
+
+def test_quote_can_override_line_gst_rate(db_session):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+
+    quote = invoice_service.build_quote(
+        db_session,
+        InvoiceQuoteRequest(
+            customer_id=customer.id,
+            payment_state="CREDIT",
+            place_of_supply_state_code="27",
+            items=[_v2_line(product, gst_rate=Decimal("12.00"))],
+        ),
+    )
+
+    assert quote.items[0].gst_rate == Decimal("12.00")
+    assert quote.items[0].cgst_rate == Decimal("6.00")
+    assert quote.items[0].sgst_rate == Decimal("6.00")
+
+
+def test_quote_snapshots_product_details_and_profit_inputs(db_session):
+    customer, buyer, product = _seed_invoice_v2_graph(db_session)
+
+    quote = invoice_service.build_quote(
+        db_session,
+        InvoiceQuoteRequest(
+            customer_id=customer.id,
+            payment_state="CREDIT",
+            place_of_supply_state_code="27",
+            items=[_v2_line(product)],
+        ),
+    )
+
+    item = quote.items[0]
+    assert item.product_item_number == product.item_number
+    assert item.product_item_name == product.item_name
+    assert item.product_category == "Pens"
+    assert item.product_buyer_id == buyer.id
+    assert item.product_company_name == "Camlin"
+    assert item.buying_price == Decimal("70.00")
+    assert item.selling_price == Decimal("118.00")
+    assert item.gst_rate == Decimal("18.00")
+    assert item.unit == "box"
+    assert item.revenue_amount == Decimal("200.00")
+    assert item.buying_amount == Decimal("140.00")
+    assert item.profit_amount == Decimal("60.00")
+
+
+def test_create_credit_invoice_debits_full_amount_and_reduces_stock_and_stores_datetime(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    invoice_datetime = datetime(2026, 4, 19, 15, 30, tzinfo=timezone.utc)
+
+    created = invoice_service.create_invoice(db_session, _v2_create_payload(customer, product, invoice_datetime=invoice_datetime), seeded_user)
+
+    assert created.invoice.payment_state == "CREDIT"
+    assert created.invoice.paid_amount == Decimal("0.00")
+    assert created.invoice.invoice_datetime == invoice_datetime
+    db_session.refresh(product)
+    assert product.quantity_on_hand == Decimal("3.000")
+    entries = _ledger_entries(db_session, created.invoice.id)
+    assert [(entry.entry_type, entry.amount) for entry in entries] == [("CREDIT_SALE", Decimal("236.00"))]
+
+
+def test_create_total_paid_invoice_debits_full_amount_and_creates_full_collection(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+
+    created = invoice_service.create_invoice(db_session, _v2_create_payload(customer, product, payment_state="TOTAL_PAID", paid_amount=Decimal("236.00")), seeded_user)
+
+    entries = _ledger_entries(db_session, created.invoice.id)
+    assert [(entry.entry_type, entry.amount) for entry in entries] == [("CREDIT_SALE", Decimal("236.00")), ("COLLECTION", Decimal("236.00"))]
+
+
+def test_create_partial_paid_invoice_debits_full_amount_and_creates_partial_collection(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+
+    created = invoice_service.create_invoice(db_session, _v2_create_payload(customer, product, payment_state="PARTIAL_PAID", paid_amount=Decimal("100.00")), seeded_user)
+
+    entries = _ledger_entries(db_session, created.invoice.id)
+    assert [(entry.entry_type, entry.amount) for entry in entries] == [("CREDIT_SALE", Decimal("236.00")), ("COLLECTION", Decimal("100.00"))]
+
+
+def test_cancel_restores_stock_reverses_customer_khata_and_is_idempotent(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    created = invoice_service.create_invoice(db_session, _v2_create_payload(customer, product, payment_state="PARTIAL_PAID", paid_amount=Decimal("100.00")), seeded_user)
+    payload = InvoiceCancelRequest(request_id=uuid4(), cancel_reason="Wrong quantity")
+
+    first = invoice_service.cancel_invoice(db_session, created.invoice.id, payload, seeded_user)
+    second = invoice_service.cancel_invoice(db_session, created.invoice.id, payload, seeded_user)
+
+    assert first.invoice.id == second.invoice.id
+    assert second.invoice.status == "CANCELED"
+    db_session.refresh(product)
+    assert product.quantity_on_hand == Decimal("5.000")
+    entries = _ledger_entries(db_session, created.invoice.id)
+    assert [(entry.entry_type, entry.amount) for entry in entries] == [
+        ("CREDIT_SALE", Decimal("236.00")),
+        ("COLLECTION", Decimal("100.00")),
+        ("INVOICE_CANCEL_REVERSAL", Decimal("236.00")),
+        ("COLLECTION_REVERSAL", Decimal("100.00")),
+    ]
 
 
 def test_create_invoice_persists_invoice_items_and_credit_ledger(db_session, seeded_user):
@@ -271,7 +474,8 @@ def test_invoice_number_sequence_allocates_incrementing_values(db_session, seede
         invoice_date="2026-04-19",
         tax_regime="INTRA_STATE",
         status="ACTIVE",
-        payment_mode="CREDIT",
+        payment_state="CREDIT",
+        paid_amount="0.00",
         subtotal="100.00",
         discount_total="0.00",
         taxable_total="100.00",
@@ -294,7 +498,8 @@ def test_invoice_number_sequence_allocates_incrementing_values(db_session, seede
         invoice_date="2026-04-20",
         tax_regime="INTRA_STATE",
         status="ACTIVE",
-        payment_mode="CREDIT",
+        payment_state="CREDIT",
+        paid_amount="0.00",
         subtotal="100.00",
         discount_total="0.00",
         taxable_total="100.00",

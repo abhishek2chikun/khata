@@ -175,7 +175,7 @@ def _pending_balance_value(session: Session, customer_id) -> Decimal:
             func.coalesce(
                 func.sum(
                     case(
-                        (CustomerTransaction.entry_type.in_(["OPENING_BALANCE", "CREDIT_SALE", "BALANCE_INCREASE_ADJUSTMENT"]), CustomerTransaction.amount),
+                        (CustomerTransaction.entry_type.in_(["OPENING_BALANCE", "CREDIT_SALE", "BALANCE_INCREASE_ADJUSTMENT", "COLLECTION_REVERSAL"]), CustomerTransaction.amount),
                         else_=-CustomerTransaction.amount,
                     )
                 ),
@@ -208,7 +208,7 @@ def get_customer_ledger(session: Session, customer_id, *, on_date: date | None =
                 invoice_number=str(invoice.invoice_number),
                 invoice_date=invoice.invoice_date,
                 grand_total=invoice.grand_total,
-                payment_mode=invoice.payment_mode,
+                payment_mode=invoice.payment_state,
                 status=invoice.status,
             )
             for invoice in invoices
