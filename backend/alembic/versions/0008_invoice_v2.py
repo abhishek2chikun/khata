@@ -74,7 +74,13 @@ def upgrade() -> None:
     op.execute(sa.text("ALTER TABLE customer_transactions DROP CONSTRAINT IF EXISTS ck_customer_transactions_shape"))
     op.execute(sa.text("""
         INSERT INTO customer_transactions (id, customer_id, invoice_id, request_id, request_hash, opening_balance_customer_id, entry_type, amount, occurred_on, notes, created_by_user_id, created_at)
-        SELECT gen_random_uuid(), i.customer_id, i.id, NULL, NULL, NULL, 'CREDIT_SALE', i.grand_total, i.invoice_date, 'Migrated invoice ' || i.invoice_number, i.created_by_user_id, now()
+        SELECT (
+            substr(md5(i.id::text || ':CREDIT_SALE'), 1, 8) || '-' ||
+            substr(md5(i.id::text || ':CREDIT_SALE'), 9, 4) || '-4' ||
+            substr(md5(i.id::text || ':CREDIT_SALE'), 14, 3) || '-a' ||
+            substr(md5(i.id::text || ':CREDIT_SALE'), 18, 3) || '-' ||
+            substr(md5(i.id::text || ':CREDIT_SALE'), 21, 12)
+        )::uuid, i.customer_id, i.id, NULL, NULL, NULL, 'CREDIT_SALE', i.grand_total, i.invoice_date, 'Migrated invoice ' || i.invoice_number, i.created_by_user_id, now()
         FROM invoices i
         WHERE i.payment_state = 'TOTAL_PAID'
           AND NOT EXISTS (
@@ -84,7 +90,13 @@ def upgrade() -> None:
     """))
     op.execute(sa.text("""
         INSERT INTO customer_transactions (id, customer_id, invoice_id, request_id, request_hash, opening_balance_customer_id, entry_type, amount, occurred_on, notes, created_by_user_id, created_at)
-        SELECT gen_random_uuid(), i.customer_id, i.id, NULL, NULL, NULL, 'COLLECTION', i.paid_amount, i.invoice_date, 'Migrated invoice ' || i.invoice_number || ' collection', i.created_by_user_id, now()
+        SELECT (
+            substr(md5(i.id::text || ':COLLECTION'), 1, 8) || '-' ||
+            substr(md5(i.id::text || ':COLLECTION'), 9, 4) || '-4' ||
+            substr(md5(i.id::text || ':COLLECTION'), 14, 3) || '-a' ||
+            substr(md5(i.id::text || ':COLLECTION'), 18, 3) || '-' ||
+            substr(md5(i.id::text || ':COLLECTION'), 21, 12)
+        )::uuid, i.customer_id, i.id, NULL, NULL, NULL, 'COLLECTION', i.paid_amount, i.invoice_date, 'Migrated invoice ' || i.invoice_number || ' collection', i.created_by_user_id, now()
         FROM invoices i
         WHERE i.payment_state = 'TOTAL_PAID'
           AND i.paid_amount > 0

@@ -1,6 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -18,6 +18,13 @@ class InvoiceLineRequest(BaseModel):
     def validate_positive_quantity(cls, value: Decimal) -> Decimal:
         if value <= 0:
             raise ValueError("quantity must be greater than zero")
+        if value > Decimal("99999999999.999"):
+            raise ValueError("quantity exceeds maximum supported value")
+        try:
+            if value != value.quantize(Decimal("0.001")):
+                raise ValueError("quantity must have at most three decimal places")
+        except InvalidOperation as exc:
+            raise ValueError("quantity must have at most three decimal places") from exc
         return value
 
     @field_validator("pricing_mode")

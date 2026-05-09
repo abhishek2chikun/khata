@@ -92,6 +92,15 @@ def test_invoice_line_request_rejects_invalid_overrides(payload):
         InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.000"), **payload)
 
 
+def test_invoice_line_quantity_matches_persistence_precision():
+    request = InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.001"))
+
+    assert request.quantity == Decimal("1.001")
+
+    with pytest.raises(ValidationError):
+        InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.0004"))
+
+
 def test_tax_inclusive_pricing_preserves_entered_total_after_rounding():
     line = normalize_line(
         quantity=Decimal("3.000"),
@@ -169,6 +178,14 @@ def test_invoice_v2_migration_synthesizes_paid_invoice_ledger_rows():
     assert "COLLECTION" in migration_text
     assert "payment_state = 'TOTAL_PAID'" in migration_text
     assert "NOT EXISTS" in migration_text
+
+
+def test_invoice_v2_migration_uses_extension_free_deterministic_ledger_ids():
+    migration_text = _invoice_v2_migration_text()
+
+    assert "gen_random_uuid()" not in migration_text
+    assert "CREATE EXTENSION" not in migration_text
+    assert "md5(" in migration_text
 
 
 def test_invoice_v2_downgrade_handles_collection_rows_before_legacy_constraint():
