@@ -109,6 +109,43 @@ class InvoiceDraftController extends ChangeNotifier {
         index, _draft.items[index].copyWith(discountPercent: discountPercent));
   }
 
+  void addItem() {
+    final items = List<InvoiceDraftItem>.from(_draft.items)
+      ..add(const InvoiceDraftItem());
+    _updateDraft(_draft.copyWith(items: items));
+  }
+
+  void removeItem(int index) {
+    if (_draft.items.length <= 1) return;
+    final items = List<InvoiceDraftItem>.from(_draft.items)..removeAt(index);
+    _updateDraft(_draft.copyWith(items: items));
+  }
+
+  void updatePaymentState(String paymentState) {
+    _updateDraft(_draft.copyWith(paymentState: paymentState));
+  }
+
+  void updatePaidAmount(double paidAmount) {
+    _updateDraft(_draft.copyWith(paidAmount: paidAmount));
+  }
+
+  void updateInvoiceDatetime(String? invoiceDatetime) {
+    _updateDraft(_draft.copyWith(
+      invoiceDatetime: invoiceDatetime,
+      clearInvoiceDatetime: invoiceDatetime == null || invoiceDatetime.isEmpty,
+    ));
+  }
+
+  void applyGstToAllLines(double? gstRate) {
+    final items = _draft.items
+        .map((item) => item.copyWith(
+              gstRate: gstRate,
+              clearGstRate: gstRate == null,
+            ))
+        .toList();
+    _updateDraft(_draft.copyWith(items: items));
+  }
+
   Future<bool> requestQuote() async {
     _isQuoting = true;
     _quoteErrorMessage = null;
