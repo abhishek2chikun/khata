@@ -55,7 +55,7 @@ class CreateProductInput {
   final double lowStockThreshold;
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
+    final json = <String, dynamic>{
       'company_name': companyName,
       'category': category,
       'item_name': itemName,
@@ -67,6 +67,7 @@ class CreateProductInput {
       'quantity_on_hand': quantityOnHand,
       'low_stock_threshold': lowStockThreshold,
     };
+    return json;
   }
 }
 
@@ -81,6 +82,7 @@ class UpdateProductInput {
     this.unit,
     required this.gstRate,
     required this.lowStockThreshold,
+    this.isActive,
   });
 
   final String companyName;
@@ -92,9 +94,10 @@ class UpdateProductInput {
   final String? unit;
   final double gstRate;
   final double lowStockThreshold;
+  final bool? isActive;
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
+    final payload = <String, dynamic>{
       'company_name': companyName,
       'category': category,
       'item_name': itemName,
@@ -105,6 +108,10 @@ class UpdateProductInput {
       'gst_rate': gstRate,
       'low_stock_threshold': lowStockThreshold,
     };
+    if (isActive != null) {
+      payload['is_active'] = isActive;
+    }
+    return payload;
   }
 }
 
@@ -115,6 +122,8 @@ abstract class ProductsService {
 
   Future<Product> updateProduct(
       {required String id, required UpdateProductInput input});
+
+  Future<Product> adjustQuantity({required String id, required double delta});
 }
 
 class ApiProductsService implements ProductsService {
@@ -143,6 +152,16 @@ class ApiProductsService implements ProductsService {
       {required String id, required UpdateProductInput input}) async {
     final response =
         await _apiClient.put('/products/$id', body: input.toJson());
+    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<Product> adjustQuantity(
+      {required String id, required double delta}) async {
+    final response = await _apiClient.post(
+      '/products/$id/adjust-quantity',
+      body: <String, dynamic>{'delta': delta},
+    );
     return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 }

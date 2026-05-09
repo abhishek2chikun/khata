@@ -132,6 +132,7 @@ class LocalProductsService implements ProductsService {
           unit: Value(input.unit),
           gstRate: Value(_normalizeDecimal(input.gstRate)),
           lowStockThreshold: Value(_normalizeDecimal(input.lowStockThreshold)),
+          isActive: Value(input.isActive ?? existing.isActive),
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
@@ -147,6 +148,38 @@ class LocalProductsService implements ProductsService {
       }
       throw error;
     }
+
+    final product = await (_database.select(_database.products)
+          ..where((product) => product.id.equals(id)))
+        .getSingle();
+    return _toProduct(product);
+  }
+
+  @override
+  Future<product_model.Product> adjustQuantity({
+    required String id,
+    required double delta,
+  }) async {
+    final existing = await (_database.select(_database.products)
+          ..where((product) => product.id.equals(id)))
+        .getSingleOrNull();
+    if (existing == null) {
+      throw const ApiError(
+        code: 'NOT_FOUND',
+        message: 'Product not found',
+        statusCode: 404,
+      );
+    }
+
+    final nextQuantity = double.parse(existing.quantityOnHand) + delta;
+    await (_database.update(_database.products)
+          ..where((product) => product.id.equals(id)))
+        .write(
+      ProductsCompanion(
+        quantityOnHand: Value(_normalizeDecimal(nextQuantity)),
+        updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+      ),
+    );
 
     final product = await (_database.select(_database.products)
           ..where((product) => product.id.equals(id)))

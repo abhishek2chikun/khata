@@ -93,25 +93,31 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            _buildField(_companyController, 'Company'),
+            _buildField(_companyController, 'Company / buyer',
+                errorKey: 'Company'),
             _buildField(_categoryController, 'Category'),
             _buildField(_itemNameController, 'Item name'),
-            _buildField(_itemCodeController, 'Item code'),
+            _buildField(_itemCodeController, 'Item number'),
             _buildField(_buyingPriceController, 'Buying price',
-                keyboardType: TextInputType.number),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             _buildField(_sellingPriceController, 'Selling price',
-                keyboardType: TextInputType.number),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             _buildField(_unitController, 'Unit'),
             _buildField(_gstController, 'GST rate',
-                keyboardType: TextInputType.number),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             if (!_isEditing)
               _buildField(
                 _quantityController,
                 'Quantity on hand',
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
               ),
             _buildField(_thresholdController, 'Low stock threshold',
-                keyboardType: TextInputType.number),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _isSaving ? null : _save,
@@ -133,6 +139,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     TextEditingController controller,
     String label, {
     TextInputType? keyboardType,
+    String? errorKey,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -142,7 +149,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         enabled: !_isSaving,
         decoration: InputDecoration(
           labelText: label,
-          errorText: _fieldErrors[label],
+          errorText: _fieldErrors[errorKey ?? label],
           border: const OutlineInputBorder(),
         ),
       ),
@@ -212,27 +219,31 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   _ValidatedProductInput? _validateInput() {
     final errors = <String, String>{};
-    _requireText(errors, _companyController, 'Company');
+    _requireText(errors, _companyController, 'Company',
+        message: 'Company or buyer is required.');
     _requireText(errors, _categoryController, 'Category');
     _requireText(errors, _itemNameController, 'Item name');
-    _requireText(errors, _itemCodeController, 'Item code');
+    _requireText(errors, _itemCodeController, 'Item number');
     final buyingPrice = _parseRequiredNumber(
       errors,
       _buyingPriceController,
       'Buying price',
       'Buying price',
+      invalidMessage: 'Buying price must be a valid amount.',
     );
     final sellingPrice = _parseRequiredNumber(
       errors,
       _sellingPriceController,
       'Selling price',
       'Selling price',
+      invalidMessage: 'Selling price must be a valid amount.',
     );
     final gstRate = _parseRequiredNumber(
       errors,
       _gstController,
       'GST rate',
       'GST rate',
+      invalidMessage: 'GST rate must be a valid percentage.',
     );
     final quantityOnHand = _isEditing
         ? widget.product!.quantityOnHand
@@ -274,10 +285,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   void _requireText(
     Map<String, String> errors,
     TextEditingController controller,
-    String label,
-  ) {
+    String label, {
+    String? message,
+  }) {
     if (controller.text.trim().isEmpty) {
-      errors[label] = '$label is required.';
+      errors[label] = message ?? '$label is required.';
     }
   }
 
@@ -285,8 +297,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     Map<String, String> errors,
     TextEditingController controller,
     String label,
-    String displayName,
-  ) {
+    String displayName, {
+    String? invalidMessage,
+  }) {
     final value = controller.text.trim();
     if (value.isEmpty) {
       errors[label] = '$displayName is required.';
@@ -294,7 +307,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
     final parsed = double.tryParse(value);
     if (parsed == null || !parsed.isFinite) {
-      errors[label] = '$displayName must be a valid number.';
+      errors[label] = invalidMessage ?? '$displayName must be a valid number.';
+      return null;
+    }
+    if (parsed < 0) {
+      errors[label] = '$displayName must be zero or greater.';
       return null;
     }
     return parsed;
