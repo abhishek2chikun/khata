@@ -92,7 +92,7 @@ def _lock_or_load_products(session: Session, product_ids: list[UUID], lock: bool
     return {product.id: product for product in products}
 
 
-def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str, invoice_datetime: datetime) -> str:
+def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str, invoice_datetime: datetime, paid_amount: Decimal | None = None) -> str:
     def money(value: Decimal) -> str:
         return f"{Decimal(value):.2f}"
 
@@ -103,7 +103,7 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
         "customer_id": str(payload.customer_id),
         "invoice_datetime": invoice_datetime.isoformat(),
         "payment_state": payload.resolved_payment_state(),
-        "paid_amount": money(payload.paid_amount),
+        "paid_amount": money(payload.paid_amount if paid_amount is None else paid_amount),
         "place_of_supply_state_code": resolved_state_code,
         "notes": payload.notes,
         "items": [
@@ -403,16 +403,17 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
     try:
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime)
+            paid_amount = _resolve_paid_amount(payload.resolved_payment_state(), payload.paid_amount, existing.grand_total)
+            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime, paid_amount)
             if existing.request_hash != request_hash:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}})
             return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
 
         prepared = _prepare_invoice(session, payload, lock_products=True)
         invoice_datetime = payload.resolved_invoice_datetime()
-        request_hash = _build_invoice_request_hash(payload, prepared.place_of_supply_state_code, invoice_datetime)
         payment_state = payload.resolved_payment_state()
         paid_amount = _resolve_paid_amount(payment_state, payload.paid_amount, prepared.totals.grand_total)
+        request_hash = _build_invoice_request_hash(payload, prepared.place_of_supply_state_code, invoice_datetime, paid_amount)
 
         invoice = Invoice(
             request_id=payload.request_id,
@@ -466,7 +467,8 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
         session.rollback()
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime)
+            paid_amount = _resolve_paid_amount(payload.resolved_payment_state(), payload.paid_amount, existing.grand_total)
+            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime, paid_amount)
             if existing.request_hash == request_hash:
                 return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}}) from exc

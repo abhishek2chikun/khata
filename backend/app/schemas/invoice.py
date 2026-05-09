@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class InvoiceLineRequest(BaseModel):
@@ -19,6 +19,40 @@ class InvoiceLineRequest(BaseModel):
         if value <= 0:
             raise ValueError("quantity must be greater than zero")
         return value
+
+    @field_validator("pricing_mode")
+    @classmethod
+    def validate_pricing_mode(cls, value: str) -> str:
+        if value not in {"TAX_INCLUSIVE", "PRE_TAX"}:
+            raise ValueError("pricing_mode must be TAX_INCLUSIVE or PRE_TAX")
+        return value
+
+    @field_validator("unit_price")
+    @classmethod
+    def validate_unit_price(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and value <= 0:
+            raise ValueError("unit_price must be greater than zero")
+        return value
+
+    @field_validator("gst_rate")
+    @classmethod
+    def validate_gst_rate(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and (value < 0 or value > 100):
+            raise ValueError("gst_rate must be between 0 and 100")
+        return value
+
+    @field_validator("discount_percent")
+    @classmethod
+    def validate_discount_percent(cls, value: Decimal) -> Decimal:
+        if value < 0 or value > 100:
+            raise ValueError("discount_percent must be between 0 and 100")
+        return value
+
+    @model_validator(mode="after")
+    def validate_required_overrides(self) -> "InvoiceLineRequest":
+        if self.pricing_mode == "PRE_TAX" and self.unit_price is None:
+            raise ValueError("unit_price is required when pricing_mode is PRE_TAX")
+        return self
 
 
 class InvoiceQuoteRequest(BaseModel):
@@ -45,6 +79,21 @@ class InvoiceQuoteRequest(BaseModel):
         if value is not None and value not in {"PAID", "CREDIT"}:
             raise ValueError("payment_mode must be PAID or CREDIT")
         return value
+
+    @field_validator("invoice_datetime")
+    @classmethod
+    def validate_invoice_datetime_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            raise ValueError("invoice_datetime must include timezone information")
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("invoice_datetime must include timezone information")
+        return value
+
+    @model_validator(mode="after")
+    def validate_invoice_date_matches_datetime(self) -> "InvoiceQuoteRequest":
+        if self.invoice_datetime is not None and self.invoice_date is not None and self.invoice_datetime.date() != self.invoice_date:
+            raise ValueError("invoice_date must match invoice_datetime date")
+        return self
 
     def resolved_payment_state(self) -> str:
         if self.payment_state is not None:

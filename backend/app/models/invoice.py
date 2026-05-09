@@ -20,6 +20,12 @@ class Invoice(Base):
         CheckConstraint("payment_state IN ('CREDIT', 'TOTAL_PAID', 'PARTIAL_PAID')", name="ck_invoices_payment_state"),
         CheckConstraint("paid_amount >= 0", name="ck_invoices_paid_amount_non_negative"),
         CheckConstraint(
+            "(payment_state = 'CREDIT' AND paid_amount = 0) OR "
+            "(payment_state = 'TOTAL_PAID' AND paid_amount = grand_total) OR "
+            "(payment_state = 'PARTIAL_PAID' AND paid_amount > 0 AND paid_amount < grand_total)",
+            name="ck_invoices_payment_amount_matches_state",
+        ),
+        CheckConstraint(
             "(status = 'ACTIVE' AND cancel_request_id IS NULL AND cancel_request_hash IS NULL AND canceled_by_user_id IS NULL AND cancel_reason IS NULL AND canceled_at IS NULL) OR "
             "(status = 'CANCELED' AND cancel_request_id IS NOT NULL AND cancel_request_hash IS NOT NULL AND canceled_by_user_id IS NOT NULL AND cancel_reason IS NOT NULL AND canceled_at IS NOT NULL)",
             name="ck_invoices_cancel_fields",
