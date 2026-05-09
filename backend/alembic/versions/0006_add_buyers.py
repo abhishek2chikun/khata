@@ -32,7 +32,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("name", name="uq_buyers_name"),
     )
-    op.create_foreign_key("fk_products_buyer_id_buyers", "products", "buyers", ["buyer_id"], ["id"])
     op.create_table(
         "buyer_transactions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
@@ -59,5 +58,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("uq_buyer_transactions_opening_payable", table_name="buyer_transactions")
     op.drop_table("buyer_transactions")
-    op.drop_constraint("fk_products_buyer_id_buyers", "products", type_="foreignkey")
     op.drop_table("buyers")
