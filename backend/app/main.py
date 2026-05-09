@@ -7,6 +7,7 @@ from app.routers.company_profile import router as company_profile_router
 from app.routers.invoices import router as invoices_router
 from app.routers.products import router as products_router
 from app.routers.customers import router as customers_router
+from app.routers.analytics import router as analytics_router
 from app.routers.auth import router as auth_router
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(customers_router)
     app.include_router(company_profile_router)
     app.include_router(invoices_router)
+    app.include_router(analytics_router)
 
     @app.post("/collections", response_model=CustomerTransactionResponse, status_code=201)
     def create_collection(payload: CollectionRequest, current_user: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> CustomerTransactionResponse:
