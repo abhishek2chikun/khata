@@ -9,7 +9,7 @@ import '../models/buyer_ledger.dart';
 import '../services/buyers_service.dart';
 import '../services/money_validator.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalBuyersService implements BuyersService {
   LocalBuyersService({required LocalDatabase database}) : _database = database;
@@ -141,7 +141,7 @@ class LocalBuyersService implements BuyersService {
     return _insertTransaction(
       buyerId: buyerId,
       requestId: input.requestId,
-      entryType: 'PAYMENT_MADE',
+      entryType: 'COLLECTION_MADE',
       amount: input.amount,
       occurredAt: input.occurredAt,
       notes: input.notes,

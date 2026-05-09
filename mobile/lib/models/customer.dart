@@ -1,5 +1,5 @@
-class Seller {
-  const Seller({
+class Customer {
+  const Customer({
     required this.id,
     required this.name,
     required this.address,
@@ -21,7 +21,7 @@ class Seller {
   final bool isActive;
   final double pendingBalance;
 
-  Seller copyWith({
+  Customer copyWith({
     String? id,
     String? name,
     String? address,
@@ -32,7 +32,7 @@ class Seller {
     bool? isActive,
     double? pendingBalance,
   }) {
-    return Seller(
+    return Customer(
       id: id ?? this.id,
       name: name ?? this.name,
       address: address ?? this.address,
@@ -45,8 +45,8 @@ class Seller {
     );
   }
 
-  factory Seller.fromJson(Map<String, dynamic> json) {
-    return Seller(
+  factory Customer.fromJson(Map<String, dynamic> json) {
+    return Customer(
       id: json['id'].toString(),
       name: json['name'] as String? ?? '',
       address: json['address'] as String? ?? '',

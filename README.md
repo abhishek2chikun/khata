@@ -81,7 +81,7 @@ BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_
   --username owner
 ```
 
-This is safe to re-run. It upserts the active company profile, creates sample sellers/products if missing, and creates the same demo ledger/invoice events idempotently.
+This is safe to re-run. It upserts the active company profile, creates sample customers/products if missing, and creates the same demo ledger/invoice events idempotently.
 
 ## Run The API
 
@@ -127,7 +127,7 @@ If you get `{"detail":"Not Found"}` from `/auth/login`, you are hitting the wron
 ## Run In API Mode
 
 API mode is the default Flutter data mode. It uses the FastAPI backend for auth,
-products, sellers, payments, company profile, invoices, and ledger data.
+products, customers, collections, company profile, invoices, and ledger data.
 
 ```bash
 (cd mobile && flutter pub get)
@@ -171,7 +171,7 @@ boundaries as API mode.
 On a fresh local database, the app shows `Set up local user` before login.
 Create the first local account there, then log in with that username and
 password. After login, local mode exposes the same core flows for products,
-sellers, payments, company profile, invoices, and ledger history without a
+customers, collections, company profile, invoices, and ledger history without a
 backend process.
 
 The local schema is intentionally backend-aligned for future server migration:
@@ -208,8 +208,8 @@ adb reverse tcp:8010 tcp:8010
 Local mode adds a `Backup & Restore` drawer destination. The backup package is
 an encrypted JSON envelope using AES-256-GCM and PBKDF2-HMAC-SHA256. The
 decrypted payload contains `schema_version`, `backend_compatibility_version`,
-`exported_at`, and table payloads for local users, products, sellers, company
-profiles, invoices, invoice items, stock movements, seller transactions, backup
+`exported_at`, and table payloads for local users, products, customers, company
+profiles, invoices, invoice items, stock movements, customer transactions, backup
 settings, and backup events.
 
 Backup/restore behavior:

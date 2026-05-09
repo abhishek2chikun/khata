@@ -6,7 +6,7 @@ import '../models/api_error.dart';
 import '../models/product.dart' as product_model;
 import '../services/products_service.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalProductsService implements ProductsService {
   LocalProductsService({required LocalDatabase database})

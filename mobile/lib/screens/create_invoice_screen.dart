@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/product.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/invoices_service.dart';
 import '../services/products_service.dart';
-import '../services/sellers_service.dart';
+import '../services/customers_service.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
 import '../widgets/money_text_field.dart';
 import '../widgets/product_picker.dart';
-import '../widgets/seller_picker.dart';
+import '../widgets/customer_picker.dart';
 import 'invoice_preview_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
@@ -20,14 +20,14 @@ class CreateInvoiceScreen extends StatefulWidget {
     super.key,
     required this.invoicesService,
     required this.productsService,
-    required this.sellersService,
-    this.initialSeller,
+    required this.customersService,
+    this.initialCustomer,
   });
 
   final InvoicesService invoicesService;
   final ProductsService productsService;
-  final SellersService sellersService;
-  final Seller? initialSeller;
+  final CustomersService customersService;
+  final Customer? initialCustomer;
 
   @override
   State<CreateInvoiceScreen> createState() => _CreateInvoiceScreenState();
@@ -43,7 +43,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _gstRateController = TextEditingController();
   final _discountPercentController = TextEditingController(text: '0');
 
-  List<Seller> _sellers = const <Seller>[];
+  List<Customer> _customers = const <Customer>[];
   List<Product> _products = const <Product>[];
   bool _isLoading = true;
   String? _loadErrorMessage;
@@ -53,7 +53,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     super.initState();
     _controller = InvoiceDraftController(
       invoicesService: widget.invoicesService,
-      initialSeller: widget.initialSeller,
+      initialCustomer: widget.initialCustomer,
     );
     _loadOptions();
   }
@@ -93,20 +93,20 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         ErrorBanner(message: _controller.quoteErrorMessage!),
                         const SizedBox(height: 16),
                       ],
-                      if (widget.initialSeller != null)
+                      if (widget.initialCustomer != null)
                         InputDecorator(
                           decoration: const InputDecoration(
-                            labelText: 'Seller',
+                            labelText: 'Customer',
                             border: OutlineInputBorder(),
                           ),
-                          child: Text(widget.initialSeller!.name),
+                          child: Text(widget.initialCustomer!.name),
                         )
                       else
-                        SellerPicker(
-                          fieldKey: const Key('sellerPickerField'),
-                          sellers: _sellers,
-                          selectedSeller: _controller.draft.seller,
-                          onSelected: _controller.updateSeller,
+                        CustomerPicker(
+                          fieldKey: const Key('customerPickerField'),
+                          customers: _customers,
+                          selectedCustomer: _controller.draft.customer,
+                          onSelected: _controller.updateCustomer,
                         ),
                       const SizedBox(height: 12),
                       TextField(
@@ -253,17 +253,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     try {
       final products = await widget.productsService
           .fetchProducts(filter: const ProductFilter(active: true));
-      final sellers = widget.initialSeller != null
-          ? <Seller>[widget.initialSeller!]
-          : (await widget.sellersService.fetchSellers())
-              .where((seller) => seller.isActive)
+      final customers = widget.initialCustomer != null
+          ? <Customer>[widget.initialCustomer!]
+          : (await widget.customersService.fetchCustomers())
+              .where((customer) => customer.isActive)
               .toList();
       if (!mounted) {
         return;
       }
       setState(() {
         _products = products;
-        _sellers = sellers;
+        _customers = customers;
       });
     } on Object catch (error) {
       if (!mounted) {

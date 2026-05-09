@@ -20,23 +20,23 @@ def _company_payload() -> dict:
 
 
 def _create_credit_invoice(client, auth_headers) -> dict:
-    seller_name = f"ABC Stores {uuid4()}"
-    seller_phone = str(uuid4().int)[:10]
+    customer_name = f"ABC Stores {uuid4()}"
+    customer_phone = str(uuid4().int)[:10]
     item_suffix = str(uuid4())
     client.put("/company-profile", headers=auth_headers, json=_company_payload())
-    seller = client.post(
-        "/sellers",
+    customer = client.post(
+        "/customers",
         headers=auth_headers,
         json={
-            "name": seller_name,
+            "name": customer_name,
             "address": "Market Yard",
-            "phone": seller_phone,
+            "phone": customer_phone,
             "gstin": "27BBBBB0000B1Z5",
             "state": "Maharashtra",
             "state_code": "27",
         },
     )
-    assert seller.status_code == 201
+    assert customer.status_code == 201
     product = client.post(
         "/products",
         headers=auth_headers,
@@ -58,7 +58,7 @@ def _create_credit_invoice(client, auth_headers) -> dict:
         headers=auth_headers,
         json={
             "request_id": str(uuid4()),
-            "seller_id": seller.json()["id"],
+            "customer_id": customer.json()["id"],
             "invoice_date": "2026-04-19",
             "payment_mode": "CREDIT",
             "place_of_supply_state_code": "27",
@@ -76,8 +76,8 @@ def _create_credit_invoice(client, auth_headers) -> dict:
     )
     assert invoice.status_code == 201
     return {
-        "seller_name": seller_name,
-        "seller_id": seller.json()["id"],
+        "customer_name": customer_name,
+        "customer_id": customer.json()["id"],
         "product_id": product.json()["id"],
         "invoice": invoice.json()["invoice"],
     }
@@ -98,7 +98,7 @@ def test_cancel_invoice_is_idempotent_and_reverses_stock_and_credit(client, auth
     assert product.status_code == 200
     assert product.json()["quantity_on_hand"] == "5.000"
 
-    ledger = client.get(f"/sellers/{created['seller_id']}/ledger", headers=auth_headers)
+    ledger = client.get(f"/customers/{created['customer_id']}/ledger", headers=auth_headers)
     assert ledger.status_code == 200
     assert [entry["entry_type"] for entry in ledger.json()["transactions"]] == ["CREDIT_SALE", "INVOICE_CANCEL_REVERSAL"]
 
@@ -147,7 +147,7 @@ def test_invoice_detail_returns_persisted_snapshots(client, auth_headers):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["seller_snapshot"]["name"] == created["seller_name"]
+    assert body["customer_snapshot"]["name"] == created["customer_name"]
     assert body["company_snapshot"]["name"] == "Acme Traders"
     assert body["items"][0]["line_number"] == 1
     assert body["items"][0]["cgst_rate"] == "9.00"

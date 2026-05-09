@@ -1,33 +1,33 @@
-import 'seller.dart';
+import 'customer.dart';
 
-class SellerLedger {
-  const SellerLedger({
-    required this.seller,
+class CustomerLedger {
+  const CustomerLedger({
+    required this.customer,
     required this.transactions,
     required this.invoices,
   });
 
-  final Seller seller;
-  final List<SellerLedgerTransaction> transactions;
-  final List<SellerInvoiceHistoryEntry> invoices;
+  final Customer customer;
+  final List<CustomerLedgerTransaction> transactions;
+  final List<CustomerInvoiceHistoryEntry> invoices;
 
-  factory SellerLedger.fromJson(Map<String, dynamic> json) {
-    return SellerLedger(
-      seller: Seller.fromJson(json['seller'] as Map<String, dynamic>),
+  factory CustomerLedger.fromJson(Map<String, dynamic> json) {
+    return CustomerLedger(
+      customer: Customer.fromJson(json['customer'] as Map<String, dynamic>),
       transactions: (json['transactions'] as List<dynamic>? ?? const <dynamic>[])
           .cast<Map<String, dynamic>>()
-          .map(SellerLedgerTransaction.fromJson)
+          .map(CustomerLedgerTransaction.fromJson)
           .toList(),
       invoices: (json['invoices'] as List<dynamic>? ?? const <dynamic>[])
           .cast<Map<String, dynamic>>()
-          .map(SellerInvoiceHistoryEntry.fromJson)
+          .map(CustomerInvoiceHistoryEntry.fromJson)
           .toList(),
     );
   }
 }
 
-class SellerLedgerTransaction {
-  const SellerLedgerTransaction({
+class CustomerLedgerTransaction {
+  const CustomerLedgerTransaction({
     required this.id,
     required this.entryType,
     required this.amount,
@@ -41,8 +41,8 @@ class SellerLedgerTransaction {
   final String occurredOn;
   final String? notes;
 
-  factory SellerLedgerTransaction.fromJson(Map<String, dynamic> json) {
-    return SellerLedgerTransaction(
+  factory CustomerLedgerTransaction.fromJson(Map<String, dynamic> json) {
+    return CustomerLedgerTransaction(
       id: json['id'].toString(),
       entryType: json['entry_type'] as String? ?? '',
       amount: _toDouble(json['amount']),
@@ -52,8 +52,8 @@ class SellerLedgerTransaction {
   }
 }
 
-class SellerInvoiceHistoryEntry {
-  const SellerInvoiceHistoryEntry({
+class CustomerInvoiceHistoryEntry {
+  const CustomerInvoiceHistoryEntry({
     required this.invoiceId,
     required this.invoiceNumber,
     required this.invoiceDate,
@@ -69,8 +69,8 @@ class SellerInvoiceHistoryEntry {
   final String paymentMode;
   final String status;
 
-  factory SellerInvoiceHistoryEntry.fromJson(Map<String, dynamic> json) {
-    return SellerInvoiceHistoryEntry(
+  factory CustomerInvoiceHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return CustomerInvoiceHistoryEntry(
       invoiceId: json['invoice_id'].toString(),
       invoiceNumber: json['invoice_number'] as String? ?? '',
       invoiceDate: json['invoice_date'] as String? ?? '',

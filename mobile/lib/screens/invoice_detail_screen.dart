@@ -53,7 +53,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                    Text('Seller: ${invoice.sellerName}'),
+                    Text('Customer: ${invoice.customerName}'),
                     Text('Date: ${invoice.invoiceDate}'),
                     Text('Status: ${invoice.status}'),
                     Text('Payment mode: ${invoice.paymentMode}'),

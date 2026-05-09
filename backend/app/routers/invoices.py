@@ -27,7 +27,7 @@ def create_invoice(payload: InvoiceCreateRequest, current_user: CurrentUserRespo
 def list_invoices(
     from_date: date | None = None,
     to_date: date | None = None,
-    seller_id: UUID | None = None,
+    customer_id: UUID | None = None,
     status: str | None = None,
     payment_mode: str | None = None,
     invoice_number: int | None = None,
@@ -38,7 +38,7 @@ def list_invoices(
         session,
         from_date=from_date,
         to_date=to_date,
-        seller_id=seller_id,
+        customer_id=customer_id,
         status_filter=status,
         payment_mode=payment_mode,
         invoice_number=invoice_number,

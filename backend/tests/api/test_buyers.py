@@ -69,7 +69,7 @@ def test_add_payment_made_endpoint(client, auth_headers):
     buyer_id = client.post("/buyers", headers=auth_headers, json=_buyer_payload()).json()["id"]
     client.post(f"/buyers/{buyer_id}/opening-payable", headers=auth_headers, json=_entry_payload(amount="250.00"))
 
-    response = client.post(f"/buyers/{buyer_id}/payments-made", headers=auth_headers, json=_entry_payload(amount="80.00"))
+    response = client.post(f"/buyers/{buyer_id}/collections-made", headers=auth_headers, json=_entry_payload(amount="80.00"))
 
     assert response.status_code == 201
     assert response.json()["entry_type"] == "PAYMENT_MADE"

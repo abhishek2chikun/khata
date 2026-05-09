@@ -23,9 +23,9 @@ def test_invoice_model_derives_place_of_supply_state_from_code():
     invoice = Invoice(
         request_id="5f2045df-5a34-4cb2-83a2-0d2614ef7403",
         request_hash="hash",
-        seller_id="9b88ec2f-b8de-43da-87b4-b0fe539801df",
-        seller_name="ABC Stores",
-        seller_address="Market Yard",
+        customer_id="9b88ec2f-b8de-43da-87b4-b0fe539801df",
+        customer_name="ABC Stores",
+        customer_address="Market Yard",
         place_of_supply_state="Wrong Value",
         place_of_supply_state_code="27",
         company_name="Acme Traders",
@@ -50,7 +50,7 @@ def test_invoice_model_derives_place_of_supply_state_from_code():
 
 def test_invoice_number_sequence_restarts_with_schema_reset(db_session):
     before_restart = db_session.execute(text("SELECT nextval('invoice_number_seq')")).scalar_one()
-    db_session.execute(text("TRUNCATE TABLE invoice_items, invoices, stock_movements, seller_transactions, company_profiles, sellers, products, user_sessions, app_users RESTART IDENTITY CASCADE"))
+    db_session.execute(text("TRUNCATE TABLE invoice_items, invoices, stock_movements, customer_transactions, company_profiles, customers, products, user_sessions, app_users RESTART IDENTITY CASCADE"))
     after_restart = db_session.execute(text("SELECT nextval('invoice_number_seq')")).scalar_one()
     db_session.commit()
 

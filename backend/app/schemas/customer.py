@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
-class SellerCreateRequest(BaseModel):
+class CustomerCreateRequest(BaseModel):
     name: str
     address: str
     phone: str | None = None
@@ -15,7 +15,7 @@ class SellerCreateRequest(BaseModel):
     state_code: str | None = None
 
 
-class SellerUpdateRequest(BaseModel):
+class CustomerUpdateRequest(BaseModel):
     name: str
     address: str
     phone: str | None = None
@@ -24,7 +24,7 @@ class SellerUpdateRequest(BaseModel):
     state_code: str | None = None
 
 
-class SellerResponse(BaseModel):
+class CustomerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -51,9 +51,9 @@ class OpeningBalanceRequest(BaseModel):
         return value
 
 
-class PaymentRequest(BaseModel):
+class CollectionRequest(BaseModel):
     request_id: uuid.UUID
-    seller_id: uuid.UUID
+    customer_id: uuid.UUID
     amount: Decimal
     occurred_on: date
     notes: str | None = None
@@ -81,7 +81,7 @@ class BalanceAdjustmentRequest(BaseModel):
         return value
 
 
-class SellerTransactionResponse(BaseModel):
+class CustomerTransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -91,7 +91,7 @@ class SellerTransactionResponse(BaseModel):
     notes: str | None
 
 
-class SellerLedgerResponse(BaseModel):
+class CustomerLedgerResponse(BaseModel):
     class InvoiceHistoryEntry(BaseModel):
         invoice_id: uuid.UUID
         invoice_number: str
@@ -100,6 +100,6 @@ class SellerLedgerResponse(BaseModel):
         payment_mode: str
         status: str
 
-    seller: SellerResponse
-    transactions: list[SellerTransactionResponse]
+    customer: CustomerResponse
+    transactions: list[CustomerTransactionResponse]
     invoices: list[InvoiceHistoryEntry] = []

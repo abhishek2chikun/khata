@@ -41,7 +41,7 @@ void main() {
     );
 
     final products = await target.select(target.products).get();
-    final sellers = await target.select(target.sellers).get();
+    final customers = await target.select(target.customers).get();
     final invoices = await target.select(target.invoices).get();
     final items = await target.select(target.invoiceItems).get();
     final buyers = await target.select(target.buyers).get();
@@ -56,7 +56,7 @@ void main() {
     expect(products.single.unit, 'box');
     expect(products.single.gstRate, '18.000');
     expect(products.single.quantityOnHand, '7.500');
-    expect(sellers.single.id, 'seller-0001');
+    expect(customers.single.id, 'customer-0001');
     expect(invoices.single.id, 'invoice-0001');
     expect(invoices.single.grandTotal, '145.6710');
     expect(items.single.id, 'invoice-item-0001');
@@ -326,9 +326,9 @@ Future<void> _seedRoundTripData(
           updatedAt: '2026-01-01T00:00:00.000Z',
         ),
       );
-  await database.into(database.sellers).insert(
-        db.SellersCompanion.insert(
-          id: 'seller-0001',
+  await database.into(database.customers).insert(
+        db.CustomersCompanion.insert(
+          id: 'customer-0001',
           name: 'Acme Stores $productId',
           address: '1 Market Road',
           state: const Value('Maharashtra'),
@@ -372,13 +372,13 @@ Future<void> _seedRoundTripData(
           requestId: 'request-$productId',
           requestHash: 'request-hash',
           invoiceNumber: 1,
-          sellerId: 'seller-0001',
-          sellerName: 'Acme Stores $productId',
-          sellerAddress: '1 Market Road',
-          sellerState: const Value('Maharashtra'),
-          sellerStateCode: const Value('27'),
-          sellerPhone: Value('9999$productId'),
-          sellerGstin: const Value('27ABCDE1234F1Z5'),
+          customerId: 'customer-0001',
+          customerName: 'Acme Stores $productId',
+          customerAddress: '1 Market Road',
+          customerState: const Value('Maharashtra'),
+          customerStateCode: const Value('27'),
+          customerPhone: Value('9999$productId'),
+          customerGstin: const Value('27ABCDE1234F1Z5'),
           placeOfSupplyState: 'Maharashtra',
           placeOfSupplyStateCode: '27',
           companyName: 'Khata Traders',

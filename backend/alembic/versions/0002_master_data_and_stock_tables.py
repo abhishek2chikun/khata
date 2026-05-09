@@ -39,7 +39,7 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "sellers",
+        "customers",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("address", sa.String(length=500), nullable=False),
@@ -50,7 +50,7 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("name", "phone", name="uq_sellers_name_phone"),
+        sa.UniqueConstraint("name", "phone", name="uq_customers_name_phone"),
     )
 
     op.create_table(
@@ -96,5 +96,5 @@ def downgrade() -> None:
     op.drop_table("stock_movements")
     op.drop_index("uq_company_profiles_single_active", table_name="company_profiles")
     op.drop_table("company_profiles")
-    op.drop_table("sellers")
+    op.drop_table("customers")
     op.drop_table("products")

@@ -10,13 +10,13 @@ from app.db import get_session_factory
 from app.models.app_user import AppUser
 from app.models.invoice import Invoice
 from app.models.product import Product
-from app.models.seller import Seller
+from app.models.customer import Customer
 from app.schemas.auth import CurrentUserResponse
 from app.schemas.company_profile import CompanyProfileUpsertRequest
 from app.schemas.invoice import InvoiceCreateRequest, InvoiceLineRequest
 from app.schemas.product import ProductCreateRequest
-from app.schemas.seller import OpeningBalanceRequest, PaymentRequest, SellerCreateRequest
-from app.services import company_profile_service, invoice_service, product_service, seller_service
+from app.schemas.customer import OpeningBalanceRequest, CollectionRequest, CustomerCreateRequest
+from app.services import company_profile_service, invoice_service, product_service, customer_service
 
 SEED_NAMESPACE = UUID("c4699823-a153-4a34-8d43-58e2d7d45ec5")
 
@@ -53,11 +53,11 @@ def _ensure_company_profile(session) -> None:
     )
 
 
-def _ensure_seller(session, payload: SellerCreateRequest) -> Seller:
-    existing = session.scalar(select(Seller).where(Seller.name == payload.name, Seller.phone == payload.phone))
+def _ensure_customer(session, payload: CustomerCreateRequest) -> Customer:
+    existing = session.scalar(select(Customer).where(Customer.name == payload.name, Customer.phone == payload.phone))
     if existing is not None:
         return existing
-    return seller_service.create_seller(session, payload)
+    return customer_service.create_customer(session, payload)
 
 
 def _ensure_product(session, payload: ProductCreateRequest, current_user: CurrentUserResponse) -> Product:
@@ -177,10 +177,10 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         current_user = _current_user_from_username(session, username)
         _ensure_company_profile(session)
 
-        sellers = {
-            "abc_stores": _ensure_seller(
+        customers = {
+            "abc_stores": _ensure_customer(
                 session,
-                SellerCreateRequest(
+                CustomerCreateRequest(
                     name="ABC Stores",
                     address="Market Yard, Pune",
                     phone="9999999999",
@@ -189,9 +189,9 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                     state_code="27",
                 ),
             ),
-            "city_books": _ensure_seller(
+            "city_books": _ensure_customer(
                 session,
-                SellerCreateRequest(
+                CustomerCreateRequest(
                     name="City Books Depot",
                     address="FC Road, Pune",
                     phone="8888888888",
@@ -200,9 +200,9 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                     state_code="27",
                 ),
             ),
-            "karnataka_office": _ensure_seller(
+            "karnataka_office": _ensure_customer(
                 session,
-                SellerCreateRequest(
+                CustomerCreateRequest(
                     name="Karnataka Office Supplies",
                     address="Commercial Street, Bengaluru",
                     phone="7777777777",
@@ -218,9 +218,9 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
         invoice_request_ids = _demo_invoice_request_ids()
         existing_invoice_request_ids = set(session.scalars(select(Invoice.request_id)).all())
 
-        seller_service.create_opening_balance(
+        customer_service.create_opening_balance(
             session,
-            str(sellers["abc_stores"].id),
+            str(customers["abc_stores"].id),
             OpeningBalanceRequest(
                 request_id=_seed_uuid("opening-balance", "abc-stores"),
                 amount=Decimal("1500.00"),
@@ -228,11 +228,11 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             ),
             current_user,
         )
-        seller_service.create_payment(
+        customer_service.create_collection(
             session,
-            PaymentRequest(
+            CollectionRequest(
                 request_id=_seed_uuid("payment", "abc-stores", "2026-04-05"),
-                seller_id=sellers["abc_stores"].id,
+                customer_id=customers["abc_stores"].id,
                 amount=Decimal("400.00"),
                 occurred_on=date(2026, 4, 5),
                 notes="Opening cycle payment collection",
@@ -245,7 +245,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 session,
                 InvoiceCreateRequest(
                     request_id=invoice_request_ids["abc_stores_credit"],
-                    seller_id=sellers["abc_stores"].id,
+                    customer_id=customers["abc_stores"].id,
                     invoice_date=date(2026, 4, 19),
                     payment_mode="CREDIT",
                     items=[
@@ -264,7 +264,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 session,
                 InvoiceCreateRequest(
                     request_id=invoice_request_ids["city_books_paid"],
-                    seller_id=sellers["city_books"].id,
+                    customer_id=customers["city_books"].id,
                     invoice_date=date(2026, 4, 21),
                     payment_mode="PAID",
                     items=[
@@ -282,7 +282,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 session,
                 InvoiceCreateRequest(
                     request_id=invoice_request_ids["karnataka_office_credit"],
-                    seller_id=sellers["karnataka_office"].id,
+                    customer_id=customers["karnataka_office"].id,
                     invoice_date=date(2026, 4, 22),
                     payment_mode="CREDIT",
                     items=[
@@ -296,7 +296,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             existing_invoice_request_ids.add(invoice_request_ids["karnataka_office_credit"])
 
         return {
-            "sellers": len(sellers),
+            "customers": len(customers),
             "products": len(products),
             "invoices": 3,
         }
@@ -317,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         "seeded demo data "
-        f"(sellers={counts['sellers']}, products={counts['products']}, invoices={counts['invoices']})"
+        f"(customers={counts['customers']}, products={counts['products']}, invoices={counts['invoices']})"
     )
     return 0
 

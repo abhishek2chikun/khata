@@ -3,25 +3,25 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart' as seller_model;
-import '../models/seller_ledger.dart';
-import '../services/sellers_service.dart';
+import '../models/customer.dart' as customer_model;
+import '../models/customer_ledger.dart';
+import '../services/customers_service.dart';
 import 'local_database.dart';
 
-class LocalSellersService implements SellersService {
-  LocalSellersService({required LocalDatabase database}) : _database = database;
+class LocalCustomersService implements CustomersService {
+  LocalCustomersService({required LocalDatabase database}) : _database = database;
 
   final LocalDatabase _database;
 
   @override
-  Future<seller_model.Seller> createSeller(CreateSellerInput input) async {
+  Future<customer_model.Customer> createCustomer(CreateCustomerInput input) async {
     await _throwIfDuplicate(name: input.name, phone: input.phone);
 
     final now = DateTime.now().toUtc().toIso8601String();
     final id = generateLocalUuid();
     try {
-      await _database.into(_database.sellers).insert(
-            SellersCompanion.insert(
+      await _database.into(_database.customers).insert(
+            CustomersCompanion.insert(
               id: id,
               name: input.name,
               address: input.address,
@@ -35,82 +35,82 @@ class LocalSellersService implements SellersService {
           );
     } on Object catch (error) {
       if (await _hasDuplicate(name: input.name, phone: input.phone)) {
-        throw _duplicateSellerError();
+        throw _duplicateCustomerError();
       }
       throw error;
     }
 
-    final seller = await (_database.select(_database.sellers)
-          ..where((seller) => seller.id.equals(id)))
+    final customer = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(id)))
         .getSingle();
-    return _toSeller(seller, pendingBalance: 0);
+    return _toCustomer(customer, pendingBalance: 0);
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) async {
-    final seller = await _getSeller(sellerId);
-    final transactions = await (_database.select(_database.sellerTransactions)
-          ..where((transaction) => transaction.sellerId.equals(sellerId))
+  Future<CustomerLedger> fetchCustomerLedger(String customerId) async {
+    final customer = await _getCustomer(customerId);
+    final transactions = await (_database.select(_database.customerTransactions)
+          ..where((transaction) => transaction.customerId.equals(customerId))
           ..orderBy([
             (transaction) => OrderingTerm.asc(transaction.occurredOn),
             (transaction) => OrderingTerm.asc(transaction.createdAt),
           ]))
         .get();
     final pendingBalance = _pendingBalance(transactions);
-    return SellerLedger(
-      seller: _toSeller(seller, pendingBalance: pendingBalance),
+    return CustomerLedger(
+      customer: _toCustomer(customer, pendingBalance: pendingBalance),
       transactions: transactions.map(_toLedgerTransaction).toList(),
-      invoices: const <SellerInvoiceHistoryEntry>[],
+      invoices: const <CustomerInvoiceHistoryEntry>[],
     );
   }
 
   @override
-  Future<List<seller_model.Seller>> fetchSellers({String search = ''}) async {
-    final query = _database.select(_database.sellers)
+  Future<List<customer_model.Customer>> fetchCustomers({String search = ''}) async {
+    final query = _database.select(_database.customers)
       ..orderBy([
-        (seller) => OrderingTerm.asc(seller.name),
+        (customer) => OrderingTerm.asc(customer.name),
       ]);
-    var sellers = await query.get();
+    var customers = await query.get();
     if (search.isNotEmpty) {
       final normalizedSearch = search.toLowerCase();
-      sellers = sellers
+      customers = customers
           .where(
-            (seller) =>
-                seller.name.toLowerCase().contains(normalizedSearch) ||
-                (seller.phone?.toLowerCase().contains(normalizedSearch) ??
+            (customer) =>
+                customer.name.toLowerCase().contains(normalizedSearch) ||
+                (customer.phone?.toLowerCase().contains(normalizedSearch) ??
                     false),
           )
           .toList();
     }
 
-    final balances = await _pendingBalancesBySellerId();
-    return sellers
+    final balances = await _pendingBalancesByCustomerId();
+    return customers
         .map(
-          (seller) => _toSeller(
-            seller,
-            pendingBalance: balances[seller.id] ?? 0,
+          (customer) => _toCustomer(
+            customer,
+            pendingBalance: balances[customer.id] ?? 0,
           ),
         )
         .toList();
   }
 
-  Future<Seller> _getSeller(String sellerId) async {
-    final seller = await (_database.select(_database.sellers)
-          ..where((seller) => seller.id.equals(sellerId)))
+  Future<Customer> _getCustomer(String customerId) async {
+    final customer = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(customerId)))
         .getSingleOrNull();
-    if (seller == null) {
+    if (customer == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
-        message: 'Seller not found',
+        message: 'Customer not found',
         statusCode: 404,
       );
     }
-    return seller;
+    return customer;
   }
 
   Future<void> _throwIfDuplicate({required String name, String? phone}) async {
     if (await _hasDuplicate(name: name, phone: phone)) {
-      throw _duplicateSellerError();
+      throw _duplicateCustomerError();
     }
   }
 
@@ -118,21 +118,21 @@ class LocalSellersService implements SellersService {
     if (phone == null) {
       return false;
     }
-    final duplicates = await (_database.select(_database.sellers)
+    final duplicates = await (_database.select(_database.customers)
           ..where(
-            (seller) => seller.name.equals(name) & seller.phone.equals(phone),
+            (customer) => customer.name.equals(name) & customer.phone.equals(phone),
           ))
         .get();
     return duplicates.isNotEmpty;
   }
 
-  Future<Map<String, double>> _pendingBalancesBySellerId() async {
+  Future<Map<String, double>> _pendingBalancesByCustomerId() async {
     final transactions =
-        await _database.select(_database.sellerTransactions).get();
+        await _database.select(_database.customerTransactions).get();
     final balances = <String, double>{};
     for (final transaction in transactions) {
       balances.update(
-        transaction.sellerId,
+        transaction.customerId,
         (balance) => balance + _signedAmount(transaction),
         ifAbsent: () => _signedAmount(transaction),
       );
@@ -140,14 +140,14 @@ class LocalSellersService implements SellersService {
     return balances;
   }
 
-  double _pendingBalance(List<SellerTransaction> transactions) {
+  double _pendingBalance(List<CustomerTransaction> transactions) {
     return transactions.fold<double>(
       0,
       (balance, transaction) => balance + _signedAmount(transaction),
     );
   }
 
-  double _signedAmount(SellerTransaction transaction) {
+  double _signedAmount(CustomerTransaction transaction) {
     final amount = double.parse(transaction.amount);
     return switch (transaction.entryType) {
       'OPENING_BALANCE' ||
@@ -158,23 +158,23 @@ class LocalSellersService implements SellersService {
     };
   }
 
-  seller_model.Seller _toSeller(Seller seller,
+  customer_model.Customer _toCustomer(Customer customer,
       {required double pendingBalance}) {
-    return seller_model.Seller(
-      id: seller.id,
-      name: seller.name,
-      address: seller.address,
-      phone: seller.phone,
-      gstin: seller.gstin,
-      state: seller.state,
-      stateCode: seller.stateCode,
-      isActive: seller.isActive,
+    return customer_model.Customer(
+      id: customer.id,
+      name: customer.name,
+      address: customer.address,
+      phone: customer.phone,
+      gstin: customer.gstin,
+      state: customer.state,
+      stateCode: customer.stateCode,
+      isActive: customer.isActive,
       pendingBalance: pendingBalance,
     );
   }
 
-  SellerLedgerTransaction _toLedgerTransaction(SellerTransaction transaction) {
-    return SellerLedgerTransaction(
+  CustomerLedgerTransaction _toLedgerTransaction(CustomerTransaction transaction) {
+    return CustomerLedgerTransaction(
       id: transaction.id,
       entryType: transaction.entryType,
       amount: double.parse(transaction.amount),
@@ -183,10 +183,10 @@ class LocalSellersService implements SellersService {
     );
   }
 
-  ApiError _duplicateSellerError() {
+  ApiError _duplicateCustomerError() {
     return const ApiError(
-      code: 'DUPLICATE_SELLER',
-      message: 'Seller already exists',
+      code: 'DUPLICATE_CUSTOMER',
+      message: 'Customer already exists',
       statusCode: 409,
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
 
@@ -9,11 +9,11 @@ class BalanceAdjustmentScreen extends StatefulWidget {
   const BalanceAdjustmentScreen({
     super.key,
     required this.paymentsService,
-    required this.seller,
+    required this.customer,
   });
 
   final PaymentsService paymentsService;
-  final Seller seller;
+  final Customer customer;
 
   @override
   State<BalanceAdjustmentScreen> createState() => _BalanceAdjustmentScreenState();
@@ -146,7 +146,7 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
 
     try {
       await widget.paymentsService.addBalanceAdjustment(
-        sellerId: widget.seller.id,
+        customerId: widget.customer.id,
         input: BalanceAdjustmentInput(
           requestId: generateRequestId(),
           direction: _direction,

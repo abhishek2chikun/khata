@@ -3,6 +3,7 @@ import subprocess
 import sys
 import uuid
 from collections.abc import Generator
+from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
@@ -20,6 +21,9 @@ from app.models.buyer_transaction import BuyerTransaction  # noqa: F401
 from app.models.invoice import Invoice  # noqa: F401
 from app.models.invoice_item import InvoiceItem  # noqa: F401
 from app.services.auth_service import bootstrap_user
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _assert_safe_test_database() -> None:
@@ -40,9 +44,12 @@ def _assert_safe_test_database() -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def migrated_database() -> Generator[None, None, None]:
+def migrated_database(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    if _all_collected_tests_are_no_db(request):
+        yield
+        return
     _assert_safe_test_database()
-    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=os.path.join(os.getcwd(), "backend"), check=True)
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=BACKEND_ROOT, check=True)
     yield
 
 
@@ -55,7 +62,11 @@ def db_session(migrated_database: None) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def clean_tables(db_session: Session) -> Generator[None, None, None]:
+def clean_tables(request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    if request.node.get_closest_marker("no_db"):
+        yield
+        return
+    db_session = request.getfixturevalue("db_session")
     table_names = [table.name for table in Base.metadata.sorted_tables]
 
     def truncate_all() -> None:
@@ -67,6 +78,14 @@ def clean_tables(db_session: Session) -> Generator[None, None, None]:
     truncate_all()
     yield
     truncate_all()
+
+
+def _all_collected_tests_are_no_db(request: pytest.FixtureRequest) -> bool:
+    session = request.node
+    items = getattr(session, "items", None)
+    if items is None:
+        items = getattr(getattr(request, "session", None), "items", None)
+    return bool(items) and all(item.get_closest_marker("no_db") for item in items)
 
 
 @pytest.fixture()

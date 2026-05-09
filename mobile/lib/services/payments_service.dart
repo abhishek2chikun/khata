@@ -2,17 +2,17 @@ import 'dart:math';
 
 import 'api_client.dart';
 
-class RecordPaymentInput {
-  const RecordPaymentInput({
+class RecordCollectionInput {
+  const RecordCollectionInput({
     required this.requestId,
-    required this.sellerId,
+    required this.customerId,
     required this.amount,
     required this.occurredOn,
     this.notes,
   });
 
   final String requestId;
-  final String sellerId;
+  final String customerId;
   final double amount;
   final String occurredOn;
   final String? notes;
@@ -20,7 +20,7 @@ class RecordPaymentInput {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'request_id': requestId,
-      'seller_id': sellerId,
+      'customer_id': customerId,
       'amount': amount,
       'occurred_on': occurredOn,
       'notes': notes,
@@ -75,15 +75,15 @@ class BalanceAdjustmentInput {
 }
 
 abstract class PaymentsService {
-  Future<void> recordPayment(RecordPaymentInput input);
+  Future<void> recordCollection(RecordCollectionInput input);
 
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   });
 
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   });
 }
@@ -95,23 +95,23 @@ class ApiPaymentsService implements PaymentsService {
 
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) async {
-    await _apiClient.post('/sellers/$sellerId/balance-adjustment', body: input.toJson());
+    await _apiClient.post('/customers/$customerId/balance-adjustment', body: input.toJson());
   }
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) async {
-    await _apiClient.post('/sellers/$sellerId/opening-balance', body: input.toJson());
+    await _apiClient.post('/customers/$customerId/opening-balance', body: input.toJson());
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) async {
-    await _apiClient.post('/payments', body: input.toJson());
+  Future<void> recordCollection(RecordCollectionInput input) async {
+    await _apiClient.post('/collections', body: input.toJson());
   }
 }
 

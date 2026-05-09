@@ -7,7 +7,7 @@ import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/api_client.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 
@@ -78,7 +78,7 @@ void main() {
       expect(quote.totals.grandTotal, 236);
     });
 
-    test('create parses nested seller snapshot and full item objects',
+    test('create parses nested customer snapshot and full item objects',
         () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
@@ -88,7 +88,7 @@ void main() {
               'id': 'inv-1',
               'request_id': 'request-1',
               'invoice_number': 1001,
-              'seller_id': 'seller-1',
+              'customer_id': 'customer-1',
               'invoice_date': '2026-04-20',
               'tax_regime': 'INTRA_STATE',
               'status': 'ACTIVE',
@@ -105,8 +105,8 @@ void main() {
               'cancel_request_id': null,
               'cancel_reason': null,
               'canceled_at': null,
-              'seller_snapshot': <String, dynamic>{
-                'id': 'seller-1',
+              'customer_snapshot': <String, dynamic>{
+                'id': 'customer-1',
                 'name': 'ABC Stores',
                 'address': 'Market Yard',
                 'state': 'Maharashtra',
@@ -183,7 +183,7 @@ void main() {
       expect(httpClient.lastPath, '/invoices');
       expect(result.invoice.id, 'inv-1');
       expect(result.invoice.invoiceNumber, '1001');
-      expect(result.invoice.sellerName, 'ABC Stores');
+      expect(result.invoice.customerName, 'ABC Stores');
       expect(result.invoice.grandTotal, 236);
       expect(result.invoice.items.single.productName, 'Blue Pen');
       expect(result.invoice.items.single.quantity, 2);
@@ -195,8 +195,8 @@ void main() {
 }
 
 const _draft = InvoiceDraft(
-  seller: Seller(
-    id: 'seller-1',
+  customer: Customer(
+    id: 'customer-1',
     name: 'ABC Stores',
     address: 'Market Yard',
     phone: '9999999999',

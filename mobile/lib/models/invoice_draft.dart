@@ -1,9 +1,9 @@
 import 'product.dart';
-import 'seller.dart';
+import 'customer.dart';
 
 class InvoiceDraft {
   const InvoiceDraft({
-    this.seller,
+    this.customer,
     this.invoiceDate = '',
     this.paymentMode = 'CREDIT',
     this.placeOfSupplyStateCode,
@@ -11,7 +11,7 @@ class InvoiceDraft {
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
   });
 
-  final Seller? seller;
+  final Customer? customer;
   final String invoiceDate;
   final String paymentMode;
   final String? placeOfSupplyStateCode;
@@ -19,8 +19,8 @@ class InvoiceDraft {
   final List<InvoiceDraftItem> items;
 
   InvoiceDraft copyWith({
-    Seller? seller,
-    bool clearSeller = false,
+    Customer? customer,
+    bool clearCustomer = false,
     String? invoiceDate,
     String? paymentMode,
     String? placeOfSupplyStateCode,
@@ -30,7 +30,7 @@ class InvoiceDraft {
     List<InvoiceDraftItem>? items,
   }) {
     return InvoiceDraft(
-      seller: clearSeller ? null : seller ?? this.seller,
+      customer: clearCustomer ? null : customer ?? this.customer,
       invoiceDate: invoiceDate ?? this.invoiceDate,
       paymentMode: paymentMode ?? this.paymentMode,
       placeOfSupplyStateCode: clearPlaceOfSupplyStateCode
@@ -43,7 +43,7 @@ class InvoiceDraft {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'seller_id': seller?.id,
+      'customer_id': customer?.id,
       'invoice_date': invoiceDate,
       'payment_mode': paymentMode,
       'place_of_supply_state_code': _emptyToNull(placeOfSupplyStateCode),

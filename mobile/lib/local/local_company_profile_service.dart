@@ -4,7 +4,7 @@ import '../models/api_error.dart';
 import '../models/company_profile.dart' as profile_model;
 import '../services/company_profile_service.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalCompanyProfileService implements CompanyProfileService {
   LocalCompanyProfileService({required LocalDatabase database})

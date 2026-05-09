@@ -132,7 +132,7 @@ void main() {
 
     expect(ledger.buyer.pendingPayable, 749.75);
     expect(ledger.transactions.map((transaction) => transaction.entryType),
-        <String>['PURCHASE_AMOUNT', 'PAYMENT_MADE']);
+        <String>['PURCHASE_AMOUNT', 'COLLECTION_MADE']);
     expect(ledger.transactions.last.notes, 'Bank transfer');
   });
 
@@ -271,7 +271,7 @@ void main() {
       <String>[
         'OPENING_PAYABLE',
         'PAYABLE_INCREASE_ADJUSTMENT',
-        'PAYMENT_MADE',
+        'COLLECTION_MADE',
       ],
     );
   });

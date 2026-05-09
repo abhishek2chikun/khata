@@ -8,12 +8,12 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
 import 'package:internal_billing_khata_mobile/screens/create_invoice_screen.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   testWidgets(
@@ -30,13 +30,13 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller]),
+          customersService: FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('sellerPickerField')));
+    await tester.tap(find.byKey(const Key('customerPickerField')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Grand total: 236.00'), findsOneWidget);
     expect(find.text('236.00'), findsWidgets);
     expect(invoicesService.quotedDrafts, hasLength(1));
-    expect(invoicesService.quotedDrafts.single.seller?.id, 'seller-1');
+    expect(invoicesService.quotedDrafts.single.customer?.id, 'customer-1');
     expect(invoicesService.quotedDrafts.single.items.single.product?.id,
         'product-1');
   });
@@ -80,13 +80,13 @@ void main() {
                 const ApiError(message: 'Quote failed', statusCode: 400),
           ),
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller]),
+          customersService: FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('sellerPickerField')));
+    await tester.tap(find.byKey(const Key('customerPickerField')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
@@ -133,7 +133,7 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller]),
+          customersService: FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -166,7 +166,7 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: invoicesService,
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller]),
+          customersService: FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -193,27 +193,27 @@ void main() {
   });
 
   testWidgets(
-      'seller preselected flow shows seller and skips seller selection changes by default',
+      'customer preselected flow shows customer and skips customer selection changes by default',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: FakeProductsService(products: <Product>[_product]),
-          sellersService:
-              FakeSellersService(sellers: <Seller>[_seller, _otherSeller]),
-          initialSeller: _seller,
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer, _otherCustomer]),
+          initialCustomer: _customer,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('ABC Stores'), findsWidgets);
-    expect(find.byKey(const Key('sellerPickerField')), findsNothing);
+    expect(find.byKey(const Key('customerPickerField')), findsNothing);
   });
 
   testWidgets(
-      'create invoice screen uses active-only products and filters archived sellers',
+      'create invoice screen uses active-only products and filters archived customers',
       (tester) async {
     final productsService =
         FakeProductsService(products: <Product>[_product, _archivedProduct]);
@@ -223,8 +223,8 @@ void main() {
         home: CreateInvoiceScreen(
           invoicesService: FakeInvoicesService(quoteResponse: _quote),
           productsService: productsService,
-          sellersService:
-              FakeSellersService(sellers: <Seller>[_seller, _archivedSeller]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer, _archivedCustomer]),
         ),
       ),
     );
@@ -233,11 +233,11 @@ void main() {
     expect(productsService.fetchFilters, hasLength(1));
     expect(productsService.fetchFilters.single?.active, isTrue);
 
-    await tester.tap(find.byKey(const Key('sellerPickerField')));
+    await tester.tap(find.byKey(const Key('customerPickerField')));
     await tester.pumpAndSettle();
 
     expect(find.text('ABC Stores'), findsWidgets);
-    expect(find.text('Archived Seller'), findsNothing);
+    expect(find.text('Archived Customer'), findsNothing);
   });
 
   testWidgets(
@@ -251,7 +251,7 @@ void main() {
             products: const <Product>[],
             error: const SocketException('timed out'),
           ),
-          sellersService: FakeSellersService(sellers: <Seller>[_seller]),
+          customersService: FakeCustomersService(customers: <Customer>[_customer]),
         ),
       ),
     );
@@ -262,7 +262,7 @@ void main() {
 }
 
 Future<void> _fillDraft(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('sellerPickerField')));
+  await tester.tap(find.byKey(const Key('customerPickerField')));
   await tester.pumpAndSettle();
   await tester.tap(find.text('ABC Stores').last);
   await tester.pumpAndSettle();
@@ -277,8 +277,8 @@ Future<void> _fillDraft(WidgetTester tester) async {
   await tester.enterText(find.byKey(const Key('quantityField-0')), '2');
 }
 
-const _seller = Seller(
-  id: 'seller-1',
+const _customer = Customer(
+  id: 'customer-1',
   name: 'ABC Stores',
   address: 'Market Yard',
   phone: '9999999999',
@@ -289,8 +289,8 @@ const _seller = Seller(
   pendingBalance: 0,
 );
 
-const _otherSeller = Seller(
-  id: 'seller-2',
+const _otherCustomer = Customer(
+  id: 'customer-2',
   name: 'XYZ Mart',
   address: 'City Road',
   phone: null,
@@ -329,9 +329,9 @@ const _archivedProduct = Product(
   isActive: false,
 );
 
-const _archivedSeller = Seller(
-  id: 'seller-3',
-  name: 'Archived Seller',
+const _archivedCustomer = Customer(
+  id: 'customer-3',
+  name: 'Archived Customer',
   address: 'Old Road',
   phone: null,
   gstin: null,
@@ -365,11 +365,11 @@ const _quote = InvoiceQuote(
 
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
-  sellerId: 'seller-1',
+  customerId: 'customer-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
   paymentMode: 'CREDIT',
-  sellerName: 'ABC Stores',
+  customerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
   grandTotal: 236,
   notes: null,
@@ -481,27 +481,27 @@ class FakeProductsService implements ProductsService {
   }
 }
 
-class FakeSellersService implements SellersService {
-  FakeSellersService({required this.sellers, this.error});
+class FakeCustomersService implements CustomersService {
+  FakeCustomersService({required this.customers, this.error});
 
-  final List<Seller> sellers;
+  final List<Customer> customers;
   final Object? error;
 
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) async {
+  Future<List<Customer>> fetchCustomers({String search = ''}) async {
     if (error != null) {
       throw error!;
     }
-    return sellers;
+    return customers;
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId) {
     throw UnimplementedError();
   }
 }

@@ -3,42 +3,42 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/payments_service.dart';
-import '../services/sellers_service.dart';
+import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
-import 'seller_detail_screen.dart';
+import 'customer_detail_screen.dart';
 
-class SellerListScreen extends StatefulWidget {
-  const SellerListScreen({
+class CustomerListScreen extends StatefulWidget {
+  const CustomerListScreen({
     super.key,
-    required this.sellersService,
+    required this.customersService,
     required this.paymentsService,
     required this.onCreateInvoice,
     this.drawer,
   });
 
-  final SellersService sellersService;
+  final CustomersService customersService;
   final PaymentsService paymentsService;
-  final Future<bool> Function(Seller seller) onCreateInvoice;
+  final Future<bool> Function(Customer customer) onCreateInvoice;
   final Widget? drawer;
 
   @override
-  State<SellerListScreen> createState() => _SellerListScreenState();
+  State<CustomerListScreen> createState() => _CustomerListScreenState();
 }
 
-class _SellerListScreenState extends State<SellerListScreen> {
+class _CustomerListScreenState extends State<CustomerListScreen> {
   final _searchController = TextEditingController();
 
-  List<Seller> _allSellers = const <Seller>[];
-  List<Seller> _sellers = const <Seller>[];
+  List<Customer> _allCustomers = const <Customer>[];
+  List<Customer> _customers = const <Customer>[];
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadSellers();
+    _loadCustomers();
   }
 
   @override
@@ -51,11 +51,11 @@ class _SellerListScreenState extends State<SellerListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: widget.drawer,
-      appBar: AppBar(title: const Text('Sellers')),
+      appBar: AppBar(title: const Text('Customers/Khata')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createSeller,
+        onPressed: _createCustomer,
         icon: const Icon(Icons.add),
-        label: const Text('Add seller'),
+        label: const Text('Add customer'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -63,11 +63,11 @@ class _SellerListScreenState extends State<SellerListScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             TextField(
-              key: const Key('sellerSearchField'),
+              key: const Key('customerSearchField'),
               controller: _searchController,
               onChanged: (_) => _applySearchFilter(),
               decoration: const InputDecoration(
-                labelText: 'Search sellers',
+                labelText: 'Search customers',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -87,25 +87,25 @@ class _SellerListScreenState extends State<SellerListScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_sellers.isEmpty) {
-      return const Center(child: Text('No sellers found'));
+    if (_customers.isEmpty) {
+      return const Center(child: Text('No customers found'));
     }
     return ListView.separated(
-      itemCount: _sellers.length,
+      itemCount: _customers.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final seller = _sellers[index];
+        final customer = _customers[index];
         return Card(
           child: ListTile(
-            onTap: () => _openSeller(seller),
-            title: Text(seller.name),
-            subtitle: Text(seller.address),
+            onTap: () => _openCustomer(customer),
+            title: Text(customer.name),
+            subtitle: Text(customer.address),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                Text(seller.pendingBalance.toStringAsFixed(2)),
-                if (!seller.isActive) const Text('Archived'),
+                Text(customer.pendingBalance.toStringAsFixed(2)),
+                if (!customer.isActive) const Text('Archived'),
               ],
             ),
           ),
@@ -114,20 +114,20 @@ class _SellerListScreenState extends State<SellerListScreen> {
     );
   }
 
-  Future<void> _loadSellers() async {
+  Future<void> _loadCustomers() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final sellers = await widget.sellersService.fetchSellers();
+      final customers = await widget.customersService.fetchCustomers();
       if (!mounted) {
         return;
       }
       setState(() {
-        _allSellers = sellers;
-        _sellers = _filterSellers(sellers, _searchController.text.trim());
+        _allCustomers = customers;
+        _customers = _filterCustomers(customers, _searchController.text.trim());
       });
     } on Object catch (error) {
       if (!mounted) {
@@ -135,8 +135,8 @@ class _SellerListScreenState extends State<SellerListScreen> {
       }
       setState(() {
         _errorMessage = _messageForLoadError(error);
-        _allSellers = const <Seller>[];
-        _sellers = const <Seller>[];
+        _allCustomers = const <Customer>[];
+        _customers = const <Customer>[];
       });
     } finally {
       if (mounted) {
@@ -149,20 +149,20 @@ class _SellerListScreenState extends State<SellerListScreen> {
 
   void _applySearchFilter() {
     setState(() {
-      _sellers = _filterSellers(_allSellers, _searchController.text.trim());
+      _customers = _filterCustomers(_allCustomers, _searchController.text.trim());
     });
   }
 
-  List<Seller> _filterSellers(List<Seller> sellers, String query) {
+  List<Customer> _filterCustomers(List<Customer> customers, String query) {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) {
-      return sellers;
+      return customers;
     }
-    return sellers.where((seller) {
-      final name = seller.name.toLowerCase();
-      final address = seller.address.toLowerCase();
-      final phone = seller.phone?.toLowerCase() ?? '';
-      final gstin = seller.gstin?.toLowerCase() ?? '';
+    return customers.where((customer) {
+      final name = customer.name.toLowerCase();
+      final address = customer.address.toLowerCase();
+      final phone = customer.phone?.toLowerCase() ?? '';
+      final gstin = customer.gstin?.toLowerCase() ?? '';
       return name.contains(normalizedQuery) ||
           address.contains(normalizedQuery) ||
           phone.contains(normalizedQuery) ||
@@ -170,31 +170,31 @@ class _SellerListScreenState extends State<SellerListScreen> {
     }).toList();
   }
 
-  Future<void> _openSeller(Seller seller) async {
+  Future<void> _openCustomer(Customer customer) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => SellerDetailScreen(
-          sellerId: seller.id,
-          sellersService: widget.sellersService,
+        builder: (_) => CustomerDetailScreen(
+          customerId: customer.id,
+          customersService: widget.customersService,
           paymentsService: widget.paymentsService,
           onCreateInvoice: widget.onCreateInvoice,
         ),
       ),
     );
     if (mounted) {
-      await _loadSellers();
+      await _loadCustomers();
     }
   }
 
-  Future<void> _createSeller() async {
+  Future<void> _createCustomer() async {
     final created = await showDialog<bool>(
           context: context,
           builder: (_) =>
-              _CreateSellerDialog(sellersService: widget.sellersService),
+              _CreateCustomerDialog(customersService: widget.customersService),
         ) ??
         false;
     if (created && mounted) {
-      await _loadSellers();
+      await _loadCustomers();
     }
   }
 
@@ -205,20 +205,20 @@ class _SellerListScreenState extends State<SellerListScreen> {
     if (error is SocketException || error is HttpException) {
       return 'Unable to reach the server';
     }
-    return 'Unable to load sellers';
+    return 'Unable to load customers';
   }
 }
 
-class _CreateSellerDialog extends StatefulWidget {
-  const _CreateSellerDialog({required this.sellersService});
+class _CreateCustomerDialog extends StatefulWidget {
+  const _CreateCustomerDialog({required this.customersService});
 
-  final SellersService sellersService;
+  final CustomersService customersService;
 
   @override
-  State<_CreateSellerDialog> createState() => _CreateSellerDialogState();
+  State<_CreateCustomerDialog> createState() => _CreateCustomerDialogState();
 }
 
-class _CreateSellerDialogState extends State<_CreateSellerDialog> {
+class _CreateCustomerDialogState extends State<_CreateCustomerDialog> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -243,7 +243,7 @@ class _CreateSellerDialogState extends State<_CreateSellerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add seller'),
+      title: const Text('Add customer'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -301,8 +301,8 @@ class _CreateSellerDialogState extends State<_CreateSellerDialog> {
     });
 
     try {
-      await widget.sellersService.createSeller(
-        CreateSellerInput(
+      await widget.customersService.createCustomer(
+        CreateCustomerInput(
           name: _nameController.text.trim(),
           address: _addressController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
