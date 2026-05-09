@@ -25,6 +25,7 @@ void main() {
     expect(find.text('Category is required.'), findsOneWidget);
     expect(find.text('Item name is required.'), findsOneWidget);
     expect(find.text('Item code is required.'), findsOneWidget);
+    expect(find.text('Buying price is required.'), findsOneWidget);
     expect(find.text('Selling price is required.'), findsOneWidget);
     expect(find.text('GST rate is required.'), findsOneWidget);
     expect(find.text('Quantity on hand is required.'), findsOneWidget);
@@ -44,10 +45,12 @@ void main() {
     await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
     await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
     await tester.enterText(find.bySemanticsLabel('Item code'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8.25');
     await tester.enterText(
-      find.bySemanticsLabel('Selling price (excl tax)'),
+      find.bySemanticsLabel('Selling price'),
       '10.5',
     );
+    await tester.enterText(find.bySemanticsLabel('Unit'), 'box');
     await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
     await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3.25');
     await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
@@ -61,7 +64,9 @@ void main() {
     expect(input.category, 'Pens');
     expect(input.itemName, 'Blue Pen');
     expect(input.itemNumber, 'PEN-1');
+    expect(input.buyingPrice, 8.25);
     expect(input.sellingPrice, 10.5);
+    expect(input.unit, 'box');
     expect(input.gstRate, 18);
     expect(input.quantityOnHand, 3.25);
     expect(input.lowStockThreshold, 2);
@@ -93,10 +98,49 @@ void main() {
     expect(find.text('Quantity on hand'), findsNothing);
     expect(find.text('Active product'), findsNothing);
   });
+
+  testWidgets('edit form preserves buying price and unit unless changed',
+      (tester) async {
+    final productsService = FakeProductsService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductFormScreen(
+          productsService: productsService,
+          product: const Product(
+            id: '1',
+            companyName: 'Acme',
+            category: 'Pens',
+            itemName: 'Blue Pen',
+            itemNumber: 'PEN-1',
+            buyingPrice: 8.25,
+            sellingPrice: 10.5,
+            unit: 'box',
+            gstRate: 18,
+            quantityOnHand: 5,
+            lowStockThreshold: 2,
+            isActive: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.widgetWithText(TextField, 'Buying price'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Unit'), findsOneWidget);
+    await tester.ensureVisible(find.text('Save changes'));
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(productsService.updatedInputs, hasLength(1));
+    final update = productsService.updatedInputs.single;
+    expect(update.buyingPrice, 8.25);
+    expect(update.sellingPrice, 10.5);
+    expect(update.unit, 'box');
+  });
 }
 
 class FakeProductsService implements ProductsService {
   final List<CreateProductInput> createdInputs = <CreateProductInput>[];
+  final List<UpdateProductInput> updatedInputs = <UpdateProductInput>[];
 
   @override
   Future<Product> createProduct(CreateProductInput input) async {
@@ -124,7 +168,21 @@ class FakeProductsService implements ProductsService {
 
   @override
   Future<Product> updateProduct(
-      {required String id, required UpdateProductInput input}) {
-    throw ApiError(message: 'not used');
+      {required String id, required UpdateProductInput input}) async {
+    updatedInputs.add(input);
+    return Product(
+      id: id,
+      companyName: input.companyName,
+      category: input.category,
+      itemName: input.itemName,
+      itemNumber: input.itemNumber,
+      buyingPrice: input.buyingPrice,
+      sellingPrice: input.sellingPrice,
+      unit: input.unit,
+      gstRate: input.gstRate,
+      quantityOnHand: 5,
+      lowStockThreshold: input.lowStockThreshold,
+      isActive: true,
+    );
   }
 }

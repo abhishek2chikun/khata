@@ -337,8 +337,20 @@ class LocalDatabase extends _$LocalDatabase {
                 category,
                 NULL,
                 company,
-                COALESCE(buying_price_excl_tax, default_selling_price_excl_tax),
-                default_selling_price_excl_tax,
+                RTRIM(RTRIM(CAST(
+                  ROUND(
+                    CAST(COALESCE(buying_price_excl_tax, default_selling_price_excl_tax) AS REAL)
+                    * (1 + CAST(COALESCE(buying_gst_rate, default_gst_rate) AS REAL) / 100),
+                    2
+                  ) AS TEXT
+                ), '0'), '.'),
+                RTRIM(RTRIM(CAST(
+                  ROUND(
+                    CAST(default_selling_price_excl_tax AS REAL)
+                    * (1 + CAST(default_gst_rate AS REAL) / 100),
+                    2
+                  ) AS TEXT
+                ), '0'), '.'),
                 NULL,
                 default_gst_rate,
                 quantity_on_hand,
