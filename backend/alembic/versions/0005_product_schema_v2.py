@@ -55,9 +55,6 @@ def upgrade() -> None:
     # Legacy product prices were stored pre-tax. Product V2 stores inclusive defaults.
     # Null legacy buying prices fall back to 0.00 so buying_price can be made NOT NULL;
     # null GST rates are treated as 0.00, preserving the legacy numeric value.
-    # buying_gst_rate is intentionally retained as an internal migration-compatibility
-    # column because canonical gst_rate comes from legacy default_gst_rate and cannot
-    # losslessly reconstruct legacy buying_price_excl_tax on downgrade.
     op.execute(
         sa.text(
             """
@@ -77,6 +74,7 @@ def upgrade() -> None:
     op.drop_column("products", "buying_price_excl_tax")
     op.drop_column("products", "default_selling_price_excl_tax")
     op.drop_column("products", "default_gst_rate")
+    op.drop_column("products", "buying_gst_rate")
 
     op.create_unique_constraint("uq_products_item_number", "products", ["item_number"])
     op.create_unique_constraint("uq_products_company_name_item_name_category", "products", ["company_name", "item_name", "category"])
@@ -89,21 +87,25 @@ def downgrade() -> None:
     op.add_column("products", sa.Column("default_gst_rate", sa.Numeric(5, 2), nullable=True))
     op.add_column("products", sa.Column("default_selling_price_excl_tax", sa.Numeric(14, 2), nullable=True))
     op.add_column("products", sa.Column("buying_price_excl_tax", sa.Numeric(14, 2), nullable=True))
+    op.add_column("products", sa.Column("buying_gst_rate", sa.Numeric(5, 2), nullable=True))
 
+    # Downgrade is lossy when legacy buying_gst_rate differed from default_gst_rate;
+    # V2 intentionally keeps only canonical gst_rate.
     op.execute(
         sa.text(
             """
             UPDATE products
             SET
                 buying_price_excl_tax = CASE
-                    WHEN COALESCE(buying_gst_rate, 0.00) = 0.00 THEN COALESCE(buying_price, 0.00)
-                    ELSE ROUND(COALESCE(buying_price, 0.00) / (1 + (buying_gst_rate / 100)), 2)
+                    WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(buying_price, 0.00)
+                    ELSE ROUND(COALESCE(buying_price, 0.00) / (1 + (gst_rate / 100)), 2)
                 END,
                 default_selling_price_excl_tax = CASE
                     WHEN COALESCE(gst_rate, 0.00) = 0.00 THEN COALESCE(selling_price, 0.00)
                     ELSE ROUND(COALESCE(selling_price, 0.00) / (1 + (gst_rate / 100)), 2)
                 END,
-                default_gst_rate = gst_rate
+                default_gst_rate = gst_rate,
+                buying_gst_rate = gst_rate
             """
         )
     )

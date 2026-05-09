@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 module_path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0005_product_schema_v2.py"
+product_model_path = Path(__file__).resolve().parents[1] / "app" / "models" / "product.py"
 spec = importlib.util.spec_from_file_location("product_schema_v2", module_path)
 product_schema_v2 = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
@@ -26,8 +27,8 @@ def test_downgrade_buying_price_conversion_restores_pre_tax_value():
     assert product_schema_v2.to_pre_tax_money(Decimal("118.00"), Decimal("18.00")) == Decimal("100.00")
 
 
-def test_downgrade_buying_price_conversion_uses_preserved_buying_gst_rate():
-    assert product_schema_v2.to_pre_tax_money(Decimal("112.00"), Decimal("12.00")) == Decimal("100.00")
+def test_downgrade_buying_price_conversion_uses_canonical_gst_rate():
+    assert product_schema_v2.to_pre_tax_money(Decimal("118.00"), Decimal("18.00")) == Decimal("100.00")
 
 
 def test_downgrade_buying_price_conversion_preserves_value_when_gst_rate_is_zero_or_null():
@@ -35,12 +36,26 @@ def test_downgrade_buying_price_conversion_preserves_value_when_gst_rate_is_zero
     assert product_schema_v2.to_pre_tax_money(Decimal("100.00"), None) == Decimal("100.00")
 
 
-def test_product_v2_migration_preserves_buying_gst_rate_for_downgrade():
+def test_product_v2_model_omits_legacy_buying_gst_rate():
+    model_text = product_model_path.read_text()
+
+    assert "buying_gst_rate" not in model_text
+
+
+def test_product_v2_migration_drops_legacy_buying_gst_rate():
     migration_text = module_path.read_text()
 
-    assert 'op.drop_column("products", "buying_gst_rate")' not in migration_text
     assert "buyer_id" in migration_text
+    assert 'op.drop_column("products", "buying_gst_rate")' in migration_text
+
+
+def test_product_v2_downgrade_documents_lossy_buying_gst_reconstruction():
+    migration_text = module_path.read_text()
+
+    assert "lossy" in migration_text
     assert "buying_gst_rate" in migration_text
+    assert "buying_price_excl_tax = CASE" in migration_text
+    assert "COALESCE(gst_rate, 0.00)" in migration_text
 
 
 def test_seed_invoice_lines_use_tax_inclusive_product_prices():
