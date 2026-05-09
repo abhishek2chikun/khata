@@ -62,6 +62,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     _invoiceDateController = TextEditingController(
       text: _formatDateTime(DateTime.now()),
     );
+    final initialDate = _invoiceDateController.text.split(' ').first;
+    _controller.updateInvoiceDate(initialDate);
     _controller.updateInvoiceDatetime(_invoiceDateController.text);
     _controller.addListener(_syncControllers);
     _syncControllers();
@@ -390,6 +392,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 _controller.applyGstToAllLines(rate);
                 for (final c in _gstRateControllers) {
                   c.text = rate.toStringAsFixed(2);
+                }
+              } else {
+                _controller.applyGstToAllLines(null);
+                for (final c in _gstRateControllers) {
+                  c.text = '';
                 }
               }
             },

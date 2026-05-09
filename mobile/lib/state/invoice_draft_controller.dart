@@ -122,7 +122,8 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   void updatePaymentState(String paymentState) {
-    _updateDraft(_draft.copyWith(paymentState: paymentState));
+    _updateDraft(
+        _draft.copyWith(paymentState: paymentState, paymentMode: paymentState));
   }
 
   void updatePaidAmount(double paidAmount) {

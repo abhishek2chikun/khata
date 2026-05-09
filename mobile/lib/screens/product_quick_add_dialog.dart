@@ -157,7 +157,7 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
           category: _categoryController.text.trim(),
           itemName: _itemNameController.text.trim(),
           itemNumber: _itemNumberController.text.trim(),
-          buyingPrice: double.tryParse(_sellingPriceController.text.trim()) ?? 0,
+          buyingPrice: 0,
           sellingPrice: double.tryParse(_sellingPriceController.text.trim()) ?? 0,
           gstRate: double.tryParse(_gstRateController.text.trim()) ?? 0,
           quantityOnHand: 0,
