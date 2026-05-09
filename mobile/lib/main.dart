@@ -101,13 +101,13 @@ class _BillingAppState extends State<BillingApp> {
       builder: (context, _) {
         return MaterialApp(
           title: 'Internal Billing',
-          home: _buildBody(),
+          home: Builder(builder: _buildBody),
         );
       },
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
     if (_isCheckingLocalUsers || widget.controller.isRestoringSession) {
       return const Center(
         child: CircularProgressIndicator(),
