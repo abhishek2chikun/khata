@@ -12,11 +12,7 @@ class InvoiceDraft {
     this.placeOfSupplyStateCode,
     this.notes,
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
-  })  : paymentState = paymentMode == null
-            ? paymentState
-            : paymentState == 'CREDIT' && paymentMode == 'PAID'
-                ? 'TOTAL_PAID'
-                : paymentMode,
+  })  : paymentState = paymentState,
         paymentMode = paymentMode ?? paymentState;
 
   final Customer? customer;

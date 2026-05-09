@@ -36,10 +36,8 @@ class LocalInvoicesService implements InvoicesService {
           ..where((invoice) => invoice.requestId.equals(requestId)))
         .getSingleOrNull();
     if (existing != null) {
-      final requestHash = _invoiceRequestHash(
-        draft,
-        existing.placeOfSupplyStateCode,
-      );
+      final prepared = await _prepareInvoice(draft);
+      final requestHash = _invoiceRequestHash(draft, prepared);
       if (existing.requestHash != requestHash) {
         throw _idempotencyConflictError();
       }
@@ -50,10 +48,7 @@ class LocalInvoicesService implements InvoicesService {
     }
 
     final prepared = await _prepareInvoice(draft);
-    final requestHash = _invoiceRequestHash(
-      draft,
-      prepared.placeOfSupplyStateCode,
-    );
+    final requestHash = _invoiceRequestHash(draft, prepared);
     final invoiceId = generateLocalUuid();
     await _ensureSystemUser();
 
@@ -241,31 +236,50 @@ class LocalInvoicesService implements InvoicesService {
     required String invoiceId,
     required String reason,
   }) async {
-    final invoice = await (_database.select(_database.invoices)
+    final existingInvoice = await (_database.select(_database.invoices)
           ..where((invoice) => invoice.id.equals(invoiceId)))
         .getSingleOrNull();
-    if (invoice == null) {
+    if (existingInvoice == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
         message: 'Invoice not found',
         statusCode: 404,
       );
     }
-    if (invoice.status == 'CANCELED') {
-      throw const ApiError(
-        code: 'INVOICE_ALREADY_CANCELED',
-        message: 'Invoice is already canceled',
-        statusCode: 409,
-      );
-    }
     await _ensureSystemUser();
-    final items = await (_database.select(_database.invoiceItems)
-          ..where((item) => item.invoiceId.equals(invoiceId))
-          ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
-        .get();
     final now = DateTime.now().toUtc();
     final nowIso = now.toIso8601String();
     await _database.transaction(() async {
+      final invoice = await (_database.select(_database.invoices)
+            ..where((invoice) => invoice.id.equals(invoiceId)))
+          .getSingle();
+      if (invoice.status == 'CANCELED') {
+        throw const ApiError(
+          code: 'INVOICE_ALREADY_CANCELED',
+          message: 'Invoice is already canceled',
+          statusCode: 409,
+        );
+      }
+      final items = await (_database.select(_database.invoiceItems)
+            ..where((item) => item.invoiceId.equals(invoiceId))
+            ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
+          .get();
+      final existingStockReversals =
+          await (_database.select(_database.stockMovements)
+                ..where((movement) => movement.invoiceId.equals(invoiceId))
+                ..where((movement) =>
+                    movement.movementType.equals('INVOICE_CANCEL_REVERSAL')))
+              .get();
+      final hasStockReversals = existingStockReversals.isNotEmpty;
+      final existingLedgerReversals = await (_database
+              .select(_database.customerTransactions)
+            ..where((transaction) => transaction.invoiceId.equals(invoiceId))
+            ..where((transaction) => transaction.entryType.isIn(
+                const ['INVOICE_CANCEL_REVERSAL', 'COLLECTION_REVERSAL'])))
+          .get();
+      final existingLedgerTypes = existingLedgerReversals
+          .map((transaction) => transaction.entryType)
+          .toSet();
       await (_database.update(_database.invoices)
             ..where((invoice) => invoice.id.equals(invoiceId)))
           .write(
@@ -281,49 +295,54 @@ class LocalInvoicesService implements InvoicesService {
           canceledAt: Value(nowIso),
         ),
       );
-      for (final item in items) {
-        final product = await (_database.select(_database.products)
-              ..where((product) => product.id.equals(item.productId)))
-            .getSingle();
-        final quantity = double.parse(item.quantity);
-        await (_database.update(_database.products)
-              ..where((product) => product.id.equals(item.productId)))
-            .write(
-          ProductsCompanion(
-            quantityOnHand: Value(_normalizeDecimal(
-              double.parse(product.quantityOnHand) + quantity,
-            )),
-            updatedAt: Value(nowIso),
-          ),
-        );
-        await _database.into(_database.stockMovements).insert(
-              StockMovementsCompanion.insert(
+      if (!hasStockReversals) {
+        for (final item in items) {
+          final product = await (_database.select(_database.products)
+                ..where((product) => product.id.equals(item.productId)))
+              .getSingle();
+          final quantity = double.parse(item.quantity);
+          await (_database.update(_database.products)
+                ..where((product) => product.id.equals(item.productId)))
+              .write(
+            ProductsCompanion(
+              quantityOnHand: Value(_normalizeDecimal(
+                double.parse(product.quantityOnHand) + quantity,
+              )),
+              updatedAt: Value(nowIso),
+            ),
+          );
+          await _database.into(_database.stockMovements).insert(
+                StockMovementsCompanion.insert(
+                  id: generateLocalUuid(),
+                  productId: item.productId,
+                  invoiceId: Value(invoiceId),
+                  movementType: 'INVOICE_CANCEL_REVERSAL',
+                  quantityDelta: _normalizeDecimal(quantity),
+                  reason: Value('Cancel invoice ${invoice.invoiceNumber}'),
+                  createdByUserId: _systemUserId,
+                  createdAt: nowIso,
+                ),
+              );
+        }
+      }
+      if (!existingLedgerTypes.contains('INVOICE_CANCEL_REVERSAL')) {
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
-                productId: item.productId,
+                customerId: invoice.customerId,
                 invoiceId: Value(invoiceId),
-                movementType: 'INVOICE_CANCEL_REVERSAL',
-                quantityDelta: _normalizeDecimal(quantity),
-                reason: Value('Cancel invoice ${invoice.invoiceNumber}'),
+                entryType: 'INVOICE_CANCEL_REVERSAL',
+                amount: invoice.grandTotal,
+                occurredOn: nowIso.substring(0, 10),
+                notes: Value('Cancel invoice ${invoice.invoiceNumber}'),
                 createdByUserId: _systemUserId,
                 createdAt: nowIso,
               ),
             );
       }
-      await _database.into(_database.customerTransactions).insert(
-            CustomerTransactionsCompanion.insert(
-              id: generateLocalUuid(),
-              customerId: invoice.customerId,
-              invoiceId: Value(invoiceId),
-              entryType: 'INVOICE_CANCEL_REVERSAL',
-              amount: invoice.grandTotal,
-              occurredOn: nowIso.substring(0, 10),
-              notes: Value('Cancel invoice ${invoice.invoiceNumber}'),
-              createdByUserId: _systemUserId,
-              createdAt: nowIso,
-            ),
-          );
       final paidAmount = double.parse(invoice.paidAmount);
-      if (paidAmount > 0) {
+      if (paidAmount > 0 &&
+          !existingLedgerTypes.contains('COLLECTION_REVERSAL')) {
         await _database.into(_database.customerTransactions).insert(
               CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
@@ -344,7 +363,7 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   Future<_PreparedInvoice> _prepareInvoice(InvoiceDraft draft) async {
-    _validatePaymentMode(draft.paymentState);
+    final paymentState = _resolvePaymentState(draft);
     final draftCustomer = draft.customer;
     if (draftCustomer == null) {
       throw const ApiError(
@@ -467,7 +486,6 @@ class LocalInvoicesService implements InvoicesService {
       }
     }
 
-    final paymentState = _resolvePaymentState(draft);
     final paidAmount = _resolvePaidAmount(
       paymentState,
       draft.paidAmount,
@@ -501,6 +519,7 @@ class LocalInvoicesService implements InvoicesService {
     required String taxRegime,
     required int lineNumber,
   }) {
+    _validateLine(item);
     final enteredUnitPrice = _roundMoney(
       item.unitPrice ?? double.parse(product.sellingPrice),
     );
@@ -705,8 +724,7 @@ class LocalInvoicesService implements InvoicesService {
   void _validatePaymentMode(String paymentMode) {
     if (paymentMode == 'CREDIT' ||
         paymentMode == 'TOTAL_PAID' ||
-        paymentMode == 'PARTIAL_PAID' ||
-        paymentMode == 'PAID') {
+        paymentMode == 'PARTIAL_PAID') {
       return;
     }
     throw const ApiError(
@@ -717,19 +735,55 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   String _resolvePaymentState(InvoiceDraft draft) {
+    if (draft.paymentMode == 'PAID') {
+      return 'TOTAL_PAID';
+    }
+    if (draft.paymentMode != draft.paymentState) {
+      _validatePaymentMode(draft.paymentMode);
+      return draft.paymentMode;
+    }
     if (draft.paymentState == 'CREDIT' ||
         draft.paymentState == 'TOTAL_PAID' ||
         draft.paymentState == 'PARTIAL_PAID') {
       return draft.paymentState;
     }
-    if (draft.paymentMode == 'PAID') {
-      return 'TOTAL_PAID';
-    }
-    if (draft.paymentMode == 'CREDIT') {
-      return 'CREDIT';
-    }
     _validatePaymentMode(draft.paymentState);
     return draft.paymentState;
+  }
+
+  void _validateLine(InvoiceDraftItem item) {
+    if (item.quantity <= 0) {
+      throw _validationError('quantity must be greater than zero');
+    }
+    if (item.quantity > 99999999999.999) {
+      throw _validationError('quantity exceeds maximum supported value');
+    }
+    if (!_hasAtMostDecimalPlaces(item.quantity, 3)) {
+      throw _validationError('quantity must have at most three decimal places');
+    }
+    if (item.pricingMode == 'PRE_TAX' && item.unitPrice == null) {
+      throw _validationError(
+          'unit_price is required when pricing_mode is PRE_TAX');
+    }
+    if (item.unitPrice != null && item.unitPrice! <= 0) {
+      throw _validationError('unit_price must be greater than zero');
+    }
+    if (item.gstRate != null && (item.gstRate! < 0 || item.gstRate! > 100)) {
+      throw _validationError('gst_rate must be between 0 and 100');
+    }
+    if (item.discountPercent < 0 || item.discountPercent > 100) {
+      throw _validationError('discount_percent must be between 0 and 100');
+    }
+  }
+
+  bool _hasAtMostDecimalPlaces(double value, int places) {
+    final text = value.toString();
+    final exponentParts = text.toLowerCase().split('e');
+    final decimalPart = exponentParts.first.split('.');
+    final decimals = decimalPart.length == 1 ? 0 : decimalPart.last.length;
+    final exponent =
+        exponentParts.length == 1 ? 0 : int.tryParse(exponentParts.last) ?? 0;
+    return decimals - exponent <= places;
   }
 
   double _resolvePaidAmount(
@@ -775,6 +829,11 @@ class LocalInvoicesService implements InvoicesService {
   String _resolveInvoiceDatetime(InvoiceDraft draft) {
     final value = _emptyToNull(draft.invoiceDatetime);
     if (value != null) {
+      _validateTimezoneAwareDatetime(value);
+      final date = _emptyToNull(draft.invoiceDate);
+      if (date != null && date != value.substring(0, 10)) {
+        throw _validationError('invoice_date must match invoice_datetime date');
+      }
       return value;
     }
     final date = _emptyToNull(draft.invoiceDate);
@@ -782,6 +841,19 @@ class LocalInvoicesService implements InvoicesService {
       return '${date}T00:00:00.000Z';
     }
     return DateTime.now().toUtc().toIso8601String();
+  }
+
+  void _validateTimezoneAwareDatetime(String value) {
+    final timezonePattern = RegExp(r'(Z|[+-]\d{2}:\d{2})$');
+    if (!timezonePattern.hasMatch(value)) {
+      throw _validationError(
+          'invoice_datetime must include timezone information');
+    }
+    try {
+      DateTime.parse(value);
+    } on FormatException {
+      throw _validationError('invoice_datetime must be a valid ISO datetime');
+    }
   }
 
   void _validateStateMetadata({
@@ -813,27 +885,35 @@ class LocalInvoicesService implements InvoicesService {
     );
   }
 
-  String _invoiceRequestHash(InvoiceDraft draft, String resolvedStateCode) {
+  String _invoiceRequestHash(InvoiceDraft draft, _PreparedInvoice prepared) {
     final payload = <String, dynamic>{
       'customer_id': draft.customer?.id,
-      'invoice_datetime': _emptyToNull(draft.invoiceDatetime),
-      'invoice_date': draft.invoiceDate,
-      'payment_state': draft.paymentState,
-      'paid_amount': draft.paidAmount.toStringAsFixed(2),
-      'place_of_supply_state_code': resolvedStateCode,
+      'invoice_datetime': prepared.invoiceDatetime,
+      'invoice_date': prepared.invoiceDate,
+      'payment_state': prepared.paymentState,
+      'paid_amount': _normalizeDecimal(prepared.paidAmount),
+      'place_of_supply_state_code': prepared.placeOfSupplyStateCode,
       'notes': _emptyToNull(draft.notes),
-      'items': draft.items
-          .map((item) => <String, dynamic>{
-                'product_id': item.product?.id,
-                'quantity': item.quantity.toStringAsFixed(3),
-                'pricing_mode': item.pricingMode,
-                'unit_price': (item.unitPrice ?? 0).toStringAsFixed(2),
-                'gst_rate': (item.gstRate ?? 0).toStringAsFixed(2),
-                'discount_percent': item.discountPercent.toStringAsFixed(2),
+      'items': prepared.lines
+          .map((line) => <String, dynamic>{
+                'product_id': line.product.id,
+                'quantity': _normalizeDecimal(line.item.quantity),
+                'pricing_mode': line.item.pricingMode,
+                'unit_price': _normalizeDecimal(line.enteredUnitPrice),
+                'gst_rate': _normalizeDecimal(line.gstRate),
+                'discount_percent': _normalizeDecimal(line.discountPercent),
               })
           .toList(),
     };
     return _hash(payload);
+  }
+
+  ApiError _validationError(String message) {
+    return ApiError(
+      code: 'VALIDATION_ERROR',
+      message: message,
+      statusCode: 400,
+    );
   }
 
   String _hash(Map<String, dynamic> payload) {
@@ -932,9 +1012,37 @@ class LocalInvoicesService implements InvoicesService {
     return _GstRates(cgst: cgst, sgst: _roundRate(normalized - cgst), igst: 0);
   }
 
-  double _roundMoney(double value) => (value * 100).round() / 100;
+  double _roundMoney(double value) => _roundHalfUp(value, 2);
 
-  double _roundRate(double value) => (value * 100).round() / 100;
+  double _roundRate(double value) => _roundHalfUp(value, 2);
+
+  double _roundHalfUp(double value, int places) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    final negative = value < 0;
+    final text = value.abs().toStringAsFixed(places + 6);
+    final parts = text.split('.');
+    final whole = int.parse(parts.first);
+    final fraction = parts.length == 1 ? '' : parts.last;
+    final kept = fraction.padRight(places, '0').substring(0, places);
+    final nextDigit =
+        fraction.length > places ? int.parse(fraction[places]) : 0;
+    var scaled = whole * _pow10(places) + int.parse(kept.isEmpty ? '0' : kept);
+    if (nextDigit >= 5) {
+      scaled += 1;
+    }
+    final rounded = scaled / _pow10(places);
+    return negative ? -rounded : rounded;
+  }
+
+  int _pow10(int exponent) {
+    var result = 1;
+    for (var index = 0; index < exponent; index += 1) {
+      result *= 10;
+    }
+    return result;
+  }
 
   String _normalizeDecimal(double value) {
     if (!value.isFinite) {
