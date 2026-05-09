@@ -1,4 +1,5 @@
 import argparse
+import uuid
 from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid5
@@ -65,6 +66,75 @@ def _ensure_product(session, payload: ProductCreateRequest, current_user: Curren
     return product_service.create_product(session, payload, current_user)
 
 
+def _demo_product_payloads() -> dict[str, ProductCreateRequest]:
+    return {
+        "PEN-001": ProductCreateRequest(
+            company_name="Camlin",
+            category="Pens",
+            item_name="Blue Ball Pen",
+            item_number="PEN-001",
+            buying_price=Decimal("9.44"),
+            selling_price=Decimal("14.16"),
+            gst_rate=Decimal("18.00"),
+            quantity_on_hand=Decimal("120.000"),
+            low_stock_threshold=Decimal("20.000"),
+        ),
+        "NOTE-001": ProductCreateRequest(
+            company_name="Navneet",
+            category="Notebooks",
+            item_name="A5 Notebook",
+            item_number="NOTE-001",
+            buying_price=Decimal("42.56"),
+            selling_price=Decimal("61.60"),
+            gst_rate=Decimal("12.00"),
+            quantity_on_hand=Decimal("80.000"),
+            low_stock_threshold=Decimal("15.000"),
+        ),
+        "MRK-001": ProductCreateRequest(
+            company_name="Camlin",
+            category="Markers",
+            item_name="Permanent Marker Black",
+            item_number="MRK-001",
+            buying_price=Decimal("28.32"),
+            selling_price=Decimal("41.30"),
+            gst_rate=Decimal("18.00"),
+            quantity_on_hand=Decimal("18.000"),
+            low_stock_threshold=Decimal("12.000"),
+        ),
+        "FILE-001": ProductCreateRequest(
+            company_name="Solo",
+            category="Files",
+            item_name="Plastic Document File",
+            item_number="FILE-001",
+            buying_price=Decimal("17.70"),
+            selling_price=Decimal("25.96"),
+            gst_rate=Decimal("18.00"),
+            quantity_on_hand=Decimal("45.000"),
+            low_stock_threshold=Decimal("10.000"),
+        ),
+    }
+
+
+def _demo_invoice_line_payloads(products: dict[str, ProductCreateRequest | Product]) -> dict[str, InvoiceLineRequest]:
+    placeholder_product_id = uuid.UUID("00000000-0000-0000-0000-000000000000")
+    return {
+        item_number: InvoiceLineRequest(
+            product_id=product.id if isinstance(product, Product) else placeholder_product_id,
+            quantity=quantity,
+            pricing_mode="TAX_INCLUSIVE",
+            unit_price=product.selling_price,
+            gst_rate=product.gst_rate,
+            discount_percent=discount_percent,
+        )
+        for item_number, product, quantity, discount_percent in [
+            ("PEN-001", products["PEN-001"], Decimal("10.000"), Decimal("0.00")),
+            ("NOTE-001", products["NOTE-001"], Decimal("5.000"), Decimal("5.00")),
+            ("FILE-001", products["FILE-001"], Decimal("12.000"), Decimal("0.00")),
+            ("MRK-001", products["MRK-001"], Decimal("8.000"), Decimal("0.00")),
+        ]
+    }
+
+
 def seed_demo_data(*, username: str) -> dict[str, int]:
     session = get_session_factory()()
     try:
@@ -107,68 +177,8 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
             ),
         }
 
-        products = {
-            "PEN-001": _ensure_product(
-                session,
-                ProductCreateRequest(
-                    company_name="Camlin",
-                    category="Pens",
-                    item_name="Blue Ball Pen",
-                    item_number="PEN-001",
-                    buying_price=Decimal("8.00"),
-                    selling_price=Decimal("12.00"),
-                    gst_rate=Decimal("18.00"),
-                    quantity_on_hand=Decimal("120.000"),
-                    low_stock_threshold=Decimal("20.000"),
-                ),
-                current_user,
-            ),
-            "NOTE-001": _ensure_product(
-                session,
-                ProductCreateRequest(
-                    company_name="Navneet",
-                    category="Notebooks",
-                    item_name="A5 Notebook",
-                    item_number="NOTE-001",
-                    buying_price=Decimal("38.00"),
-                    selling_price=Decimal("55.00"),
-                    gst_rate=Decimal("12.00"),
-                    quantity_on_hand=Decimal("80.000"),
-                    low_stock_threshold=Decimal("15.000"),
-                ),
-                current_user,
-            ),
-            "MRK-001": _ensure_product(
-                session,
-                ProductCreateRequest(
-                    company_name="Camlin",
-                    category="Markers",
-                    item_name="Permanent Marker Black",
-                    item_number="MRK-001",
-                    buying_price=Decimal("24.00"),
-                    selling_price=Decimal("35.00"),
-                    gst_rate=Decimal("18.00"),
-                    quantity_on_hand=Decimal("18.000"),
-                    low_stock_threshold=Decimal("12.000"),
-                ),
-                current_user,
-            ),
-            "FILE-001": _ensure_product(
-                session,
-                ProductCreateRequest(
-                    company_name="Solo",
-                    category="Files",
-                    item_name="Plastic Document File",
-                    item_number="FILE-001",
-                    buying_price=Decimal("15.00"),
-                    selling_price=Decimal("22.00"),
-                    gst_rate=Decimal("18.00"),
-                    quantity_on_hand=Decimal("45.000"),
-                    low_stock_threshold=Decimal("10.000"),
-                ),
-                current_user,
-            ),
-        }
+        products = {item_number: _ensure_product(session, payload, current_user) for item_number, payload in _demo_product_payloads().items()}
+        invoice_lines = _demo_invoice_line_payloads(products)
 
         seller_service.create_opening_balance(
             session,
@@ -200,22 +210,8 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 invoice_date=date(2026, 4, 19),
                 payment_mode="CREDIT",
                 items=[
-                    InvoiceLineRequest(
-                        product_id=products["PEN-001"].id,
-                        quantity=Decimal("10.000"),
-                        pricing_mode="PRE_TAX",
-                        unit_price=Decimal("12.00"),
-                        gst_rate=Decimal("18.00"),
-                        discount_percent=Decimal("0.00"),
-                    ),
-                    InvoiceLineRequest(
-                        product_id=products["NOTE-001"].id,
-                        quantity=Decimal("5.000"),
-                        pricing_mode="PRE_TAX",
-                        unit_price=Decimal("55.00"),
-                        gst_rate=Decimal("12.00"),
-                        discount_percent=Decimal("5.00"),
-                    ),
+                    invoice_lines["PEN-001"],
+                    invoice_lines["NOTE-001"],
                 ],
                 place_of_supply_state_code="27",
                 notes="Demo credit sale inside Maharashtra",
@@ -231,14 +227,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 invoice_date=date(2026, 4, 21),
                 payment_mode="PAID",
                 items=[
-                    InvoiceLineRequest(
-                        product_id=products["FILE-001"].id,
-                        quantity=Decimal("12.000"),
-                        pricing_mode="PRE_TAX",
-                        unit_price=Decimal("22.00"),
-                        gst_rate=Decimal("18.00"),
-                        discount_percent=Decimal("0.00"),
-                    ),
+                    invoice_lines["FILE-001"],
                 ],
                 place_of_supply_state_code="27",
                 notes="Demo paid invoice",
@@ -254,14 +243,7 @@ def seed_demo_data(*, username: str) -> dict[str, int]:
                 invoice_date=date(2026, 4, 22),
                 payment_mode="CREDIT",
                 items=[
-                    InvoiceLineRequest(
-                        product_id=products["MRK-001"].id,
-                        quantity=Decimal("8.000"),
-                        pricing_mode="PRE_TAX",
-                        unit_price=Decimal("35.00"),
-                        gst_rate=Decimal("18.00"),
-                        discount_percent=Decimal("0.00"),
-                    ),
+                    invoice_lines["MRK-001"],
                 ],
                 place_of_supply_state_code="29",
                 notes="Demo interstate credit invoice",
