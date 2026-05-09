@@ -1,11 +1,14 @@
 from decimal import Decimal
+import inspect
 
 import pytest
 
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
 from app.models.customer_transaction import CustomerTransaction
+from app.routers import invoices
 from app.schemas.invoice import InvoiceLineRequest
+from app.services import invoice_service
 
 
 pytestmark = pytest.mark.no_db
@@ -55,3 +58,13 @@ def test_customer_transaction_shape_allows_invoice_linked_collection_and_reversa
     assert "COLLECTION" in shape_sql
     assert "COLLECTION_REVERSAL" in shape_sql
     assert "invoice_id IS NOT NULL" in shape_sql
+
+
+def test_invoice_list_api_and_service_expose_payment_state_filter_not_payment_mode():
+    router_signature = inspect.signature(invoices.list_invoices)
+    service_signature = inspect.signature(invoice_service.list_invoices)
+
+    assert "payment_state" in router_signature.parameters
+    assert "payment_state" in service_signature.parameters
+    assert "payment_mode" not in router_signature.parameters
+    assert "payment_mode" not in service_signature.parameters
