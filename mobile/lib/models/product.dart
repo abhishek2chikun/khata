@@ -1,39 +1,67 @@
 class Product {
   const Product({
     required this.id,
-    required this.company,
+    String? companyName,
+    String? company,
     required this.category,
     required this.itemName,
-    required this.itemCode,
-    required this.defaultSellingPriceExclTax,
-    required this.defaultGstRate,
+    String? itemNumber,
+    String? itemCode,
+    double? buyingPrice,
+    double? sellingPrice,
+    double? defaultSellingPriceExclTax,
+    this.unit,
+    double? gstRate,
+    double? defaultGstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
     required this.isActive,
-  });
+  })  : companyName = companyName ?? company ?? '',
+        itemNumber = itemNumber ?? itemCode ?? '',
+        buyingPrice =
+            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        gstRate = gstRate ?? defaultGstRate ?? 0;
 
   final String id;
-  final String company;
+  final String companyName;
   final String category;
   final String itemName;
-  final String itemCode;
-  final double defaultSellingPriceExclTax;
-  final double defaultGstRate;
+  final String itemNumber;
+  final double buyingPrice;
+  final double sellingPrice;
+  final String? unit;
+  final double gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
   final bool isActive;
+
+  String get company => companyName;
+  String get itemCode => itemNumber;
+  double get defaultSellingPriceExclTax => sellingPrice;
+  double get defaultGstRate => gstRate;
 
   bool get isLowStock => quantityOnHand <= lowStockThreshold;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'].toString(),
-      company: json['company'] as String? ?? '',
+      companyName:
+          json['company_name'] as String? ?? json['company'] as String? ?? '',
       category: json['category'] as String? ?? '',
       itemName: json['item_name'] as String? ?? '',
-      itemCode: json['item_code'] as String? ?? '',
-      defaultSellingPriceExclTax: _toDouble(json['default_selling_price_excl_tax']),
-      defaultGstRate: _toDouble(json['default_gst_rate']),
+      itemNumber:
+          json['item_number'] as String? ?? json['item_code'] as String? ?? '',
+      buyingPrice: _toDouble(
+        json['buying_price'] ??
+            json['buying_price_excl_tax'] ??
+            json['default_selling_price_excl_tax'],
+      ),
+      sellingPrice: _toDouble(
+        json['selling_price'] ?? json['default_selling_price_excl_tax'],
+      ),
+      unit: json['unit'] as String?,
+      gstRate: _toDouble(json['gst_rate'] ?? json['default_gst_rate']),
       quantityOnHand: _toDouble(json['quantity_on_hand']),
       lowStockThreshold: _toDouble(json['low_stock_threshold']),
       isActive: json['is_active'] as bool? ?? true,

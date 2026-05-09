@@ -5,14 +5,16 @@ import 'api_client.dart';
 
 class ProductFilter {
   const ProductFilter({
-    this.company,
+    String? companyName,
+    String? company,
     this.category,
     this.search,
     this.active,
     this.lowStockOnly,
-  });
+  }) : companyName = companyName ?? company;
 
-  final String? company;
+  final String? companyName;
+  String? get company => companyName;
   final String? category;
   final String? search;
   final bool? active;
@@ -21,6 +23,7 @@ class ProductFilter {
   Map<String, String?> toQueryParameters() {
     return <String, String?>{
       'company': company,
+      'company_name': companyName,
       'category': category,
       'search': search,
       'active': active == null ? null : active.toString(),
@@ -31,33 +34,52 @@ class ProductFilter {
 
 class CreateProductInput {
   const CreateProductInput({
-    required this.company,
+    String? companyName,
+    String? company,
     required this.category,
     required this.itemName,
-    required this.itemCode,
-    required this.defaultSellingPriceExclTax,
-    required this.defaultGstRate,
+    String? itemNumber,
+    String? itemCode,
+    double? buyingPrice,
+    double? sellingPrice,
+    double? defaultSellingPriceExclTax,
+    this.unit,
+    double? gstRate,
+    double? defaultGstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
-  });
+  })  : companyName = companyName ?? company ?? '',
+        itemNumber = itemNumber ?? itemCode ?? '',
+        buyingPrice =
+            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        gstRate = gstRate ?? defaultGstRate ?? 0;
 
-  final String company;
+  final String companyName;
+  String get company => companyName;
   final String category;
   final String itemName;
-  final String itemCode;
-  final double defaultSellingPriceExclTax;
-  final double defaultGstRate;
+  final String itemNumber;
+  String get itemCode => itemNumber;
+  final double buyingPrice;
+  final double sellingPrice;
+  final String? unit;
+  final double gstRate;
+  double get defaultSellingPriceExclTax => sellingPrice;
+  double get defaultGstRate => gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'company': company,
+      'company_name': companyName,
       'category': category,
       'item_name': itemName,
-      'item_code': itemCode,
-      'default_selling_price_excl_tax': defaultSellingPriceExclTax,
-      'default_gst_rate': defaultGstRate,
+      'item_number': itemNumber,
+      'buying_price': buyingPrice,
+      'selling_price': sellingPrice,
+      'unit': unit,
+      'gst_rate': gstRate,
       'quantity_on_hand': quantityOnHand,
       'low_stock_threshold': lowStockThreshold,
     };
@@ -66,31 +88,50 @@ class CreateProductInput {
 
 class UpdateProductInput {
   const UpdateProductInput({
-    required this.company,
+    String? companyName,
+    String? company,
     required this.category,
     required this.itemName,
-    required this.itemCode,
-    required this.defaultSellingPriceExclTax,
-    required this.defaultGstRate,
+    String? itemNumber,
+    String? itemCode,
+    double? buyingPrice,
+    double? sellingPrice,
+    double? defaultSellingPriceExclTax,
+    this.unit,
+    double? gstRate,
+    double? defaultGstRate,
     required this.lowStockThreshold,
-  });
+  })  : companyName = companyName ?? company ?? '',
+        itemNumber = itemNumber ?? itemCode ?? '',
+        buyingPrice =
+            buyingPrice ?? sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        sellingPrice = sellingPrice ?? defaultSellingPriceExclTax ?? 0,
+        gstRate = gstRate ?? defaultGstRate ?? 0;
 
-  final String company;
+  final String companyName;
+  String get company => companyName;
   final String category;
   final String itemName;
-  final String itemCode;
-  final double defaultSellingPriceExclTax;
-  final double defaultGstRate;
+  final String itemNumber;
+  String get itemCode => itemNumber;
+  final double buyingPrice;
+  final double sellingPrice;
+  final String? unit;
+  final double gstRate;
+  double get defaultSellingPriceExclTax => sellingPrice;
+  double get defaultGstRate => gstRate;
   final double lowStockThreshold;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'company': company,
+      'company_name': companyName,
       'category': category,
       'item_name': itemName,
-      'item_code': itemCode,
-      'default_selling_price_excl_tax': defaultSellingPriceExclTax,
-      'default_gst_rate': defaultGstRate,
+      'item_number': itemNumber,
+      'buying_price': buyingPrice,
+      'selling_price': sellingPrice,
+      'unit': unit,
+      'gst_rate': gstRate,
       'low_stock_threshold': lowStockThreshold,
     };
   }
@@ -101,7 +142,8 @@ abstract class ProductsService {
 
   Future<Product> createProduct(CreateProductInput input);
 
-  Future<Product> updateProduct({required String id, required UpdateProductInput input});
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input});
 }
 
 class ApiProductsService implements ProductsService {
@@ -122,15 +164,14 @@ class ApiProductsService implements ProductsService {
       queryParameters: filter?.toQueryParameters(),
     );
     final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded
-        .cast<Map<String, dynamic>>()
-        .map(Product.fromJson)
-        .toList();
+    return decoded.cast<Map<String, dynamic>>().map(Product.fromJson).toList();
   }
 
   @override
-  Future<Product> updateProduct({required String id, required UpdateProductInput input}) async {
-    final response = await _apiClient.put('/products/$id', body: input.toJson());
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input}) async {
+    final response =
+        await _apiClient.put('/products/$id', body: input.toJson());
     return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 }

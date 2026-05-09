@@ -7,7 +7,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 1);
+    expect(database.schemaVersion, 2);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -32,14 +32,15 @@ void main() {
     expect(
         _columnNames(database, 'products'),
         containsAll(<String>[
-          'company',
-          'category',
+          'item_number',
           'item_name',
-          'item_code',
-          'buying_price_excl_tax',
-          'buying_gst_rate',
-          'default_selling_price_excl_tax',
-          'default_gst_rate',
+          'category',
+          'buyer_id',
+          'company_name',
+          'buying_price',
+          'selling_price',
+          'unit',
+          'gst_rate',
           'quantity_on_hand',
           'low_stock_threshold',
           'is_active',
@@ -103,6 +104,47 @@ void main() {
         ]));
   });
 
+  test('products table exposes canonical V2 columns and constraints', () async {
+    final database = LocalDatabase.memory();
+    addTearDown(database.close);
+
+    expect(
+        _columnNames(database, 'products'),
+        containsAll(<String>[
+          'item_number',
+          'item_name',
+          'category',
+          'buyer_id',
+          'company_name',
+          'buying_price',
+          'selling_price',
+          'unit',
+          'gst_rate',
+          'quantity_on_hand',
+          'low_stock_threshold',
+          'is_active',
+          'created_at',
+          'updated_at',
+        ]));
+    _expectRequired(database, 'products', 'item_number');
+    _expectRequired(database, 'products', 'company_name');
+    _expectRequired(database, 'products', 'buying_price');
+    _expectRequired(database, 'products', 'selling_price');
+    _expectRequired(database, 'products', 'gst_rate');
+    _expectNullable(database, 'products', 'unit');
+
+    final productTable = database.allTables
+        .singleWhere((table) => table.actualTableName == 'products');
+    final uniqueKeys = productTable.uniqueKeys
+        .map((key) => key.map((column) => column.$name).toSet())
+        .toList();
+    expect(uniqueKeys, contains(equals(<String>{'item_number'})));
+    expect(
+      uniqueKeys,
+      contains(equals(<String>{'company_name', 'item_name', 'category'})),
+    );
+  });
+
   test('backup settings stores automatic backup flag and daily time', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
@@ -118,11 +160,13 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    _expectRequired(database, 'products', 'company');
+    _expectRequired(database, 'products', 'company_name');
     _expectRequired(database, 'products', 'category');
-    _expectRequired(database, 'products', 'item_code');
-    _expectNullable(database, 'products', 'buying_price_excl_tax');
-    _expectNullable(database, 'products', 'buying_gst_rate');
+    _expectRequired(database, 'products', 'item_number');
+    _expectRequired(database, 'products', 'buying_price');
+    _expectRequired(database, 'products', 'selling_price');
+    _expectRequired(database, 'products', 'gst_rate');
+    _expectNullable(database, 'products', 'unit');
 
     _expectRequired(database, 'sellers', 'address');
     _expectRequired(database, 'company_profiles', 'address');

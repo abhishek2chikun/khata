@@ -498,17 +498,11 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _companyMeta =
-      const VerificationMeta('company');
+  static const VerificationMeta _itemNumberMeta =
+      const VerificationMeta('itemNumber');
   @override
-  late final GeneratedColumn<String> company = GeneratedColumn<String>(
-      'company', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _categoryMeta =
-      const VerificationMeta('category');
-  @override
-  late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, false,
+  late final GeneratedColumn<String> itemNumber = GeneratedColumn<String>(
+      'item_number', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _itemNameMeta =
       const VerificationMeta('itemName');
@@ -516,36 +510,46 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   late final GeneratedColumn<String> itemName = GeneratedColumn<String>(
       'item_name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _itemCodeMeta =
-      const VerificationMeta('itemCode');
+  static const VerificationMeta _categoryMeta =
+      const VerificationMeta('category');
   @override
-  late final GeneratedColumn<String> itemCode = GeneratedColumn<String>(
-      'item_code', aliasedName, false,
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+      'category', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _buyingPriceExclTaxMeta =
-      const VerificationMeta('buyingPriceExclTax');
+  static const VerificationMeta _buyerIdMeta =
+      const VerificationMeta('buyerId');
   @override
-  late final GeneratedColumn<String> buyingPriceExclTax =
-      GeneratedColumn<String>('buying_price_excl_tax', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _buyingGstRateMeta =
-      const VerificationMeta('buyingGstRate');
-  @override
-  late final GeneratedColumn<String> buyingGstRate = GeneratedColumn<String>(
-      'buying_gst_rate', aliasedName, true,
+  late final GeneratedColumn<String> buyerId = GeneratedColumn<String>(
+      'buyer_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _defaultSellingPriceExclTaxMeta =
-      const VerificationMeta('defaultSellingPriceExclTax');
+  static const VerificationMeta _companyNameMeta =
+      const VerificationMeta('companyName');
   @override
-  late final GeneratedColumn<String> defaultSellingPriceExclTax =
-      GeneratedColumn<String>(
-          'default_selling_price_excl_tax', aliasedName, false,
-          type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _defaultGstRateMeta =
-      const VerificationMeta('defaultGstRate');
+  late final GeneratedColumn<String> companyName = GeneratedColumn<String>(
+      'company_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _buyingPriceMeta =
+      const VerificationMeta('buyingPrice');
   @override
-  late final GeneratedColumn<String> defaultGstRate = GeneratedColumn<String>(
-      'default_gst_rate', aliasedName, false,
+  late final GeneratedColumn<String> buyingPrice = GeneratedColumn<String>(
+      'buying_price', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sellingPriceMeta =
+      const VerificationMeta('sellingPrice');
+  @override
+  late final GeneratedColumn<String> sellingPrice = GeneratedColumn<String>(
+      'selling_price', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+      'unit', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _gstRateMeta =
+      const VerificationMeta('gstRate');
+  @override
+  late final GeneratedColumn<String> gstRate = GeneratedColumn<String>(
+      'gst_rate', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _quantityOnHandMeta =
       const VerificationMeta('quantityOnHand');
@@ -584,14 +588,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   @override
   List<GeneratedColumn> get $columns => [
         id,
-        company,
-        category,
+        itemNumber,
         itemName,
-        itemCode,
-        buyingPriceExclTax,
-        buyingGstRate,
-        defaultSellingPriceExclTax,
-        defaultGstRate,
+        category,
+        buyerId,
+        companyName,
+        buyingPrice,
+        sellingPrice,
+        unit,
+        gstRate,
         quantityOnHand,
         lowStockThreshold,
         isActive,
@@ -613,17 +618,13 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('company')) {
-      context.handle(_companyMeta,
-          company.isAcceptableOrUnknown(data['company']!, _companyMeta));
+    if (data.containsKey('item_number')) {
+      context.handle(
+          _itemNumberMeta,
+          itemNumber.isAcceptableOrUnknown(
+              data['item_number']!, _itemNumberMeta));
     } else if (isInserting) {
-      context.missing(_companyMeta);
-    }
-    if (data.containsKey('category')) {
-      context.handle(_categoryMeta,
-          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
-    } else if (isInserting) {
-      context.missing(_categoryMeta);
+      context.missing(_itemNumberMeta);
     }
     if (data.containsKey('item_name')) {
       context.handle(_itemNameMeta,
@@ -631,40 +632,49 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     } else if (isInserting) {
       context.missing(_itemNameMeta);
     }
-    if (data.containsKey('item_code')) {
-      context.handle(_itemCodeMeta,
-          itemCode.isAcceptableOrUnknown(data['item_code']!, _itemCodeMeta));
+    if (data.containsKey('category')) {
+      context.handle(_categoryMeta,
+          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
     } else if (isInserting) {
-      context.missing(_itemCodeMeta);
+      context.missing(_categoryMeta);
     }
-    if (data.containsKey('buying_price_excl_tax')) {
-      context.handle(
-          _buyingPriceExclTaxMeta,
-          buyingPriceExclTax.isAcceptableOrUnknown(
-              data['buying_price_excl_tax']!, _buyingPriceExclTaxMeta));
+    if (data.containsKey('buyer_id')) {
+      context.handle(_buyerIdMeta,
+          buyerId.isAcceptableOrUnknown(data['buyer_id']!, _buyerIdMeta));
     }
-    if (data.containsKey('buying_gst_rate')) {
+    if (data.containsKey('company_name')) {
       context.handle(
-          _buyingGstRateMeta,
-          buyingGstRate.isAcceptableOrUnknown(
-              data['buying_gst_rate']!, _buyingGstRateMeta));
-    }
-    if (data.containsKey('default_selling_price_excl_tax')) {
-      context.handle(
-          _defaultSellingPriceExclTaxMeta,
-          defaultSellingPriceExclTax.isAcceptableOrUnknown(
-              data['default_selling_price_excl_tax']!,
-              _defaultSellingPriceExclTaxMeta));
+          _companyNameMeta,
+          companyName.isAcceptableOrUnknown(
+              data['company_name']!, _companyNameMeta));
     } else if (isInserting) {
-      context.missing(_defaultSellingPriceExclTaxMeta);
+      context.missing(_companyNameMeta);
     }
-    if (data.containsKey('default_gst_rate')) {
+    if (data.containsKey('buying_price')) {
       context.handle(
-          _defaultGstRateMeta,
-          defaultGstRate.isAcceptableOrUnknown(
-              data['default_gst_rate']!, _defaultGstRateMeta));
+          _buyingPriceMeta,
+          buyingPrice.isAcceptableOrUnknown(
+              data['buying_price']!, _buyingPriceMeta));
     } else if (isInserting) {
-      context.missing(_defaultGstRateMeta);
+      context.missing(_buyingPriceMeta);
+    }
+    if (data.containsKey('selling_price')) {
+      context.handle(
+          _sellingPriceMeta,
+          sellingPrice.isAcceptableOrUnknown(
+              data['selling_price']!, _sellingPriceMeta));
+    } else if (isInserting) {
+      context.missing(_sellingPriceMeta);
+    }
+    if (data.containsKey('unit')) {
+      context.handle(
+          _unitMeta, unit.isAcceptableOrUnknown(data['unit']!, _unitMeta));
+    }
+    if (data.containsKey('gst_rate')) {
+      context.handle(_gstRateMeta,
+          gstRate.isAcceptableOrUnknown(data['gst_rate']!, _gstRateMeta));
+    } else if (isInserting) {
+      context.missing(_gstRateMeta);
     }
     if (data.containsKey('quantity_on_hand')) {
       context.handle(
@@ -705,8 +715,8 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-        {company, category, itemName},
-        {itemCode},
+        {itemNumber},
+        {companyName, itemName, category},
       ];
   @override
   Product map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -714,23 +724,24 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     return Product(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      company: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}company'])!,
-      category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      itemNumber: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}item_number'])!,
       itemName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}item_name'])!,
-      itemCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}item_code'])!,
-      buyingPriceExclTax: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}buying_price_excl_tax']),
-      buyingGstRate: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}buying_gst_rate']),
-      defaultSellingPriceExclTax: attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}default_selling_price_excl_tax'])!,
-      defaultGstRate: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}default_gst_rate'])!,
+      category: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      buyerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buyer_id']),
+      companyName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}company_name'])!,
+      buyingPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buying_price'])!,
+      sellingPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}selling_price'])!,
+      unit: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}unit']),
+      gstRate: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}gst_rate'])!,
       quantityOnHand: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}quantity_on_hand'])!,
       lowStockThreshold: attachedDatabase.typeMapping.read(
@@ -752,14 +763,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
 
 class Product extends DataClass implements Insertable<Product> {
   final String id;
-  final String company;
-  final String category;
+  final String itemNumber;
   final String itemName;
-  final String itemCode;
-  final String? buyingPriceExclTax;
-  final String? buyingGstRate;
-  final String defaultSellingPriceExclTax;
-  final String defaultGstRate;
+  final String category;
+  final String? buyerId;
+  final String companyName;
+  final String buyingPrice;
+  final String sellingPrice;
+  final String? unit;
+  final String gstRate;
   final String quantityOnHand;
   final String lowStockThreshold;
   final bool isActive;
@@ -767,14 +779,15 @@ class Product extends DataClass implements Insertable<Product> {
   final String updatedAt;
   const Product(
       {required this.id,
-      required this.company,
-      required this.category,
+      required this.itemNumber,
       required this.itemName,
-      required this.itemCode,
-      this.buyingPriceExclTax,
-      this.buyingGstRate,
-      required this.defaultSellingPriceExclTax,
-      required this.defaultGstRate,
+      required this.category,
+      this.buyerId,
+      required this.companyName,
+      required this.buyingPrice,
+      required this.sellingPrice,
+      this.unit,
+      required this.gstRate,
       required this.quantityOnHand,
       required this.lowStockThreshold,
       required this.isActive,
@@ -784,19 +797,19 @@ class Product extends DataClass implements Insertable<Product> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['company'] = Variable<String>(company);
-    map['category'] = Variable<String>(category);
+    map['item_number'] = Variable<String>(itemNumber);
     map['item_name'] = Variable<String>(itemName);
-    map['item_code'] = Variable<String>(itemCode);
-    if (!nullToAbsent || buyingPriceExclTax != null) {
-      map['buying_price_excl_tax'] = Variable<String>(buyingPriceExclTax);
+    map['category'] = Variable<String>(category);
+    if (!nullToAbsent || buyerId != null) {
+      map['buyer_id'] = Variable<String>(buyerId);
     }
-    if (!nullToAbsent || buyingGstRate != null) {
-      map['buying_gst_rate'] = Variable<String>(buyingGstRate);
+    map['company_name'] = Variable<String>(companyName);
+    map['buying_price'] = Variable<String>(buyingPrice);
+    map['selling_price'] = Variable<String>(sellingPrice);
+    if (!nullToAbsent || unit != null) {
+      map['unit'] = Variable<String>(unit);
     }
-    map['default_selling_price_excl_tax'] =
-        Variable<String>(defaultSellingPriceExclTax);
-    map['default_gst_rate'] = Variable<String>(defaultGstRate);
+    map['gst_rate'] = Variable<String>(gstRate);
     map['quantity_on_hand'] = Variable<String>(quantityOnHand);
     map['low_stock_threshold'] = Variable<String>(lowStockThreshold);
     map['is_active'] = Variable<bool>(isActive);
@@ -808,18 +821,17 @@ class Product extends DataClass implements Insertable<Product> {
   ProductsCompanion toCompanion(bool nullToAbsent) {
     return ProductsCompanion(
       id: Value(id),
-      company: Value(company),
-      category: Value(category),
+      itemNumber: Value(itemNumber),
       itemName: Value(itemName),
-      itemCode: Value(itemCode),
-      buyingPriceExclTax: buyingPriceExclTax == null && nullToAbsent
+      category: Value(category),
+      buyerId: buyerId == null && nullToAbsent
           ? const Value.absent()
-          : Value(buyingPriceExclTax),
-      buyingGstRate: buyingGstRate == null && nullToAbsent
-          ? const Value.absent()
-          : Value(buyingGstRate),
-      defaultSellingPriceExclTax: Value(defaultSellingPriceExclTax),
-      defaultGstRate: Value(defaultGstRate),
+          : Value(buyerId),
+      companyName: Value(companyName),
+      buyingPrice: Value(buyingPrice),
+      sellingPrice: Value(sellingPrice),
+      unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
+      gstRate: Value(gstRate),
       quantityOnHand: Value(quantityOnHand),
       lowStockThreshold: Value(lowStockThreshold),
       isActive: Value(isActive),
@@ -833,16 +845,15 @@ class Product extends DataClass implements Insertable<Product> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Product(
       id: serializer.fromJson<String>(json['id']),
-      company: serializer.fromJson<String>(json['company']),
-      category: serializer.fromJson<String>(json['category']),
+      itemNumber: serializer.fromJson<String>(json['itemNumber']),
       itemName: serializer.fromJson<String>(json['itemName']),
-      itemCode: serializer.fromJson<String>(json['itemCode']),
-      buyingPriceExclTax:
-          serializer.fromJson<String?>(json['buyingPriceExclTax']),
-      buyingGstRate: serializer.fromJson<String?>(json['buyingGstRate']),
-      defaultSellingPriceExclTax:
-          serializer.fromJson<String>(json['defaultSellingPriceExclTax']),
-      defaultGstRate: serializer.fromJson<String>(json['defaultGstRate']),
+      category: serializer.fromJson<String>(json['category']),
+      buyerId: serializer.fromJson<String?>(json['buyerId']),
+      companyName: serializer.fromJson<String>(json['companyName']),
+      buyingPrice: serializer.fromJson<String>(json['buyingPrice']),
+      sellingPrice: serializer.fromJson<String>(json['sellingPrice']),
+      unit: serializer.fromJson<String?>(json['unit']),
+      gstRate: serializer.fromJson<String>(json['gstRate']),
       quantityOnHand: serializer.fromJson<String>(json['quantityOnHand']),
       lowStockThreshold: serializer.fromJson<String>(json['lowStockThreshold']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -855,15 +866,15 @@ class Product extends DataClass implements Insertable<Product> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'company': serializer.toJson<String>(company),
-      'category': serializer.toJson<String>(category),
+      'itemNumber': serializer.toJson<String>(itemNumber),
       'itemName': serializer.toJson<String>(itemName),
-      'itemCode': serializer.toJson<String>(itemCode),
-      'buyingPriceExclTax': serializer.toJson<String?>(buyingPriceExclTax),
-      'buyingGstRate': serializer.toJson<String?>(buyingGstRate),
-      'defaultSellingPriceExclTax':
-          serializer.toJson<String>(defaultSellingPriceExclTax),
-      'defaultGstRate': serializer.toJson<String>(defaultGstRate),
+      'category': serializer.toJson<String>(category),
+      'buyerId': serializer.toJson<String?>(buyerId),
+      'companyName': serializer.toJson<String>(companyName),
+      'buyingPrice': serializer.toJson<String>(buyingPrice),
+      'sellingPrice': serializer.toJson<String>(sellingPrice),
+      'unit': serializer.toJson<String?>(unit),
+      'gstRate': serializer.toJson<String>(gstRate),
       'quantityOnHand': serializer.toJson<String>(quantityOnHand),
       'lowStockThreshold': serializer.toJson<String>(lowStockThreshold),
       'isActive': serializer.toJson<bool>(isActive),
@@ -874,14 +885,15 @@ class Product extends DataClass implements Insertable<Product> {
 
   Product copyWith(
           {String? id,
-          String? company,
-          String? category,
+          String? itemNumber,
           String? itemName,
-          String? itemCode,
-          Value<String?> buyingPriceExclTax = const Value.absent(),
-          Value<String?> buyingGstRate = const Value.absent(),
-          String? defaultSellingPriceExclTax,
-          String? defaultGstRate,
+          String? category,
+          Value<String?> buyerId = const Value.absent(),
+          String? companyName,
+          String? buyingPrice,
+          String? sellingPrice,
+          Value<String?> unit = const Value.absent(),
+          String? gstRate,
           String? quantityOnHand,
           String? lowStockThreshold,
           bool? isActive,
@@ -889,18 +901,15 @@ class Product extends DataClass implements Insertable<Product> {
           String? updatedAt}) =>
       Product(
         id: id ?? this.id,
-        company: company ?? this.company,
-        category: category ?? this.category,
+        itemNumber: itemNumber ?? this.itemNumber,
         itemName: itemName ?? this.itemName,
-        itemCode: itemCode ?? this.itemCode,
-        buyingPriceExclTax: buyingPriceExclTax.present
-            ? buyingPriceExclTax.value
-            : this.buyingPriceExclTax,
-        buyingGstRate:
-            buyingGstRate.present ? buyingGstRate.value : this.buyingGstRate,
-        defaultSellingPriceExclTax:
-            defaultSellingPriceExclTax ?? this.defaultSellingPriceExclTax,
-        defaultGstRate: defaultGstRate ?? this.defaultGstRate,
+        category: category ?? this.category,
+        buyerId: buyerId.present ? buyerId.value : this.buyerId,
+        companyName: companyName ?? this.companyName,
+        buyingPrice: buyingPrice ?? this.buyingPrice,
+        sellingPrice: sellingPrice ?? this.sellingPrice,
+        unit: unit.present ? unit.value : this.unit,
+        gstRate: gstRate ?? this.gstRate,
         quantityOnHand: quantityOnHand ?? this.quantityOnHand,
         lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
         isActive: isActive ?? this.isActive,
@@ -910,22 +919,20 @@ class Product extends DataClass implements Insertable<Product> {
   Product copyWithCompanion(ProductsCompanion data) {
     return Product(
       id: data.id.present ? data.id.value : this.id,
-      company: data.company.present ? data.company.value : this.company,
-      category: data.category.present ? data.category.value : this.category,
+      itemNumber:
+          data.itemNumber.present ? data.itemNumber.value : this.itemNumber,
       itemName: data.itemName.present ? data.itemName.value : this.itemName,
-      itemCode: data.itemCode.present ? data.itemCode.value : this.itemCode,
-      buyingPriceExclTax: data.buyingPriceExclTax.present
-          ? data.buyingPriceExclTax.value
-          : this.buyingPriceExclTax,
-      buyingGstRate: data.buyingGstRate.present
-          ? data.buyingGstRate.value
-          : this.buyingGstRate,
-      defaultSellingPriceExclTax: data.defaultSellingPriceExclTax.present
-          ? data.defaultSellingPriceExclTax.value
-          : this.defaultSellingPriceExclTax,
-      defaultGstRate: data.defaultGstRate.present
-          ? data.defaultGstRate.value
-          : this.defaultGstRate,
+      category: data.category.present ? data.category.value : this.category,
+      buyerId: data.buyerId.present ? data.buyerId.value : this.buyerId,
+      companyName:
+          data.companyName.present ? data.companyName.value : this.companyName,
+      buyingPrice:
+          data.buyingPrice.present ? data.buyingPrice.value : this.buyingPrice,
+      sellingPrice: data.sellingPrice.present
+          ? data.sellingPrice.value
+          : this.sellingPrice,
+      unit: data.unit.present ? data.unit.value : this.unit,
+      gstRate: data.gstRate.present ? data.gstRate.value : this.gstRate,
       quantityOnHand: data.quantityOnHand.present
           ? data.quantityOnHand.value
           : this.quantityOnHand,
@@ -942,14 +949,15 @@ class Product extends DataClass implements Insertable<Product> {
   String toString() {
     return (StringBuffer('Product(')
           ..write('id: $id, ')
-          ..write('company: $company, ')
-          ..write('category: $category, ')
+          ..write('itemNumber: $itemNumber, ')
           ..write('itemName: $itemName, ')
-          ..write('itemCode: $itemCode, ')
-          ..write('buyingPriceExclTax: $buyingPriceExclTax, ')
-          ..write('buyingGstRate: $buyingGstRate, ')
-          ..write('defaultSellingPriceExclTax: $defaultSellingPriceExclTax, ')
-          ..write('defaultGstRate: $defaultGstRate, ')
+          ..write('category: $category, ')
+          ..write('buyerId: $buyerId, ')
+          ..write('companyName: $companyName, ')
+          ..write('buyingPrice: $buyingPrice, ')
+          ..write('sellingPrice: $sellingPrice, ')
+          ..write('unit: $unit, ')
+          ..write('gstRate: $gstRate, ')
           ..write('quantityOnHand: $quantityOnHand, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('isActive: $isActive, ')
@@ -962,14 +970,15 @@ class Product extends DataClass implements Insertable<Product> {
   @override
   int get hashCode => Object.hash(
       id,
-      company,
-      category,
+      itemNumber,
       itemName,
-      itemCode,
-      buyingPriceExclTax,
-      buyingGstRate,
-      defaultSellingPriceExclTax,
-      defaultGstRate,
+      category,
+      buyerId,
+      companyName,
+      buyingPrice,
+      sellingPrice,
+      unit,
+      gstRate,
       quantityOnHand,
       lowStockThreshold,
       isActive,
@@ -980,14 +989,15 @@ class Product extends DataClass implements Insertable<Product> {
       identical(this, other) ||
       (other is Product &&
           other.id == this.id &&
-          other.company == this.company &&
-          other.category == this.category &&
+          other.itemNumber == this.itemNumber &&
           other.itemName == this.itemName &&
-          other.itemCode == this.itemCode &&
-          other.buyingPriceExclTax == this.buyingPriceExclTax &&
-          other.buyingGstRate == this.buyingGstRate &&
-          other.defaultSellingPriceExclTax == this.defaultSellingPriceExclTax &&
-          other.defaultGstRate == this.defaultGstRate &&
+          other.category == this.category &&
+          other.buyerId == this.buyerId &&
+          other.companyName == this.companyName &&
+          other.buyingPrice == this.buyingPrice &&
+          other.sellingPrice == this.sellingPrice &&
+          other.unit == this.unit &&
+          other.gstRate == this.gstRate &&
           other.quantityOnHand == this.quantityOnHand &&
           other.lowStockThreshold == this.lowStockThreshold &&
           other.isActive == this.isActive &&
@@ -997,14 +1007,15 @@ class Product extends DataClass implements Insertable<Product> {
 
 class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String> id;
-  final Value<String> company;
-  final Value<String> category;
+  final Value<String> itemNumber;
   final Value<String> itemName;
-  final Value<String> itemCode;
-  final Value<String?> buyingPriceExclTax;
-  final Value<String?> buyingGstRate;
-  final Value<String> defaultSellingPriceExclTax;
-  final Value<String> defaultGstRate;
+  final Value<String> category;
+  final Value<String?> buyerId;
+  final Value<String> companyName;
+  final Value<String> buyingPrice;
+  final Value<String> sellingPrice;
+  final Value<String?> unit;
+  final Value<String> gstRate;
   final Value<String> quantityOnHand;
   final Value<String> lowStockThreshold;
   final Value<bool> isActive;
@@ -1013,14 +1024,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> rowid;
   const ProductsCompanion({
     this.id = const Value.absent(),
-    this.company = const Value.absent(),
-    this.category = const Value.absent(),
+    this.itemNumber = const Value.absent(),
     this.itemName = const Value.absent(),
-    this.itemCode = const Value.absent(),
-    this.buyingPriceExclTax = const Value.absent(),
-    this.buyingGstRate = const Value.absent(),
-    this.defaultSellingPriceExclTax = const Value.absent(),
-    this.defaultGstRate = const Value.absent(),
+    this.category = const Value.absent(),
+    this.buyerId = const Value.absent(),
+    this.companyName = const Value.absent(),
+    this.buyingPrice = const Value.absent(),
+    this.sellingPrice = const Value.absent(),
+    this.unit = const Value.absent(),
+    this.gstRate = const Value.absent(),
     this.quantityOnHand = const Value.absent(),
     this.lowStockThreshold = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -1030,14 +1042,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   });
   ProductsCompanion.insert({
     required String id,
-    required String company,
-    required String category,
+    required String itemNumber,
     required String itemName,
-    required String itemCode,
-    this.buyingPriceExclTax = const Value.absent(),
-    this.buyingGstRate = const Value.absent(),
-    required String defaultSellingPriceExclTax,
-    required String defaultGstRate,
+    required String category,
+    this.buyerId = const Value.absent(),
+    required String companyName,
+    required String buyingPrice,
+    required String sellingPrice,
+    this.unit = const Value.absent(),
+    required String gstRate,
     required String quantityOnHand,
     required String lowStockThreshold,
     this.isActive = const Value.absent(),
@@ -1045,26 +1058,28 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required String updatedAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
-        company = Value(company),
-        category = Value(category),
+        itemNumber = Value(itemNumber),
         itemName = Value(itemName),
-        itemCode = Value(itemCode),
-        defaultSellingPriceExclTax = Value(defaultSellingPriceExclTax),
-        defaultGstRate = Value(defaultGstRate),
+        category = Value(category),
+        companyName = Value(companyName),
+        buyingPrice = Value(buyingPrice),
+        sellingPrice = Value(sellingPrice),
+        gstRate = Value(gstRate),
         quantityOnHand = Value(quantityOnHand),
         lowStockThreshold = Value(lowStockThreshold),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<Product> custom({
     Expression<String>? id,
-    Expression<String>? company,
-    Expression<String>? category,
+    Expression<String>? itemNumber,
     Expression<String>? itemName,
-    Expression<String>? itemCode,
-    Expression<String>? buyingPriceExclTax,
-    Expression<String>? buyingGstRate,
-    Expression<String>? defaultSellingPriceExclTax,
-    Expression<String>? defaultGstRate,
+    Expression<String>? category,
+    Expression<String>? buyerId,
+    Expression<String>? companyName,
+    Expression<String>? buyingPrice,
+    Expression<String>? sellingPrice,
+    Expression<String>? unit,
+    Expression<String>? gstRate,
     Expression<String>? quantityOnHand,
     Expression<String>? lowStockThreshold,
     Expression<bool>? isActive,
@@ -1074,16 +1089,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (company != null) 'company': company,
-      if (category != null) 'category': category,
+      if (itemNumber != null) 'item_number': itemNumber,
       if (itemName != null) 'item_name': itemName,
-      if (itemCode != null) 'item_code': itemCode,
-      if (buyingPriceExclTax != null)
-        'buying_price_excl_tax': buyingPriceExclTax,
-      if (buyingGstRate != null) 'buying_gst_rate': buyingGstRate,
-      if (defaultSellingPriceExclTax != null)
-        'default_selling_price_excl_tax': defaultSellingPriceExclTax,
-      if (defaultGstRate != null) 'default_gst_rate': defaultGstRate,
+      if (category != null) 'category': category,
+      if (buyerId != null) 'buyer_id': buyerId,
+      if (companyName != null) 'company_name': companyName,
+      if (buyingPrice != null) 'buying_price': buyingPrice,
+      if (sellingPrice != null) 'selling_price': sellingPrice,
+      if (unit != null) 'unit': unit,
+      if (gstRate != null) 'gst_rate': gstRate,
       if (quantityOnHand != null) 'quantity_on_hand': quantityOnHand,
       if (lowStockThreshold != null) 'low_stock_threshold': lowStockThreshold,
       if (isActive != null) 'is_active': isActive,
@@ -1095,14 +1109,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
 
   ProductsCompanion copyWith(
       {Value<String>? id,
-      Value<String>? company,
-      Value<String>? category,
+      Value<String>? itemNumber,
       Value<String>? itemName,
-      Value<String>? itemCode,
-      Value<String?>? buyingPriceExclTax,
-      Value<String?>? buyingGstRate,
-      Value<String>? defaultSellingPriceExclTax,
-      Value<String>? defaultGstRate,
+      Value<String>? category,
+      Value<String?>? buyerId,
+      Value<String>? companyName,
+      Value<String>? buyingPrice,
+      Value<String>? sellingPrice,
+      Value<String?>? unit,
+      Value<String>? gstRate,
       Value<String>? quantityOnHand,
       Value<String>? lowStockThreshold,
       Value<bool>? isActive,
@@ -1111,15 +1126,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       Value<int>? rowid}) {
     return ProductsCompanion(
       id: id ?? this.id,
-      company: company ?? this.company,
-      category: category ?? this.category,
+      itemNumber: itemNumber ?? this.itemNumber,
       itemName: itemName ?? this.itemName,
-      itemCode: itemCode ?? this.itemCode,
-      buyingPriceExclTax: buyingPriceExclTax ?? this.buyingPriceExclTax,
-      buyingGstRate: buyingGstRate ?? this.buyingGstRate,
-      defaultSellingPriceExclTax:
-          defaultSellingPriceExclTax ?? this.defaultSellingPriceExclTax,
-      defaultGstRate: defaultGstRate ?? this.defaultGstRate,
+      category: category ?? this.category,
+      buyerId: buyerId ?? this.buyerId,
+      companyName: companyName ?? this.companyName,
+      buyingPrice: buyingPrice ?? this.buyingPrice,
+      sellingPrice: sellingPrice ?? this.sellingPrice,
+      unit: unit ?? this.unit,
+      gstRate: gstRate ?? this.gstRate,
       quantityOnHand: quantityOnHand ?? this.quantityOnHand,
       lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
       isActive: isActive ?? this.isActive,
@@ -1135,30 +1150,32 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (company.present) {
-      map['company'] = Variable<String>(company.value);
-    }
-    if (category.present) {
-      map['category'] = Variable<String>(category.value);
+    if (itemNumber.present) {
+      map['item_number'] = Variable<String>(itemNumber.value);
     }
     if (itemName.present) {
       map['item_name'] = Variable<String>(itemName.value);
     }
-    if (itemCode.present) {
-      map['item_code'] = Variable<String>(itemCode.value);
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
     }
-    if (buyingPriceExclTax.present) {
-      map['buying_price_excl_tax'] = Variable<String>(buyingPriceExclTax.value);
+    if (buyerId.present) {
+      map['buyer_id'] = Variable<String>(buyerId.value);
     }
-    if (buyingGstRate.present) {
-      map['buying_gst_rate'] = Variable<String>(buyingGstRate.value);
+    if (companyName.present) {
+      map['company_name'] = Variable<String>(companyName.value);
     }
-    if (defaultSellingPriceExclTax.present) {
-      map['default_selling_price_excl_tax'] =
-          Variable<String>(defaultSellingPriceExclTax.value);
+    if (buyingPrice.present) {
+      map['buying_price'] = Variable<String>(buyingPrice.value);
     }
-    if (defaultGstRate.present) {
-      map['default_gst_rate'] = Variable<String>(defaultGstRate.value);
+    if (sellingPrice.present) {
+      map['selling_price'] = Variable<String>(sellingPrice.value);
+    }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
+    }
+    if (gstRate.present) {
+      map['gst_rate'] = Variable<String>(gstRate.value);
     }
     if (quantityOnHand.present) {
       map['quantity_on_hand'] = Variable<String>(quantityOnHand.value);
@@ -1185,14 +1202,15 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   String toString() {
     return (StringBuffer('ProductsCompanion(')
           ..write('id: $id, ')
-          ..write('company: $company, ')
-          ..write('category: $category, ')
+          ..write('itemNumber: $itemNumber, ')
           ..write('itemName: $itemName, ')
-          ..write('itemCode: $itemCode, ')
-          ..write('buyingPriceExclTax: $buyingPriceExclTax, ')
-          ..write('buyingGstRate: $buyingGstRate, ')
-          ..write('defaultSellingPriceExclTax: $defaultSellingPriceExclTax, ')
-          ..write('defaultGstRate: $defaultGstRate, ')
+          ..write('category: $category, ')
+          ..write('buyerId: $buyerId, ')
+          ..write('companyName: $companyName, ')
+          ..write('buyingPrice: $buyingPrice, ')
+          ..write('sellingPrice: $sellingPrice, ')
+          ..write('unit: $unit, ')
+          ..write('gstRate: $gstRate, ')
           ..write('quantityOnHand: $quantityOnHand, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('isActive: $isActive, ')
@@ -8583,14 +8601,15 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool localSessionsRefs})>;
 typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String id,
-  required String company,
-  required String category,
+  required String itemNumber,
   required String itemName,
-  required String itemCode,
-  Value<String?> buyingPriceExclTax,
-  Value<String?> buyingGstRate,
-  required String defaultSellingPriceExclTax,
-  required String defaultGstRate,
+  required String category,
+  Value<String?> buyerId,
+  required String companyName,
+  required String buyingPrice,
+  required String sellingPrice,
+  Value<String?> unit,
+  required String gstRate,
   required String quantityOnHand,
   required String lowStockThreshold,
   Value<bool> isActive,
@@ -8600,14 +8619,15 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
 });
 typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<String> id,
-  Value<String> company,
-  Value<String> category,
+  Value<String> itemNumber,
   Value<String> itemName,
-  Value<String> itemCode,
-  Value<String?> buyingPriceExclTax,
-  Value<String?> buyingGstRate,
-  Value<String> defaultSellingPriceExclTax,
-  Value<String> defaultGstRate,
+  Value<String> category,
+  Value<String?> buyerId,
+  Value<String> companyName,
+  Value<String> buyingPrice,
+  Value<String> sellingPrice,
+  Value<String?> unit,
+  Value<String> gstRate,
   Value<String> quantityOnHand,
   Value<String> lowStockThreshold,
   Value<bool> isActive,
@@ -8663,32 +8683,32 @@ class $$ProductsTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get company => $composableBuilder(
-      column: $table.company, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get itemNumber => $composableBuilder(
+      column: $table.itemNumber, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get itemName => $composableBuilder(
       column: $table.itemName, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get itemCode => $composableBuilder(
-      column: $table.itemCode, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get buyingPriceExclTax => $composableBuilder(
-      column: $table.buyingPriceExclTax,
-      builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get buyerId => $composableBuilder(
+      column: $table.buyerId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get buyingGstRate => $composableBuilder(
-      column: $table.buyingGstRate, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get companyName => $composableBuilder(
+      column: $table.companyName, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get defaultSellingPriceExclTax => $composableBuilder(
-      column: $table.defaultSellingPriceExclTax,
-      builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get defaultGstRate => $composableBuilder(
-      column: $table.defaultGstRate,
-      builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get unit => $composableBuilder(
+      column: $table.unit, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get gstRate => $composableBuilder(
+      column: $table.gstRate, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand,
@@ -8762,33 +8782,33 @@ class $$ProductsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get company => $composableBuilder(
-      column: $table.company, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get itemNumber => $composableBuilder(
+      column: $table.itemNumber, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get itemName => $composableBuilder(
       column: $table.itemName, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get itemCode => $composableBuilder(
-      column: $table.itemCode, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get buyingPriceExclTax => $composableBuilder(
-      column: $table.buyingPriceExclTax,
+  ColumnOrderings<String> get buyerId => $composableBuilder(
+      column: $table.buyerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get companyName => $composableBuilder(
+      column: $table.companyName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get buyingGstRate => $composableBuilder(
-      column: $table.buyingGstRate,
-      builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get unit => $composableBuilder(
+      column: $table.unit, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get defaultSellingPriceExclTax => $composableBuilder(
-      column: $table.defaultSellingPriceExclTax,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get defaultGstRate => $composableBuilder(
-      column: $table.defaultGstRate,
-      builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get gstRate => $composableBuilder(
+      column: $table.gstRate, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand,
@@ -8820,29 +8840,32 @@ class $$ProductsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get company =>
-      $composableBuilder(column: $table.company, builder: (column) => column);
-
-  GeneratedColumn<String> get category =>
-      $composableBuilder(column: $table.category, builder: (column) => column);
+  GeneratedColumn<String> get itemNumber => $composableBuilder(
+      column: $table.itemNumber, builder: (column) => column);
 
   GeneratedColumn<String> get itemName =>
       $composableBuilder(column: $table.itemName, builder: (column) => column);
 
-  GeneratedColumn<String> get itemCode =>
-      $composableBuilder(column: $table.itemCode, builder: (column) => column);
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
 
-  GeneratedColumn<String> get buyingPriceExclTax => $composableBuilder(
-      column: $table.buyingPriceExclTax, builder: (column) => column);
+  GeneratedColumn<String> get buyerId =>
+      $composableBuilder(column: $table.buyerId, builder: (column) => column);
 
-  GeneratedColumn<String> get buyingGstRate => $composableBuilder(
-      column: $table.buyingGstRate, builder: (column) => column);
+  GeneratedColumn<String> get companyName => $composableBuilder(
+      column: $table.companyName, builder: (column) => column);
 
-  GeneratedColumn<String> get defaultSellingPriceExclTax => $composableBuilder(
-      column: $table.defaultSellingPriceExclTax, builder: (column) => column);
+  GeneratedColumn<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => column);
 
-  GeneratedColumn<String> get defaultGstRate => $composableBuilder(
-      column: $table.defaultGstRate, builder: (column) => column);
+  GeneratedColumn<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice, builder: (column) => column);
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
+
+  GeneratedColumn<String> get gstRate =>
+      $composableBuilder(column: $table.gstRate, builder: (column) => column);
 
   GeneratedColumn<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand, builder: (column) => column);
@@ -8926,14 +8949,15 @@ class $$ProductsTableTableManager extends RootTableManager<
               $$ProductsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String> company = const Value.absent(),
-            Value<String> category = const Value.absent(),
+            Value<String> itemNumber = const Value.absent(),
             Value<String> itemName = const Value.absent(),
-            Value<String> itemCode = const Value.absent(),
-            Value<String?> buyingPriceExclTax = const Value.absent(),
-            Value<String?> buyingGstRate = const Value.absent(),
-            Value<String> defaultSellingPriceExclTax = const Value.absent(),
-            Value<String> defaultGstRate = const Value.absent(),
+            Value<String> category = const Value.absent(),
+            Value<String?> buyerId = const Value.absent(),
+            Value<String> companyName = const Value.absent(),
+            Value<String> buyingPrice = const Value.absent(),
+            Value<String> sellingPrice = const Value.absent(),
+            Value<String?> unit = const Value.absent(),
+            Value<String> gstRate = const Value.absent(),
             Value<String> quantityOnHand = const Value.absent(),
             Value<String> lowStockThreshold = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
@@ -8943,14 +8967,15 @@ class $$ProductsTableTableManager extends RootTableManager<
           }) =>
               ProductsCompanion(
             id: id,
-            company: company,
-            category: category,
+            itemNumber: itemNumber,
             itemName: itemName,
-            itemCode: itemCode,
-            buyingPriceExclTax: buyingPriceExclTax,
-            buyingGstRate: buyingGstRate,
-            defaultSellingPriceExclTax: defaultSellingPriceExclTax,
-            defaultGstRate: defaultGstRate,
+            category: category,
+            buyerId: buyerId,
+            companyName: companyName,
+            buyingPrice: buyingPrice,
+            sellingPrice: sellingPrice,
+            unit: unit,
+            gstRate: gstRate,
             quantityOnHand: quantityOnHand,
             lowStockThreshold: lowStockThreshold,
             isActive: isActive,
@@ -8960,14 +8985,15 @@ class $$ProductsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
-            required String company,
-            required String category,
+            required String itemNumber,
             required String itemName,
-            required String itemCode,
-            Value<String?> buyingPriceExclTax = const Value.absent(),
-            Value<String?> buyingGstRate = const Value.absent(),
-            required String defaultSellingPriceExclTax,
-            required String defaultGstRate,
+            required String category,
+            Value<String?> buyerId = const Value.absent(),
+            required String companyName,
+            required String buyingPrice,
+            required String sellingPrice,
+            Value<String?> unit = const Value.absent(),
+            required String gstRate,
             required String quantityOnHand,
             required String lowStockThreshold,
             Value<bool> isActive = const Value.absent(),
@@ -8977,14 +9003,15 @@ class $$ProductsTableTableManager extends RootTableManager<
           }) =>
               ProductsCompanion.insert(
             id: id,
-            company: company,
-            category: category,
+            itemNumber: itemNumber,
             itemName: itemName,
-            itemCode: itemCode,
-            buyingPriceExclTax: buyingPriceExclTax,
-            buyingGstRate: buyingGstRate,
-            defaultSellingPriceExclTax: defaultSellingPriceExclTax,
-            defaultGstRate: defaultGstRate,
+            category: category,
+            buyerId: buyerId,
+            companyName: companyName,
+            buyingPrice: buyingPrice,
+            sellingPrice: sellingPrice,
+            unit: unit,
+            gstRate: gstRate,
             quantityOnHand: quantityOnHand,
             lowStockThreshold: lowStockThreshold,
             isActive: isActive,

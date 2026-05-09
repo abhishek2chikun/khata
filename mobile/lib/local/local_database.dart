@@ -27,14 +27,15 @@ class LocalUsers extends Table {
 
 class Products extends Table {
   TextColumn get id => text()();
-  TextColumn get company => text()();
-  TextColumn get category => text()();
+  TextColumn get itemNumber => text()();
   TextColumn get itemName => text()();
-  TextColumn get itemCode => text()();
-  TextColumn get buyingPriceExclTax => text().nullable()();
-  TextColumn get buyingGstRate => text().nullable()();
-  TextColumn get defaultSellingPriceExclTax => text()();
-  TextColumn get defaultGstRate => text()();
+  TextColumn get category => text()();
+  TextColumn get buyerId => text().nullable()();
+  TextColumn get companyName => text()();
+  TextColumn get buyingPrice => text()();
+  TextColumn get sellingPrice => text()();
+  TextColumn get unit => text().nullable()();
+  TextColumn get gstRate => text()();
   TextColumn get quantityOnHand => text()();
   TextColumn get lowStockThreshold => text()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
@@ -46,8 +47,8 @@ class Products extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-        {company, category, itemName},
-        {itemCode},
+        {itemNumber},
+        {companyName, itemName, category},
       ];
 }
 
@@ -284,10 +285,74 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await customStatement('PRAGMA foreign_keys = OFF');
+            await customStatement('''
+              CREATE TABLE products_v2 (
+                id TEXT NOT NULL PRIMARY KEY,
+                item_number TEXT NOT NULL UNIQUE,
+                item_name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                buyer_id TEXT NULL,
+                company_name TEXT NOT NULL,
+                buying_price TEXT NOT NULL,
+                selling_price TEXT NOT NULL,
+                unit TEXT NULL,
+                gst_rate TEXT NOT NULL,
+                quantity_on_hand TEXT NOT NULL,
+                low_stock_threshold TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (company_name, item_name, category)
+              )
+            ''');
+            await customStatement('''
+              INSERT INTO products_v2 (
+                id,
+                item_number,
+                item_name,
+                category,
+                buyer_id,
+                company_name,
+                buying_price,
+                selling_price,
+                unit,
+                gst_rate,
+                quantity_on_hand,
+                low_stock_threshold,
+                is_active,
+                created_at,
+                updated_at
+              )
+              SELECT
+                id,
+                item_code,
+                item_name,
+                category,
+                NULL,
+                company,
+                COALESCE(buying_price_excl_tax, default_selling_price_excl_tax),
+                default_selling_price_excl_tax,
+                NULL,
+                default_gst_rate,
+                quantity_on_hand,
+                low_stock_threshold,
+                is_active,
+                created_at,
+                updated_at
+              FROM products
+            ''');
+            await customStatement('DROP TABLE products');
+            await customStatement('ALTER TABLE products_v2 RENAME TO products');
+            await customStatement('PRAGMA foreign_keys = ON');
+          }
+        },
         beforeOpen: (_) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
