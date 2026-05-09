@@ -288,6 +288,15 @@ Migration scripts must preserve IDs, ledger rows, invoice rows, invoice item ord
 | `low_stock_threshold` | `low_stock_threshold` | Copy directly with 3-decimal normalization. |
 | `is_active` | `is_active` | Copy directly. |
 
+### Invoice Payment Migration
+
+| Current `invoices.payment_mode` | Canonical fields | Migration rule |
+| --- | --- | --- |
+| `CREDIT` | `payment_state = CREDIT`, `paid_amount = 0.00` | Preserve the old credit-sale balance effect as one full `INVOICE_DEBIT` for `grand_total`. |
+| `PAID` | `payment_state = TOTAL_PAID`, `paid_amount = grand_total` | Preserve the old paid-sale balance effect as one full `INVOICE_DEBIT` for `grand_total` plus one full `COLLECTION_RECEIVED` for `grand_total` only when a matching payment/collection ledger row does not already exist. |
+
+There is no old `payment_mode` equivalent for `PARTIAL_PAID`; `PARTIAL_PAID` appears only on invoices created after the V2 schema is active. When migrating invoices and customer transactions together, migration must not duplicate ledger rows: existing matching seller/customer transaction rows are renamed and reused, and synthesized debit or collection rows are added only for missing invoice side effects required to preserve the pre-migration customer balance.
+
 ### Seller Transaction Entry-Type Migration
 
 | Current `seller_transactions.entry_type` | Canonical `customer_transactions.entry_type` | Migration rule |
