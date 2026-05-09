@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 4);
+    expect(database.schemaVersion, 5);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -98,7 +98,10 @@ void main() {
           'customer_name',
           'customer_state_code',
           'company_bank_ifsc',
+          'invoice_datetime',
           'tax_regime',
+          'payment_state',
+          'paid_amount',
           'discount_total',
           'taxable_total',
           'cancel_request_id',
@@ -111,6 +114,14 @@ void main() {
           'line_number',
           'product_name',
           'product_code',
+          'product_item_number',
+          'product_item_name',
+          'product_category',
+          'product_buyer_id',
+          'product_company_name',
+          'buying_price',
+          'selling_price',
+          'unit',
           'pricing_mode',
           'entered_unit_price',
           'unit_price_excl_tax',
@@ -286,6 +297,9 @@ void main() {
     _expectRequired(database, 'invoices', 'company_city');
     _expectRequired(database, 'invoices', 'company_state');
     _expectRequired(database, 'invoices', 'company_state_code');
+    _expectGeneratedRequired(database, 'invoices', 'invoice_datetime');
+    _expectGeneratedRequired(database, 'invoices', 'payment_state');
+    _expectGeneratedRequired(database, 'invoices', 'paid_amount');
     _expectRequired(database, 'invoices', 'payment_mode');
     expect(_column(database, 'invoices', 'invoice_number'),
         isA<GeneratedColumn<int>>());
@@ -296,6 +310,14 @@ void main() {
     _expectNullable(database, 'customer_transactions', 'request_hash');
 
     _expectRequired(database, 'invoice_items', 'product_code');
+    _expectGeneratedRequired(database, 'invoice_items', 'product_item_number');
+    _expectGeneratedRequired(database, 'invoice_items', 'product_item_name');
+    _expectGeneratedRequired(database, 'invoice_items', 'product_category');
+    _expectNullable(database, 'invoice_items', 'product_buyer_id');
+    _expectGeneratedRequired(database, 'invoice_items', 'product_company_name');
+    _expectGeneratedRequired(database, 'invoice_items', 'buying_price');
+    _expectGeneratedRequired(database, 'invoice_items', 'selling_price');
+    _expectNullable(database, 'invoice_items', 'unit');
     _expectRequired(database, 'invoice_items', 'company');
     _expectRequired(database, 'invoice_items', 'category');
   });
@@ -314,6 +336,14 @@ void main() {
           line_number,
           product_name,
           product_code,
+          product_item_number,
+          product_item_name,
+          product_category,
+          product_buyer_id,
+          product_company_name,
+          buying_price,
+          selling_price,
+          unit,
           company,
           category,
           quantity,
@@ -340,6 +370,14 @@ void main() {
           1,
           'Missing Product',
           'MISSING-1',
+          'MISSING-1',
+          'Missing Product',
+          'Missing Category',
+          NULL,
+          'Missing Company',
+          '8',
+          '11.8',
+          NULL,
           'Missing Company',
           'Missing Category',
           '1',
@@ -388,6 +426,16 @@ void _expectRequired(
       reason: '$tableName.$columnName should be NOT NULL');
   expect(column.requiredDuringInsert, isTrue,
       reason: '$tableName.$columnName should require insert values');
+}
+
+void _expectGeneratedRequired(
+    LocalDatabase database, String tableName, String columnName) {
+  final column = _column(database, tableName, columnName);
+  expect(column.$nullable, isFalse,
+      reason: '$tableName.$columnName should be NOT NULL');
+  expect(column.requiredDuringInsert, isFalse,
+      reason:
+          '$tableName.$columnName should have a generated migration default');
 }
 
 void _expectNullable(

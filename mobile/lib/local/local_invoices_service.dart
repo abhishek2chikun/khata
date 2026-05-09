@@ -88,10 +88,13 @@ class LocalInvoicesService implements InvoicesService {
               companyBankIfsc: Value(prepared.company.bankIfsc),
               companyBankBranch: Value(prepared.company.bankBranch),
               companyJurisdiction: Value(prepared.company.jurisdiction),
-              invoiceDate: draft.invoiceDate,
+              invoiceDate: prepared.invoiceDate,
+              invoiceDatetime: Value(prepared.invoiceDatetime),
               taxRegime: prepared.taxRegime,
               status: 'ACTIVE',
-              paymentMode: draft.paymentMode,
+              paymentState: Value(prepared.paymentState),
+              paidAmount: Value(_normalizeDecimal(prepared.paidAmount)),
+              paymentMode: prepared.paymentState,
               subtotal: _normalizeDecimal(prepared.totals.subtotal),
               discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
               taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
@@ -113,6 +116,16 @@ class LocalInvoicesService implements InvoicesService {
                 lineNumber: line.lineNumber,
                 productName: line.product.itemName,
                 productCode: line.product.itemNumber,
+                productItemNumber: Value(line.product.itemNumber),
+                productItemName: Value(line.product.itemName),
+                productCategory: Value(line.product.category),
+                productBuyerId: Value(line.product.buyerId),
+                productCompanyName: Value(line.product.companyName),
+                buyingPrice: Value(
+                    _normalizeDecimal(double.parse(line.product.buyingPrice))),
+                sellingPrice: Value(
+                    _normalizeDecimal(double.parse(line.product.sellingPrice))),
+                unit: Value(line.product.unit),
                 company: line.product.companyName,
                 category: line.product.category,
                 quantity: _normalizeDecimal(line.item.quantity),
@@ -169,16 +182,29 @@ class LocalInvoicesService implements InvoicesService {
         );
       }
 
-      if (draft.paymentMode == 'CREDIT') {
+      await _database.into(_database.customerTransactions).insert(
+            CustomerTransactionsCompanion.insert(
+              id: generateLocalUuid(),
+              customerId: prepared.customer.id,
+              invoiceId: Value(invoiceId),
+              entryType: 'CREDIT_SALE',
+              amount: _normalizeDecimal(prepared.totals.grandTotal),
+              occurredOn: prepared.invoiceDate,
+              notes: Value('Invoice $invoiceNumber'),
+              createdByUserId: _systemUserId,
+              createdAt: now,
+            ),
+          );
+      if (prepared.paidAmount > 0) {
         await _database.into(_database.customerTransactions).insert(
               CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
                 customerId: prepared.customer.id,
                 invoiceId: Value(invoiceId),
-                entryType: 'CREDIT_SALE',
-                amount: _normalizeDecimal(prepared.totals.grandTotal),
-                occurredOn: draft.invoiceDate,
-                notes: Value('Invoice $invoiceNumber'),
+                entryType: 'COLLECTION',
+                amount: _normalizeDecimal(prepared.paidAmount),
+                occurredOn: prepared.invoiceDate,
+                notes: Value('Invoice $invoiceNumber collection'),
                 createdByUserId: _systemUserId,
                 createdAt: now,
               ),
@@ -283,16 +309,31 @@ class LocalInvoicesService implements InvoicesService {
               ),
             );
       }
-      if (invoice.paymentMode == 'CREDIT') {
+      await _database.into(_database.customerTransactions).insert(
+            CustomerTransactionsCompanion.insert(
+              id: generateLocalUuid(),
+              customerId: invoice.customerId,
+              invoiceId: Value(invoiceId),
+              entryType: 'INVOICE_CANCEL_REVERSAL',
+              amount: invoice.grandTotal,
+              occurredOn: nowIso.substring(0, 10),
+              notes: Value('Cancel invoice ${invoice.invoiceNumber}'),
+              createdByUserId: _systemUserId,
+              createdAt: nowIso,
+            ),
+          );
+      final paidAmount = double.parse(invoice.paidAmount);
+      if (paidAmount > 0) {
         await _database.into(_database.customerTransactions).insert(
               CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
                 customerId: invoice.customerId,
                 invoiceId: Value(invoiceId),
-                entryType: 'INVOICE_CANCEL_REVERSAL',
-                amount: invoice.grandTotal,
+                entryType: 'COLLECTION_REVERSAL',
+                amount: invoice.paidAmount,
                 occurredOn: nowIso.substring(0, 10),
-                notes: Value('Cancel invoice ${invoice.invoiceNumber}'),
+                notes:
+                    Value('Cancel invoice ${invoice.invoiceNumber} collection'),
                 createdByUserId: _systemUserId,
                 createdAt: nowIso,
               ),
@@ -303,7 +344,7 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   Future<_PreparedInvoice> _prepareInvoice(InvoiceDraft draft) async {
-    _validatePaymentMode(draft.paymentMode);
+    _validatePaymentMode(draft.paymentState);
     final draftCustomer = draft.customer;
     if (draftCustomer == null) {
       throw const ApiError(
@@ -364,6 +405,8 @@ class LocalInvoicesService implements InvoicesService {
             _normalizeStateCode(placeOfSupplyStateCode)
         ? 'INTRA_STATE'
         : 'INTER_STATE';
+    final invoiceDatetime = _resolveInvoiceDatetime(draft);
+    final invoiceDate = invoiceDatetime.substring(0, 10);
     final lines = <_PreparedLine>[];
     final warnings = <InvoiceWarning>[];
     final consumedQuantities = <String, double>{};
@@ -424,9 +467,19 @@ class LocalInvoicesService implements InvoicesService {
       }
     }
 
+    final paymentState = _resolvePaymentState(draft);
+    final paidAmount = _resolvePaidAmount(
+      paymentState,
+      draft.paidAmount,
+      _roundMoney(grandTotal),
+    );
     return _PreparedInvoice(
       customer: customer,
       company: company,
+      invoiceDatetime: invoiceDatetime,
+      invoiceDate: invoiceDate,
+      paymentState: paymentState,
+      paidAmount: paidAmount,
       placeOfSupplyState: placeOfSupplyState,
       placeOfSupplyStateCode: placeOfSupplyStateCode,
       taxRegime: taxRegime,
@@ -475,8 +528,21 @@ class LocalInvoicesService implements InvoicesService {
     }
     final lineSubtotal = _roundMoney(item.quantity * unitPriceExclTax);
     final discountAmount = _roundMoney(lineSubtotal * (discountPercent / 100));
-    final taxableAmount = _roundMoney(lineSubtotal - discountAmount);
-    final gstAmount = _roundMoney(taxableAmount * (gstRate / 100));
+    late final double taxableAmount;
+    late final double gstAmount;
+    late final double lineTotal;
+    if (item.pricingMode == 'TAX_INCLUSIVE') {
+      final grossLineTotal = _roundMoney(item.quantity * unitPriceInclTax);
+      final grossDiscountAmount =
+          _roundMoney(grossLineTotal * (discountPercent / 100));
+      lineTotal = _roundMoney(grossLineTotal - grossDiscountAmount);
+      taxableAmount = _roundMoney(lineTotal / (1 + (gstRate / 100)));
+      gstAmount = _roundMoney(lineTotal - taxableAmount);
+    } else {
+      taxableAmount = _roundMoney(lineSubtotal - discountAmount);
+      gstAmount = _roundMoney(taxableAmount * (gstRate / 100));
+      lineTotal = _roundMoney(taxableAmount + gstAmount);
+    }
     final rates = _splitGstRate(gstRate, taxRegime);
     final cgstAmount = taxRegime == 'INTER_STATE'
         ? 0.0
@@ -502,7 +568,7 @@ class LocalInvoicesService implements InvoicesService {
       cgstAmount: cgstAmount,
       sgstAmount: sgstAmount,
       igstAmount: igstAmount,
-      lineTotal: _roundMoney(taxableAmount + gstAmount),
+      lineTotal: lineTotal,
     );
   }
 
@@ -526,9 +592,12 @@ class LocalInvoicesService implements InvoicesService {
       customerId: invoice.customerId,
       invoiceNumber: invoice.invoiceNumber.toString(),
       status: invoice.status,
+      paymentState: invoice.paymentState,
       paymentMode: invoice.paymentMode,
+      paidAmount: double.parse(invoice.paidAmount),
       customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
+      invoiceDatetime: invoice.invoiceDatetime,
       grandTotal: double.parse(invoice.grandTotal),
       notes: invoice.notes,
       cancelReason: invoice.cancelReason,
@@ -536,6 +605,14 @@ class LocalInvoicesService implements InvoicesService {
           .map(
             (item) => InvoiceDetailItem(
               productName: item.productName,
+              productItemNumber: item.productItemNumber,
+              productItemName: item.productItemName,
+              productCategory: item.productCategory,
+              productBuyerId: item.productBuyerId,
+              productCompanyName: item.productCompanyName,
+              buyingPrice: double.parse(item.buyingPrice),
+              sellingPrice: double.parse(item.sellingPrice),
+              unit: item.unit,
               quantity: double.parse(item.quantity),
               lineTotal: double.parse(item.lineTotal),
             ),
@@ -552,6 +629,7 @@ class LocalInvoicesService implements InvoicesService {
       customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
       status: invoice.status,
+      paymentState: invoice.paymentState,
       paymentMode: invoice.paymentMode,
       grandTotal: double.parse(invoice.grandTotal),
     );
@@ -566,8 +644,21 @@ class LocalInvoicesService implements InvoicesService {
           .map(
             (line) => InvoiceQuoteItem(
               productId: line.product.id,
+              productItemNumber: line.product.itemNumber,
+              productItemName: line.product.itemName,
+              productCategory: line.product.category,
+              productBuyerId: line.product.buyerId,
+              productCompanyName: line.product.companyName,
+              buyingPrice: double.parse(line.product.buyingPrice),
+              sellingPrice: double.parse(line.product.sellingPrice),
+              unit: line.product.unit,
               quantity: line.item.quantity,
+              pricingMode: line.item.pricingMode,
+              enteredUnitPrice: line.enteredUnitPrice,
               unitPriceExclTax: line.unitPriceExclTax,
+              unitPriceInclTax: line.unitPriceInclTax,
+              gstRate: line.gstRate,
+              gstAmount: line.gstAmount,
               lineTotal: line.lineTotal,
             ),
           )
@@ -612,14 +703,85 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   void _validatePaymentMode(String paymentMode) {
-    if (paymentMode == 'CREDIT' || paymentMode == 'PAID') {
+    if (paymentMode == 'CREDIT' ||
+        paymentMode == 'TOTAL_PAID' ||
+        paymentMode == 'PARTIAL_PAID' ||
+        paymentMode == 'PAID') {
       return;
     }
     throw const ApiError(
       code: 'VALIDATION_ERROR',
-      message: 'payment_mode must be CREDIT or PAID',
+      message: 'payment_state must be CREDIT, TOTAL_PAID, or PARTIAL_PAID',
       statusCode: 400,
     );
+  }
+
+  String _resolvePaymentState(InvoiceDraft draft) {
+    if (draft.paymentState == 'CREDIT' ||
+        draft.paymentState == 'TOTAL_PAID' ||
+        draft.paymentState == 'PARTIAL_PAID') {
+      return draft.paymentState;
+    }
+    if (draft.paymentMode == 'PAID') {
+      return 'TOTAL_PAID';
+    }
+    if (draft.paymentMode == 'CREDIT') {
+      return 'CREDIT';
+    }
+    _validatePaymentMode(draft.paymentState);
+    return draft.paymentState;
+  }
+
+  double _resolvePaidAmount(
+    String paymentState,
+    double paidAmount,
+    double grandTotal,
+  ) {
+    switch (paymentState) {
+      case 'CREDIT':
+        if (paidAmount != 0) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message: 'paid_amount must be 0 for CREDIT invoices',
+            statusCode: 400,
+          );
+        }
+        return 0;
+      case 'TOTAL_PAID':
+        if (paidAmount != 0 && _roundMoney(paidAmount) != grandTotal) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message:
+                'paid_amount must equal grand_total for TOTAL_PAID invoices',
+            statusCode: 400,
+          );
+        }
+        return grandTotal;
+      case 'PARTIAL_PAID':
+        if (paidAmount <= 0 || paidAmount >= grandTotal) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message:
+                'paid_amount must be greater than zero and less than grand_total for PARTIAL_PAID invoices',
+            statusCode: 400,
+          );
+        }
+        return _roundMoney(paidAmount);
+    }
+    _validatePaymentMode(paymentState);
+    return paidAmount;
+  }
+
+  String _resolveInvoiceDatetime(InvoiceDraft draft) {
+    final value = _emptyToNull(draft.invoiceDatetime);
+    if (value != null) {
+      return value;
+    }
+    final date = _emptyToNull(draft.invoiceDate);
+    if (date != null) {
+      return '${date}T00:00:00.000Z';
+    }
+    return DateTime.now().toUtc().toIso8601String();
   }
 
   void _validateStateMetadata({
@@ -654,8 +816,10 @@ class LocalInvoicesService implements InvoicesService {
   String _invoiceRequestHash(InvoiceDraft draft, String resolvedStateCode) {
     final payload = <String, dynamic>{
       'customer_id': draft.customer?.id,
+      'invoice_datetime': _emptyToNull(draft.invoiceDatetime),
       'invoice_date': draft.invoiceDate,
-      'payment_mode': draft.paymentMode,
+      'payment_state': draft.paymentState,
+      'paid_amount': draft.paidAmount.toStringAsFixed(2),
       'place_of_supply_state_code': resolvedStateCode,
       'notes': _emptyToNull(draft.notes),
       'items': draft.items
@@ -794,6 +958,10 @@ class _PreparedInvoice {
   const _PreparedInvoice({
     required this.customer,
     required this.company,
+    required this.invoiceDatetime,
+    required this.invoiceDate,
+    required this.paymentState,
+    required this.paidAmount,
     required this.placeOfSupplyState,
     required this.placeOfSupplyStateCode,
     required this.taxRegime,
@@ -804,6 +972,10 @@ class _PreparedInvoice {
 
   final Customer customer;
   final CompanyProfile company;
+  final String invoiceDatetime;
+  final String invoiceDate;
+  final String paymentState;
+  final double paidAmount;
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;
   final String taxRegime;

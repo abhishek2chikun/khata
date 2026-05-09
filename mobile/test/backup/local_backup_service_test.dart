@@ -29,7 +29,7 @@ void main() {
     );
 
     expect(package.version, LocalBackupPackage.currentVersion);
-    expect(payload.schemaVersion, 4);
+    expect(payload.schemaVersion, 5);
     expect(payload.tables, contains('buyers'));
     expect(payload.tables, contains('buyer_transactions'));
     expect(payload.tables, contains('customers'));

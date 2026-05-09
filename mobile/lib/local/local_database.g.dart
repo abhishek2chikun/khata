@@ -1898,6 +1898,14 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   late final GeneratedColumn<String> invoiceDate = GeneratedColumn<String>(
       'invoice_date', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _invoiceDatetimeMeta =
+      const VerificationMeta('invoiceDatetime');
+  @override
+  late final GeneratedColumn<String> invoiceDatetime = GeneratedColumn<String>(
+      'invoice_datetime', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _taxRegimeMeta =
       const VerificationMeta('taxRegime');
   @override
@@ -1909,6 +1917,22 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
       'status', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _paymentStateMeta =
+      const VerificationMeta('paymentState');
+  @override
+  late final GeneratedColumn<String> paymentState = GeneratedColumn<String>(
+      'payment_state', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _paidAmountMeta =
+      const VerificationMeta('paidAmount');
+  @override
+  late final GeneratedColumn<String> paidAmount = GeneratedColumn<String>(
+      'paid_amount', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _paymentModeMeta =
       const VerificationMeta('paymentMode');
   @override
@@ -2027,8 +2051,11 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         companyBankBranch,
         companyJurisdiction,
         invoiceDate,
+        invoiceDatetime,
         taxRegime,
         status,
+        paymentState,
+        paidAmount,
         paymentMode,
         subtotal,
         discountTotal,
@@ -2242,6 +2269,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
     } else if (isInserting) {
       context.missing(_invoiceDateMeta);
     }
+    if (data.containsKey('invoice_datetime')) {
+      context.handle(
+          _invoiceDatetimeMeta,
+          invoiceDatetime.isAcceptableOrUnknown(
+              data['invoice_datetime']!, _invoiceDatetimeMeta));
+    }
     if (data.containsKey('tax_regime')) {
       context.handle(_taxRegimeMeta,
           taxRegime.isAcceptableOrUnknown(data['tax_regime']!, _taxRegimeMeta));
@@ -2253,6 +2286,18 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
     } else if (isInserting) {
       context.missing(_statusMeta);
+    }
+    if (data.containsKey('payment_state')) {
+      context.handle(
+          _paymentStateMeta,
+          paymentState.isAcceptableOrUnknown(
+              data['payment_state']!, _paymentStateMeta));
+    }
+    if (data.containsKey('paid_amount')) {
+      context.handle(
+          _paidAmountMeta,
+          paidAmount.isAcceptableOrUnknown(
+              data['paid_amount']!, _paidAmountMeta));
     }
     if (data.containsKey('payment_mode')) {
       context.handle(
@@ -2416,10 +2461,16 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           DriftSqlType.string, data['${effectivePrefix}company_jurisdiction']),
       invoiceDate: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}invoice_date'])!,
+      invoiceDatetime: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}invoice_datetime'])!,
       taxRegime: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}tax_regime'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      paymentState: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payment_state'])!,
+      paidAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}paid_amount'])!,
       paymentMode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}payment_mode'])!,
       subtotal: attachedDatabase.typeMapping
@@ -2485,8 +2536,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String? companyBankBranch;
   final String? companyJurisdiction;
   final String invoiceDate;
+  final String invoiceDatetime;
   final String taxRegime;
   final String status;
+  final String paymentState;
+  final String paidAmount;
   final String paymentMode;
   final String subtotal;
   final String discountTotal;
@@ -2529,8 +2583,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       this.companyBankBranch,
       this.companyJurisdiction,
       required this.invoiceDate,
+      required this.invoiceDatetime,
       required this.taxRegime,
       required this.status,
+      required this.paymentState,
+      required this.paidAmount,
       required this.paymentMode,
       required this.subtotal,
       required this.discountTotal,
@@ -2600,8 +2657,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       map['company_jurisdiction'] = Variable<String>(companyJurisdiction);
     }
     map['invoice_date'] = Variable<String>(invoiceDate);
+    map['invoice_datetime'] = Variable<String>(invoiceDatetime);
     map['tax_regime'] = Variable<String>(taxRegime);
     map['status'] = Variable<String>(status);
+    map['payment_state'] = Variable<String>(paymentState);
+    map['paid_amount'] = Variable<String>(paidAmount);
     map['payment_mode'] = Variable<String>(paymentMode);
     map['subtotal'] = Variable<String>(subtotal);
     map['discount_total'] = Variable<String>(discountTotal);
@@ -2684,8 +2744,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ? const Value.absent()
           : Value(companyJurisdiction),
       invoiceDate: Value(invoiceDate),
+      invoiceDatetime: Value(invoiceDatetime),
       taxRegime: Value(taxRegime),
       status: Value(status),
+      paymentState: Value(paymentState),
+      paidAmount: Value(paidAmount),
       paymentMode: Value(paymentMode),
       subtotal: Value(subtotal),
       discountTotal: Value(discountTotal),
@@ -2751,8 +2814,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyJurisdiction:
           serializer.fromJson<String?>(json['companyJurisdiction']),
       invoiceDate: serializer.fromJson<String>(json['invoiceDate']),
+      invoiceDatetime: serializer.fromJson<String>(json['invoiceDatetime']),
       taxRegime: serializer.fromJson<String>(json['taxRegime']),
       status: serializer.fromJson<String>(json['status']),
+      paymentState: serializer.fromJson<String>(json['paymentState']),
+      paidAmount: serializer.fromJson<String>(json['paidAmount']),
       paymentMode: serializer.fromJson<String>(json['paymentMode']),
       subtotal: serializer.fromJson<String>(json['subtotal']),
       discountTotal: serializer.fromJson<String>(json['discountTotal']),
@@ -2802,8 +2868,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'companyBankBranch': serializer.toJson<String?>(companyBankBranch),
       'companyJurisdiction': serializer.toJson<String?>(companyJurisdiction),
       'invoiceDate': serializer.toJson<String>(invoiceDate),
+      'invoiceDatetime': serializer.toJson<String>(invoiceDatetime),
       'taxRegime': serializer.toJson<String>(taxRegime),
       'status': serializer.toJson<String>(status),
+      'paymentState': serializer.toJson<String>(paymentState),
+      'paidAmount': serializer.toJson<String>(paidAmount),
       'paymentMode': serializer.toJson<String>(paymentMode),
       'subtotal': serializer.toJson<String>(subtotal),
       'discountTotal': serializer.toJson<String>(discountTotal),
@@ -2849,8 +2918,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           Value<String?> companyBankBranch = const Value.absent(),
           Value<String?> companyJurisdiction = const Value.absent(),
           String? invoiceDate,
+          String? invoiceDatetime,
           String? taxRegime,
           String? status,
+          String? paymentState,
+          String? paidAmount,
           String? paymentMode,
           String? subtotal,
           String? discountTotal,
@@ -2912,8 +2984,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
             ? companyJurisdiction.value
             : this.companyJurisdiction,
         invoiceDate: invoiceDate ?? this.invoiceDate,
+        invoiceDatetime: invoiceDatetime ?? this.invoiceDatetime,
         taxRegime: taxRegime ?? this.taxRegime,
         status: status ?? this.status,
+        paymentState: paymentState ?? this.paymentState,
+        paidAmount: paidAmount ?? this.paidAmount,
         paymentMode: paymentMode ?? this.paymentMode,
         subtotal: subtotal ?? this.subtotal,
         discountTotal: discountTotal ?? this.discountTotal,
@@ -3010,8 +3085,16 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           : this.companyJurisdiction,
       invoiceDate:
           data.invoiceDate.present ? data.invoiceDate.value : this.invoiceDate,
+      invoiceDatetime: data.invoiceDatetime.present
+          ? data.invoiceDatetime.value
+          : this.invoiceDatetime,
       taxRegime: data.taxRegime.present ? data.taxRegime.value : this.taxRegime,
       status: data.status.present ? data.status.value : this.status,
+      paymentState: data.paymentState.present
+          ? data.paymentState.value
+          : this.paymentState,
+      paidAmount:
+          data.paidAmount.present ? data.paidAmount.value : this.paidAmount,
       paymentMode:
           data.paymentMode.present ? data.paymentMode.value : this.paymentMode,
       subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
@@ -3076,8 +3159,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ..write('companyBankBranch: $companyBankBranch, ')
           ..write('companyJurisdiction: $companyJurisdiction, ')
           ..write('invoiceDate: $invoiceDate, ')
+          ..write('invoiceDatetime: $invoiceDatetime, ')
           ..write('taxRegime: $taxRegime, ')
           ..write('status: $status, ')
+          ..write('paymentState: $paymentState, ')
+          ..write('paidAmount: $paidAmount, ')
           ..write('paymentMode: $paymentMode, ')
           ..write('subtotal: $subtotal, ')
           ..write('discountTotal: $discountTotal, ')
@@ -3125,8 +3211,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         companyBankBranch,
         companyJurisdiction,
         invoiceDate,
+        invoiceDatetime,
         taxRegime,
         status,
+        paymentState,
+        paidAmount,
         paymentMode,
         subtotal,
         discountTotal,
@@ -3173,8 +3262,11 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           other.companyBankBranch == this.companyBankBranch &&
           other.companyJurisdiction == this.companyJurisdiction &&
           other.invoiceDate == this.invoiceDate &&
+          other.invoiceDatetime == this.invoiceDatetime &&
           other.taxRegime == this.taxRegime &&
           other.status == this.status &&
+          other.paymentState == this.paymentState &&
+          other.paidAmount == this.paidAmount &&
           other.paymentMode == this.paymentMode &&
           other.subtotal == this.subtotal &&
           other.discountTotal == this.discountTotal &&
@@ -3219,8 +3311,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String?> companyBankBranch;
   final Value<String?> companyJurisdiction;
   final Value<String> invoiceDate;
+  final Value<String> invoiceDatetime;
   final Value<String> taxRegime;
   final Value<String> status;
+  final Value<String> paymentState;
+  final Value<String> paidAmount;
   final Value<String> paymentMode;
   final Value<String> subtotal;
   final Value<String> discountTotal;
@@ -3264,8 +3359,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyBankBranch = const Value.absent(),
     this.companyJurisdiction = const Value.absent(),
     this.invoiceDate = const Value.absent(),
+    this.invoiceDatetime = const Value.absent(),
     this.taxRegime = const Value.absent(),
     this.status = const Value.absent(),
+    this.paymentState = const Value.absent(),
+    this.paidAmount = const Value.absent(),
     this.paymentMode = const Value.absent(),
     this.subtotal = const Value.absent(),
     this.discountTotal = const Value.absent(),
@@ -3310,8 +3408,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyBankBranch = const Value.absent(),
     this.companyJurisdiction = const Value.absent(),
     required String invoiceDate,
+    this.invoiceDatetime = const Value.absent(),
     required String taxRegime,
     required String status,
+    this.paymentState = const Value.absent(),
+    this.paidAmount = const Value.absent(),
     required String paymentMode,
     required String subtotal,
     required String discountTotal,
@@ -3380,8 +3481,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? companyBankBranch,
     Expression<String>? companyJurisdiction,
     Expression<String>? invoiceDate,
+    Expression<String>? invoiceDatetime,
     Expression<String>? taxRegime,
     Expression<String>? status,
+    Expression<String>? paymentState,
+    Expression<String>? paidAmount,
     Expression<String>? paymentMode,
     Expression<String>? subtotal,
     Expression<String>? discountTotal,
@@ -3430,8 +3534,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       if (companyJurisdiction != null)
         'company_jurisdiction': companyJurisdiction,
       if (invoiceDate != null) 'invoice_date': invoiceDate,
+      if (invoiceDatetime != null) 'invoice_datetime': invoiceDatetime,
       if (taxRegime != null) 'tax_regime': taxRegime,
       if (status != null) 'status': status,
+      if (paymentState != null) 'payment_state': paymentState,
+      if (paidAmount != null) 'paid_amount': paidAmount,
       if (paymentMode != null) 'payment_mode': paymentMode,
       if (subtotal != null) 'subtotal': subtotal,
       if (discountTotal != null) 'discount_total': discountTotal,
@@ -3478,8 +3585,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       Value<String?>? companyBankBranch,
       Value<String?>? companyJurisdiction,
       Value<String>? invoiceDate,
+      Value<String>? invoiceDatetime,
       Value<String>? taxRegime,
       Value<String>? status,
+      Value<String>? paymentState,
+      Value<String>? paidAmount,
       Value<String>? paymentMode,
       Value<String>? subtotal,
       Value<String>? discountTotal,
@@ -3524,8 +3634,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       companyBankBranch: companyBankBranch ?? this.companyBankBranch,
       companyJurisdiction: companyJurisdiction ?? this.companyJurisdiction,
       invoiceDate: invoiceDate ?? this.invoiceDate,
+      invoiceDatetime: invoiceDatetime ?? this.invoiceDatetime,
       taxRegime: taxRegime ?? this.taxRegime,
       status: status ?? this.status,
+      paymentState: paymentState ?? this.paymentState,
+      paidAmount: paidAmount ?? this.paidAmount,
       paymentMode: paymentMode ?? this.paymentMode,
       subtotal: subtotal ?? this.subtotal,
       discountTotal: discountTotal ?? this.discountTotal,
@@ -3629,11 +3742,20 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     if (invoiceDate.present) {
       map['invoice_date'] = Variable<String>(invoiceDate.value);
     }
+    if (invoiceDatetime.present) {
+      map['invoice_datetime'] = Variable<String>(invoiceDatetime.value);
+    }
     if (taxRegime.present) {
       map['tax_regime'] = Variable<String>(taxRegime.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
+    }
+    if (paymentState.present) {
+      map['payment_state'] = Variable<String>(paymentState.value);
+    }
+    if (paidAmount.present) {
+      map['paid_amount'] = Variable<String>(paidAmount.value);
     }
     if (paymentMode.present) {
       map['payment_mode'] = Variable<String>(paymentMode.value);
@@ -3713,8 +3835,11 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           ..write('companyBankBranch: $companyBankBranch, ')
           ..write('companyJurisdiction: $companyJurisdiction, ')
           ..write('invoiceDate: $invoiceDate, ')
+          ..write('invoiceDatetime: $invoiceDatetime, ')
           ..write('taxRegime: $taxRegime, ')
           ..write('status: $status, ')
+          ..write('paymentState: $paymentState, ')
+          ..write('paidAmount: $paidAmount, ')
           ..write('paymentMode: $paymentMode, ')
           ..write('subtotal: $subtotal, ')
           ..write('discountTotal: $discountTotal, ')
@@ -6852,6 +6977,65 @@ class $InvoiceItemsTable extends InvoiceItems
   late final GeneratedColumn<String> productCode = GeneratedColumn<String>(
       'product_code', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _productItemNumberMeta =
+      const VerificationMeta('productItemNumber');
+  @override
+  late final GeneratedColumn<String> productItemNumber =
+      GeneratedColumn<String>('product_item_number', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _productItemNameMeta =
+      const VerificationMeta('productItemName');
+  @override
+  late final GeneratedColumn<String> productItemName = GeneratedColumn<String>(
+      'product_item_name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _productCategoryMeta =
+      const VerificationMeta('productCategory');
+  @override
+  late final GeneratedColumn<String> productCategory = GeneratedColumn<String>(
+      'product_category', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _productBuyerIdMeta =
+      const VerificationMeta('productBuyerId');
+  @override
+  late final GeneratedColumn<String> productBuyerId = GeneratedColumn<String>(
+      'product_buyer_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _productCompanyNameMeta =
+      const VerificationMeta('productCompanyName');
+  @override
+  late final GeneratedColumn<String> productCompanyName =
+      GeneratedColumn<String>('product_company_name', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _buyingPriceMeta =
+      const VerificationMeta('buyingPrice');
+  @override
+  late final GeneratedColumn<String> buyingPrice = GeneratedColumn<String>(
+      'buying_price', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _sellingPriceMeta =
+      const VerificationMeta('sellingPrice');
+  @override
+  late final GeneratedColumn<String> sellingPrice = GeneratedColumn<String>(
+      'selling_price', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+      'unit', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _companyMeta =
       const VerificationMeta('company');
   @override
@@ -6974,6 +7158,14 @@ class $InvoiceItemsTable extends InvoiceItems
         lineNumber,
         productName,
         productCode,
+        productItemNumber,
+        productItemName,
+        productCategory,
+        productBuyerId,
+        productCompanyName,
+        buyingPrice,
+        sellingPrice,
+        unit,
         company,
         category,
         quantity,
@@ -7044,6 +7236,52 @@ class $InvoiceItemsTable extends InvoiceItems
               data['product_code']!, _productCodeMeta));
     } else if (isInserting) {
       context.missing(_productCodeMeta);
+    }
+    if (data.containsKey('product_item_number')) {
+      context.handle(
+          _productItemNumberMeta,
+          productItemNumber.isAcceptableOrUnknown(
+              data['product_item_number']!, _productItemNumberMeta));
+    }
+    if (data.containsKey('product_item_name')) {
+      context.handle(
+          _productItemNameMeta,
+          productItemName.isAcceptableOrUnknown(
+              data['product_item_name']!, _productItemNameMeta));
+    }
+    if (data.containsKey('product_category')) {
+      context.handle(
+          _productCategoryMeta,
+          productCategory.isAcceptableOrUnknown(
+              data['product_category']!, _productCategoryMeta));
+    }
+    if (data.containsKey('product_buyer_id')) {
+      context.handle(
+          _productBuyerIdMeta,
+          productBuyerId.isAcceptableOrUnknown(
+              data['product_buyer_id']!, _productBuyerIdMeta));
+    }
+    if (data.containsKey('product_company_name')) {
+      context.handle(
+          _productCompanyNameMeta,
+          productCompanyName.isAcceptableOrUnknown(
+              data['product_company_name']!, _productCompanyNameMeta));
+    }
+    if (data.containsKey('buying_price')) {
+      context.handle(
+          _buyingPriceMeta,
+          buyingPrice.isAcceptableOrUnknown(
+              data['buying_price']!, _buyingPriceMeta));
+    }
+    if (data.containsKey('selling_price')) {
+      context.handle(
+          _sellingPriceMeta,
+          sellingPrice.isAcceptableOrUnknown(
+              data['selling_price']!, _sellingPriceMeta));
+    }
+    if (data.containsKey('unit')) {
+      context.handle(
+          _unitMeta, unit.isAcceptableOrUnknown(data['unit']!, _unitMeta));
     }
     if (data.containsKey('company')) {
       context.handle(_companyMeta,
@@ -7200,6 +7438,22 @@ class $InvoiceItemsTable extends InvoiceItems
           .read(DriftSqlType.string, data['${effectivePrefix}product_name'])!,
       productCode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}product_code'])!,
+      productItemNumber: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_item_number'])!,
+      productItemName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_item_name'])!,
+      productCategory: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_category'])!,
+      productBuyerId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_buyer_id']),
+      productCompanyName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_company_name'])!,
+      buyingPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buying_price'])!,
+      sellingPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}selling_price'])!,
+      unit: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}unit']),
       company: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}company'])!,
       category: attachedDatabase.typeMapping
@@ -7254,6 +7508,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
   final int lineNumber;
   final String productName;
   final String productCode;
+  final String productItemNumber;
+  final String productItemName;
+  final String productCategory;
+  final String? productBuyerId;
+  final String productCompanyName;
+  final String buyingPrice;
+  final String sellingPrice;
+  final String? unit;
   final String company;
   final String category;
   final String quantity;
@@ -7280,6 +7542,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       required this.lineNumber,
       required this.productName,
       required this.productCode,
+      required this.productItemNumber,
+      required this.productItemName,
+      required this.productCategory,
+      this.productBuyerId,
+      required this.productCompanyName,
+      required this.buyingPrice,
+      required this.sellingPrice,
+      this.unit,
       required this.company,
       required this.category,
       required this.quantity,
@@ -7308,6 +7578,18 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
     map['line_number'] = Variable<int>(lineNumber);
     map['product_name'] = Variable<String>(productName);
     map['product_code'] = Variable<String>(productCode);
+    map['product_item_number'] = Variable<String>(productItemNumber);
+    map['product_item_name'] = Variable<String>(productItemName);
+    map['product_category'] = Variable<String>(productCategory);
+    if (!nullToAbsent || productBuyerId != null) {
+      map['product_buyer_id'] = Variable<String>(productBuyerId);
+    }
+    map['product_company_name'] = Variable<String>(productCompanyName);
+    map['buying_price'] = Variable<String>(buyingPrice);
+    map['selling_price'] = Variable<String>(sellingPrice);
+    if (!nullToAbsent || unit != null) {
+      map['unit'] = Variable<String>(unit);
+    }
     map['company'] = Variable<String>(company);
     map['category'] = Variable<String>(category);
     map['quantity'] = Variable<String>(quantity);
@@ -7338,6 +7620,16 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       lineNumber: Value(lineNumber),
       productName: Value(productName),
       productCode: Value(productCode),
+      productItemNumber: Value(productItemNumber),
+      productItemName: Value(productItemName),
+      productCategory: Value(productCategory),
+      productBuyerId: productBuyerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productBuyerId),
+      productCompanyName: Value(productCompanyName),
+      buyingPrice: Value(buyingPrice),
+      sellingPrice: Value(sellingPrice),
+      unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
       company: Value(company),
       category: Value(category),
       quantity: Value(quantity),
@@ -7370,6 +7662,15 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       lineNumber: serializer.fromJson<int>(json['lineNumber']),
       productName: serializer.fromJson<String>(json['productName']),
       productCode: serializer.fromJson<String>(json['productCode']),
+      productItemNumber: serializer.fromJson<String>(json['productItemNumber']),
+      productItemName: serializer.fromJson<String>(json['productItemName']),
+      productCategory: serializer.fromJson<String>(json['productCategory']),
+      productBuyerId: serializer.fromJson<String?>(json['productBuyerId']),
+      productCompanyName:
+          serializer.fromJson<String>(json['productCompanyName']),
+      buyingPrice: serializer.fromJson<String>(json['buyingPrice']),
+      sellingPrice: serializer.fromJson<String>(json['sellingPrice']),
+      unit: serializer.fromJson<String?>(json['unit']),
       company: serializer.fromJson<String>(json['company']),
       category: serializer.fromJson<String>(json['category']),
       quantity: serializer.fromJson<String>(json['quantity']),
@@ -7401,6 +7702,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       'lineNumber': serializer.toJson<int>(lineNumber),
       'productName': serializer.toJson<String>(productName),
       'productCode': serializer.toJson<String>(productCode),
+      'productItemNumber': serializer.toJson<String>(productItemNumber),
+      'productItemName': serializer.toJson<String>(productItemName),
+      'productCategory': serializer.toJson<String>(productCategory),
+      'productBuyerId': serializer.toJson<String?>(productBuyerId),
+      'productCompanyName': serializer.toJson<String>(productCompanyName),
+      'buyingPrice': serializer.toJson<String>(buyingPrice),
+      'sellingPrice': serializer.toJson<String>(sellingPrice),
+      'unit': serializer.toJson<String?>(unit),
       'company': serializer.toJson<String>(company),
       'category': serializer.toJson<String>(category),
       'quantity': serializer.toJson<String>(quantity),
@@ -7430,6 +7739,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           int? lineNumber,
           String? productName,
           String? productCode,
+          String? productItemNumber,
+          String? productItemName,
+          String? productCategory,
+          Value<String?> productBuyerId = const Value.absent(),
+          String? productCompanyName,
+          String? buyingPrice,
+          String? sellingPrice,
+          Value<String?> unit = const Value.absent(),
           String? company,
           String? category,
           String? quantity,
@@ -7456,6 +7773,15 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         lineNumber: lineNumber ?? this.lineNumber,
         productName: productName ?? this.productName,
         productCode: productCode ?? this.productCode,
+        productItemNumber: productItemNumber ?? this.productItemNumber,
+        productItemName: productItemName ?? this.productItemName,
+        productCategory: productCategory ?? this.productCategory,
+        productBuyerId:
+            productBuyerId.present ? productBuyerId.value : this.productBuyerId,
+        productCompanyName: productCompanyName ?? this.productCompanyName,
+        buyingPrice: buyingPrice ?? this.buyingPrice,
+        sellingPrice: sellingPrice ?? this.sellingPrice,
+        unit: unit.present ? unit.value : this.unit,
         company: company ?? this.company,
         category: category ?? this.category,
         quantity: quantity ?? this.quantity,
@@ -7487,6 +7813,27 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           data.productName.present ? data.productName.value : this.productName,
       productCode:
           data.productCode.present ? data.productCode.value : this.productCode,
+      productItemNumber: data.productItemNumber.present
+          ? data.productItemNumber.value
+          : this.productItemNumber,
+      productItemName: data.productItemName.present
+          ? data.productItemName.value
+          : this.productItemName,
+      productCategory: data.productCategory.present
+          ? data.productCategory.value
+          : this.productCategory,
+      productBuyerId: data.productBuyerId.present
+          ? data.productBuyerId.value
+          : this.productBuyerId,
+      productCompanyName: data.productCompanyName.present
+          ? data.productCompanyName.value
+          : this.productCompanyName,
+      buyingPrice:
+          data.buyingPrice.present ? data.buyingPrice.value : this.buyingPrice,
+      sellingPrice: data.sellingPrice.present
+          ? data.sellingPrice.value
+          : this.sellingPrice,
+      unit: data.unit.present ? data.unit.value : this.unit,
       company: data.company.present ? data.company.value : this.company,
       category: data.category.present ? data.category.value : this.category,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
@@ -7534,6 +7881,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           ..write('lineNumber: $lineNumber, ')
           ..write('productName: $productName, ')
           ..write('productCode: $productCode, ')
+          ..write('productItemNumber: $productItemNumber, ')
+          ..write('productItemName: $productItemName, ')
+          ..write('productCategory: $productCategory, ')
+          ..write('productBuyerId: $productBuyerId, ')
+          ..write('productCompanyName: $productCompanyName, ')
+          ..write('buyingPrice: $buyingPrice, ')
+          ..write('sellingPrice: $sellingPrice, ')
+          ..write('unit: $unit, ')
           ..write('company: $company, ')
           ..write('category: $category, ')
           ..write('quantity: $quantity, ')
@@ -7565,6 +7920,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         lineNumber,
         productName,
         productCode,
+        productItemNumber,
+        productItemName,
+        productCategory,
+        productBuyerId,
+        productCompanyName,
+        buyingPrice,
+        sellingPrice,
+        unit,
         company,
         category,
         quantity,
@@ -7595,6 +7958,14 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           other.lineNumber == this.lineNumber &&
           other.productName == this.productName &&
           other.productCode == this.productCode &&
+          other.productItemNumber == this.productItemNumber &&
+          other.productItemName == this.productItemName &&
+          other.productCategory == this.productCategory &&
+          other.productBuyerId == this.productBuyerId &&
+          other.productCompanyName == this.productCompanyName &&
+          other.buyingPrice == this.buyingPrice &&
+          other.sellingPrice == this.sellingPrice &&
+          other.unit == this.unit &&
           other.company == this.company &&
           other.category == this.category &&
           other.quantity == this.quantity &&
@@ -7623,6 +7994,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
   final Value<int> lineNumber;
   final Value<String> productName;
   final Value<String> productCode;
+  final Value<String> productItemNumber;
+  final Value<String> productItemName;
+  final Value<String> productCategory;
+  final Value<String?> productBuyerId;
+  final Value<String> productCompanyName;
+  final Value<String> buyingPrice;
+  final Value<String> sellingPrice;
+  final Value<String?> unit;
   final Value<String> company;
   final Value<String> category;
   final Value<String> quantity;
@@ -7650,6 +8029,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     this.lineNumber = const Value.absent(),
     this.productName = const Value.absent(),
     this.productCode = const Value.absent(),
+    this.productItemNumber = const Value.absent(),
+    this.productItemName = const Value.absent(),
+    this.productCategory = const Value.absent(),
+    this.productBuyerId = const Value.absent(),
+    this.productCompanyName = const Value.absent(),
+    this.buyingPrice = const Value.absent(),
+    this.sellingPrice = const Value.absent(),
+    this.unit = const Value.absent(),
     this.company = const Value.absent(),
     this.category = const Value.absent(),
     this.quantity = const Value.absent(),
@@ -7678,6 +8065,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     required int lineNumber,
     required String productName,
     required String productCode,
+    this.productItemNumber = const Value.absent(),
+    this.productItemName = const Value.absent(),
+    this.productCategory = const Value.absent(),
+    this.productBuyerId = const Value.absent(),
+    this.productCompanyName = const Value.absent(),
+    this.buyingPrice = const Value.absent(),
+    this.sellingPrice = const Value.absent(),
+    this.unit = const Value.absent(),
     required String company,
     required String category,
     required String quantity,
@@ -7730,6 +8125,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     Expression<int>? lineNumber,
     Expression<String>? productName,
     Expression<String>? productCode,
+    Expression<String>? productItemNumber,
+    Expression<String>? productItemName,
+    Expression<String>? productCategory,
+    Expression<String>? productBuyerId,
+    Expression<String>? productCompanyName,
+    Expression<String>? buyingPrice,
+    Expression<String>? sellingPrice,
+    Expression<String>? unit,
     Expression<String>? company,
     Expression<String>? category,
     Expression<String>? quantity,
@@ -7758,6 +8161,15 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       if (lineNumber != null) 'line_number': lineNumber,
       if (productName != null) 'product_name': productName,
       if (productCode != null) 'product_code': productCode,
+      if (productItemNumber != null) 'product_item_number': productItemNumber,
+      if (productItemName != null) 'product_item_name': productItemName,
+      if (productCategory != null) 'product_category': productCategory,
+      if (productBuyerId != null) 'product_buyer_id': productBuyerId,
+      if (productCompanyName != null)
+        'product_company_name': productCompanyName,
+      if (buyingPrice != null) 'buying_price': buyingPrice,
+      if (sellingPrice != null) 'selling_price': sellingPrice,
+      if (unit != null) 'unit': unit,
       if (company != null) 'company': company,
       if (category != null) 'category': category,
       if (quantity != null) 'quantity': quantity,
@@ -7788,6 +8200,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       Value<int>? lineNumber,
       Value<String>? productName,
       Value<String>? productCode,
+      Value<String>? productItemNumber,
+      Value<String>? productItemName,
+      Value<String>? productCategory,
+      Value<String?>? productBuyerId,
+      Value<String>? productCompanyName,
+      Value<String>? buyingPrice,
+      Value<String>? sellingPrice,
+      Value<String?>? unit,
       Value<String>? company,
       Value<String>? category,
       Value<String>? quantity,
@@ -7815,6 +8235,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       lineNumber: lineNumber ?? this.lineNumber,
       productName: productName ?? this.productName,
       productCode: productCode ?? this.productCode,
+      productItemNumber: productItemNumber ?? this.productItemNumber,
+      productItemName: productItemName ?? this.productItemName,
+      productCategory: productCategory ?? this.productCategory,
+      productBuyerId: productBuyerId ?? this.productBuyerId,
+      productCompanyName: productCompanyName ?? this.productCompanyName,
+      buyingPrice: buyingPrice ?? this.buyingPrice,
+      sellingPrice: sellingPrice ?? this.sellingPrice,
+      unit: unit ?? this.unit,
       company: company ?? this.company,
       category: category ?? this.category,
       quantity: quantity ?? this.quantity,
@@ -7858,6 +8286,30 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     }
     if (productCode.present) {
       map['product_code'] = Variable<String>(productCode.value);
+    }
+    if (productItemNumber.present) {
+      map['product_item_number'] = Variable<String>(productItemNumber.value);
+    }
+    if (productItemName.present) {
+      map['product_item_name'] = Variable<String>(productItemName.value);
+    }
+    if (productCategory.present) {
+      map['product_category'] = Variable<String>(productCategory.value);
+    }
+    if (productBuyerId.present) {
+      map['product_buyer_id'] = Variable<String>(productBuyerId.value);
+    }
+    if (productCompanyName.present) {
+      map['product_company_name'] = Variable<String>(productCompanyName.value);
+    }
+    if (buyingPrice.present) {
+      map['buying_price'] = Variable<String>(buyingPrice.value);
+    }
+    if (sellingPrice.present) {
+      map['selling_price'] = Variable<String>(sellingPrice.value);
+    }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
     }
     if (company.present) {
       map['company'] = Variable<String>(company.value);
@@ -7931,6 +8383,14 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
           ..write('lineNumber: $lineNumber, ')
           ..write('productName: $productName, ')
           ..write('productCode: $productCode, ')
+          ..write('productItemNumber: $productItemNumber, ')
+          ..write('productItemName: $productItemName, ')
+          ..write('productCategory: $productCategory, ')
+          ..write('productBuyerId: $productBuyerId, ')
+          ..write('productCompanyName: $productCompanyName, ')
+          ..write('buyingPrice: $buyingPrice, ')
+          ..write('sellingPrice: $sellingPrice, ')
+          ..write('unit: $unit, ')
           ..write('company: $company, ')
           ..write('category: $category, ')
           ..write('quantity: $quantity, ')
@@ -10716,8 +11176,11 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> companyBankBranch,
   Value<String?> companyJurisdiction,
   required String invoiceDate,
+  Value<String> invoiceDatetime,
   required String taxRegime,
   required String status,
+  Value<String> paymentState,
+  Value<String> paidAmount,
   required String paymentMode,
   required String subtotal,
   required String discountTotal,
@@ -10762,8 +11225,11 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> companyBankBranch,
   Value<String?> companyJurisdiction,
   Value<String> invoiceDate,
+  Value<String> invoiceDatetime,
   Value<String> taxRegime,
   Value<String> status,
+  Value<String> paymentState,
+  Value<String> paidAmount,
   Value<String> paymentMode,
   Value<String> subtotal,
   Value<String> discountTotal,
@@ -10978,11 +11444,21 @@ class $$InvoicesTableFilterComposer
   ColumnFilters<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get invoiceDatetime => $composableBuilder(
+      column: $table.invoiceDatetime,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get taxRegime => $composableBuilder(
       column: $table.taxRegime, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get paymentState => $composableBuilder(
+      column: $table.paymentState, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get paidAmount => $composableBuilder(
+      column: $table.paidAmount, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get paymentMode => $composableBuilder(
       column: $table.paymentMode, builder: (column) => ColumnFilters(column));
@@ -11254,11 +11730,22 @@ class $$InvoicesTableOrderingComposer
   ColumnOrderings<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get invoiceDatetime => $composableBuilder(
+      column: $table.invoiceDatetime,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get taxRegime => $composableBuilder(
       column: $table.taxRegime, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get paymentState => $composableBuilder(
+      column: $table.paymentState,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get paidAmount => $composableBuilder(
+      column: $table.paidAmount, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get paymentMode => $composableBuilder(
       column: $table.paymentMode, builder: (column) => ColumnOrderings(column));
@@ -11449,11 +11936,20 @@ class $$InvoicesTableAnnotationComposer
   GeneratedColumn<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => column);
 
+  GeneratedColumn<String> get invoiceDatetime => $composableBuilder(
+      column: $table.invoiceDatetime, builder: (column) => column);
+
   GeneratedColumn<String> get taxRegime =>
       $composableBuilder(column: $table.taxRegime, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentState => $composableBuilder(
+      column: $table.paymentState, builder: (column) => column);
+
+  GeneratedColumn<String> get paidAmount => $composableBuilder(
+      column: $table.paidAmount, builder: (column) => column);
 
   GeneratedColumn<String> get paymentMode => $composableBuilder(
       column: $table.paymentMode, builder: (column) => column);
@@ -11673,8 +12169,11 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> companyBankBranch = const Value.absent(),
             Value<String?> companyJurisdiction = const Value.absent(),
             Value<String> invoiceDate = const Value.absent(),
+            Value<String> invoiceDatetime = const Value.absent(),
             Value<String> taxRegime = const Value.absent(),
             Value<String> status = const Value.absent(),
+            Value<String> paymentState = const Value.absent(),
+            Value<String> paidAmount = const Value.absent(),
             Value<String> paymentMode = const Value.absent(),
             Value<String> subtotal = const Value.absent(),
             Value<String> discountTotal = const Value.absent(),
@@ -11719,8 +12218,11 @@ class $$InvoicesTableTableManager extends RootTableManager<
             companyBankBranch: companyBankBranch,
             companyJurisdiction: companyJurisdiction,
             invoiceDate: invoiceDate,
+            invoiceDatetime: invoiceDatetime,
             taxRegime: taxRegime,
             status: status,
+            paymentState: paymentState,
+            paidAmount: paidAmount,
             paymentMode: paymentMode,
             subtotal: subtotal,
             discountTotal: discountTotal,
@@ -11765,8 +12267,11 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> companyBankBranch = const Value.absent(),
             Value<String?> companyJurisdiction = const Value.absent(),
             required String invoiceDate,
+            Value<String> invoiceDatetime = const Value.absent(),
             required String taxRegime,
             required String status,
+            Value<String> paymentState = const Value.absent(),
+            Value<String> paidAmount = const Value.absent(),
             required String paymentMode,
             required String subtotal,
             required String discountTotal,
@@ -11811,8 +12316,11 @@ class $$InvoicesTableTableManager extends RootTableManager<
             companyBankBranch: companyBankBranch,
             companyJurisdiction: companyJurisdiction,
             invoiceDate: invoiceDate,
+            invoiceDatetime: invoiceDatetime,
             taxRegime: taxRegime,
             status: status,
+            paymentState: paymentState,
+            paidAmount: paidAmount,
             paymentMode: paymentMode,
             subtotal: subtotal,
             discountTotal: discountTotal,
@@ -14157,6 +14665,14 @@ typedef $$InvoiceItemsTableCreateCompanionBuilder = InvoiceItemsCompanion
   required int lineNumber,
   required String productName,
   required String productCode,
+  Value<String> productItemNumber,
+  Value<String> productItemName,
+  Value<String> productCategory,
+  Value<String?> productBuyerId,
+  Value<String> productCompanyName,
+  Value<String> buyingPrice,
+  Value<String> sellingPrice,
+  Value<String?> unit,
   required String company,
   required String category,
   required String quantity,
@@ -14186,6 +14702,14 @@ typedef $$InvoiceItemsTableUpdateCompanionBuilder = InvoiceItemsCompanion
   Value<int> lineNumber,
   Value<String> productName,
   Value<String> productCode,
+  Value<String> productItemNumber,
+  Value<String> productItemName,
+  Value<String> productCategory,
+  Value<String?> productBuyerId,
+  Value<String> productCompanyName,
+  Value<String> buyingPrice,
+  Value<String> sellingPrice,
+  Value<String?> unit,
   Value<String> company,
   Value<String> category,
   Value<String> quantity,
@@ -14263,6 +14787,35 @@ class $$InvoiceItemsTableFilterComposer
 
   ColumnFilters<String> get productCode => $composableBuilder(
       column: $table.productCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productItemNumber => $composableBuilder(
+      column: $table.productItemNumber,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productItemName => $composableBuilder(
+      column: $table.productItemName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productCategory => $composableBuilder(
+      column: $table.productCategory,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productBuyerId => $composableBuilder(
+      column: $table.productBuyerId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productCompanyName => $composableBuilder(
+      column: $table.productCompanyName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get unit => $composableBuilder(
+      column: $table.unit, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get company => $composableBuilder(
       column: $table.company, builder: (column) => ColumnFilters(column));
@@ -14388,6 +14941,36 @@ class $$InvoiceItemsTableOrderingComposer
   ColumnOrderings<String> get productCode => $composableBuilder(
       column: $table.productCode, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get productItemNumber => $composableBuilder(
+      column: $table.productItemNumber,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get productItemName => $composableBuilder(
+      column: $table.productItemName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get productCategory => $composableBuilder(
+      column: $table.productCategory,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get productBuyerId => $composableBuilder(
+      column: $table.productBuyerId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get productCompanyName => $composableBuilder(
+      column: $table.productCompanyName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get unit => $composableBuilder(
+      column: $table.unit, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get company => $composableBuilder(
       column: $table.company, builder: (column) => ColumnOrderings(column));
 
@@ -14512,6 +15095,30 @@ class $$InvoiceItemsTableAnnotationComposer
 
   GeneratedColumn<String> get productCode => $composableBuilder(
       column: $table.productCode, builder: (column) => column);
+
+  GeneratedColumn<String> get productItemNumber => $composableBuilder(
+      column: $table.productItemNumber, builder: (column) => column);
+
+  GeneratedColumn<String> get productItemName => $composableBuilder(
+      column: $table.productItemName, builder: (column) => column);
+
+  GeneratedColumn<String> get productCategory => $composableBuilder(
+      column: $table.productCategory, builder: (column) => column);
+
+  GeneratedColumn<String> get productBuyerId => $composableBuilder(
+      column: $table.productBuyerId, builder: (column) => column);
+
+  GeneratedColumn<String> get productCompanyName => $composableBuilder(
+      column: $table.productCompanyName, builder: (column) => column);
+
+  GeneratedColumn<String> get buyingPrice => $composableBuilder(
+      column: $table.buyingPrice, builder: (column) => column);
+
+  GeneratedColumn<String> get sellingPrice => $composableBuilder(
+      column: $table.sellingPrice, builder: (column) => column);
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
 
   GeneratedColumn<String> get company =>
       $composableBuilder(column: $table.company, builder: (column) => column);
@@ -14640,6 +15247,14 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             Value<int> lineNumber = const Value.absent(),
             Value<String> productName = const Value.absent(),
             Value<String> productCode = const Value.absent(),
+            Value<String> productItemNumber = const Value.absent(),
+            Value<String> productItemName = const Value.absent(),
+            Value<String> productCategory = const Value.absent(),
+            Value<String?> productBuyerId = const Value.absent(),
+            Value<String> productCompanyName = const Value.absent(),
+            Value<String> buyingPrice = const Value.absent(),
+            Value<String> sellingPrice = const Value.absent(),
+            Value<String?> unit = const Value.absent(),
             Value<String> company = const Value.absent(),
             Value<String> category = const Value.absent(),
             Value<String> quantity = const Value.absent(),
@@ -14668,6 +15283,14 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             lineNumber: lineNumber,
             productName: productName,
             productCode: productCode,
+            productItemNumber: productItemNumber,
+            productItemName: productItemName,
+            productCategory: productCategory,
+            productBuyerId: productBuyerId,
+            productCompanyName: productCompanyName,
+            buyingPrice: buyingPrice,
+            sellingPrice: sellingPrice,
+            unit: unit,
             company: company,
             category: category,
             quantity: quantity,
@@ -14696,6 +15319,14 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             required int lineNumber,
             required String productName,
             required String productCode,
+            Value<String> productItemNumber = const Value.absent(),
+            Value<String> productItemName = const Value.absent(),
+            Value<String> productCategory = const Value.absent(),
+            Value<String?> productBuyerId = const Value.absent(),
+            Value<String> productCompanyName = const Value.absent(),
+            Value<String> buyingPrice = const Value.absent(),
+            Value<String> sellingPrice = const Value.absent(),
+            Value<String?> unit = const Value.absent(),
             required String company,
             required String category,
             required String quantity,
@@ -14724,6 +15355,14 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             lineNumber: lineNumber,
             productName: productName,
             productCode: productCode,
+            productItemNumber: productItemNumber,
+            productItemName: productItemName,
+            productCategory: productCategory,
+            productBuyerId: productBuyerId,
+            productCompanyName: productCompanyName,
+            buyingPrice: buyingPrice,
+            sellingPrice: sellingPrice,
+            unit: unit,
             company: company,
             category: category,
             quantity: quantity,
