@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoice_pdf_service.dart';
+import '../services/invoice_share_service.dart';
 import '../services/invoices_service.dart';
 import '../services/products_service.dart';
 import '../services/customers_service.dart';
@@ -20,12 +21,14 @@ class InvoiceListScreen extends StatefulWidget {
     required this.productsService,
     required this.customersService,
     required this.drawer,
+    this.shareService,
   });
 
   final InvoicesService invoicesService;
   final ProductsService productsService;
   final CustomersService customersService;
   final Widget drawer;
+  final InvoiceShareService? shareService;
 
   @override
   State<InvoiceListScreen> createState() => _InvoiceListScreenState();
@@ -109,12 +112,20 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                IconButton(
-                  key: Key('pdfButton-${invoice.id}'),
-                  icon: const Icon(Icons.picture_as_pdf),
-                  tooltip: 'Generate PDF',
-                  onPressed: () => _generatePdfForInvoice(invoice),
-                ),
+                if (widget.shareService != null)
+                  IconButton(
+                    key: Key('shareButton-${invoice.id}'),
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Share PDF',
+                    onPressed: () => _sharePdfForInvoice(invoice),
+                  )
+                else
+                  IconButton(
+                    key: Key('pdfButton-${invoice.id}'),
+                    icon: const Icon(Icons.picture_as_pdf),
+                    tooltip: 'Generate PDF',
+                    onPressed: () => _generatePdfForInvoice(invoice),
+                  ),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -181,6 +192,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
+  Future<void> _sharePdfForInvoice(InvoiceSummary summary) async {
+    try {
+      final invoice =
+          await widget.invoicesService.fetchInvoiceDetail(summary.id);
+      final pdfService = InvoicePdfService.production();
+      final path = await pdfService.generateInvoicePdf(invoice);
+      if (!mounted) return;
+      await widget.shareService!.shareInvoicePdf(path);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    }
+  }
+
   Future<void> _openCreateInvoice() async {
     final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
@@ -188,6 +215,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
               customersService: widget.customersService,
+              shareService: widget.shareService,
             ),
           ),
         ) ??
@@ -203,6 +231,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             builder: (_) => InvoiceDetailScreen(
               invoiceId: invoice.id,
               invoicesService: widget.invoicesService,
+              shareService: widget.shareService,
             ),
           ),
         ) ??

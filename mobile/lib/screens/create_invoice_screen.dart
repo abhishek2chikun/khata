@@ -6,6 +6,7 @@ import '../models/api_error.dart';
 import '../models/product.dart';
 import '../models/customer.dart';
 import '../services/invoices_service.dart';
+import '../services/invoice_share_service.dart';
 import '../services/products_service.dart';
 import '../services/customers_service.dart';
 import '../state/invoice_draft_controller.dart';
@@ -16,7 +17,6 @@ import '../widgets/customer_picker.dart';
 import 'customer_quick_add_dialog.dart';
 import 'product_quick_add_dialog.dart';
 import 'invoice_preview_screen.dart';
-
 class CreateInvoiceScreen extends StatefulWidget {
   const CreateInvoiceScreen({
     super.key,
@@ -24,12 +24,14 @@ class CreateInvoiceScreen extends StatefulWidget {
     required this.productsService,
     required this.customersService,
     this.initialCustomer,
+    this.shareService,
   });
 
   final InvoicesService invoicesService;
   final ProductsService productsService;
   final CustomersService customersService;
   final Customer? initialCustomer;
+  final InvoiceShareService? shareService;
 
   @override
   State<CreateInvoiceScreen> createState() => _CreateInvoiceScreenState();
@@ -504,7 +506,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
     final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
-            builder: (_) => InvoicePreviewScreen(controller: _controller),
+            builder: (_) => InvoicePreviewScreen(
+              controller: _controller,
+              shareService: widget.shareService,
+            ),
           ),
         ) ??
         false;
