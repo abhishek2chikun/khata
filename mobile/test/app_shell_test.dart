@@ -136,6 +136,14 @@ class FakeCustomersService implements CustomersService {
   }
 
   @override
+  Future<Customer> updateCustomer({
+    required String id,
+    required UpdateCustomerInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate}) {
     throw UnimplementedError();

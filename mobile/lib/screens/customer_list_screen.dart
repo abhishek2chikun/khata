@@ -222,18 +222,34 @@ class _CreateCustomerDialogState extends State<_CreateCustomerDialog> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _whatsappController = TextEditingController();
   final _gstinController = TextEditingController();
   final _stateController = TextEditingController();
   final _stateCodeController = TextEditingController();
 
   bool _isSaving = false;
+  bool _whatsappSameAsPhone = false;
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    _phoneController.addListener(_syncWhatsappIfSame);
+  }
+
+  void _syncWhatsappIfSame() {
+    if (_whatsappSameAsPhone) {
+      _whatsappController.text = _phoneController.text;
+    }
+  }
+
+  @override
   void dispose() {
+    _phoneController.removeListener(_syncWhatsappIfSame);
     _nameController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
+    _whatsappController.dispose();
     _gstinController.dispose();
     _stateController.dispose();
     _stateCodeController.dispose();
@@ -255,6 +271,25 @@ class _CreateCustomerDialogState extends State<_CreateCustomerDialog> {
             _buildField(_nameController, 'Name'),
             _buildField(_addressController, 'Address'),
             _buildField(_phoneController, 'Phone'),
+            SwitchListTile(
+              title: const Text('WhatsApp same as phone'),
+              value: _whatsappSameAsPhone,
+              onChanged: _isSaving
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _whatsappSameAsPhone = value;
+                        if (value) {
+                          _whatsappController.text = _phoneController.text;
+                        }
+                      });
+                    },
+            ),
+            _buildField(
+              _whatsappController,
+              'WhatsApp number',
+              enabled: !_whatsappSameAsPhone,
+            ),
             _buildField(_gstinController, 'GSTIN'),
             _buildField(_stateController, 'State'),
             _buildField(_stateCodeController, 'State code'),
@@ -280,12 +315,13 @@ class _CreateCustomerDialogState extends State<_CreateCustomerDialog> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String label) {
+  Widget _buildField(TextEditingController controller, String label,
+      {bool enabled = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
-        enabled: !_isSaving,
+        enabled: enabled && !_isSaving,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
@@ -308,6 +344,13 @@ class _CreateCustomerDialogState extends State<_CreateCustomerDialog> {
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
+          whatsappNumber: _whatsappSameAsPhone
+              ? (_phoneController.text.trim().isEmpty
+                  ? null
+                  : _phoneController.text.trim())
+              : (_whatsappController.text.trim().isEmpty
+                  ? null
+                  : _whatsappController.text.trim()),
           gstin: _gstinController.text.trim().isEmpty
               ? null
               : _gstinController.text.trim(),

@@ -283,6 +283,11 @@ void main() {
     );
     final selectedDay = int.parse(selectedDate.substring(8, 10)).toString();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ledgerDateFilterField')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('ledgerDateFilterField')));
     await tester.pumpAndSettle();
     expect(find.byType(CalendarDatePicker), findsOneWidget);
@@ -622,6 +627,14 @@ class FakeCustomersService implements CustomersService {
 
   @override
   Future<Customer> createCustomer(CreateCustomerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Customer> updateCustomer({
+    required String id,
+    required UpdateCustomerInput input,
+  }) {
     throw UnimplementedError();
   }
 
