@@ -484,6 +484,26 @@ void main() {
         await database.select(database.customerTransactions).getSingle();
     expect(transaction.amount, '125.50');
   });
+
+  test('rejects 1.005 deterministically using string-based validation',
+      () async {
+    final customer = await customersService.createCustomer(_customerInput());
+
+    await expectLater(
+      () => paymentsService.recordCollection(
+        RecordCollectionInput(
+          requestId: _uuid(21),
+          customerId: customer.id,
+          amount: 1.005,
+          occurredOn: '2026-01-01',
+        ),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+
+    expect(
+        await database.select(database.customerTransactions).get(), isEmpty);
+  });
 }
 
 CreateCustomerInput _customerInput({

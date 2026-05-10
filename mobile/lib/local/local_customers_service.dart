@@ -163,6 +163,7 @@ class LocalCustomersService implements CustomersService {
     return switch (transaction.entryType) {
       'OPENING_BALANCE' ||
       'CREDIT_SALE' ||
+      'COLLECTION_REVERSAL' ||
       'BALANCE_INCREASE_ADJUSTMENT' =>
         amount,
       _ => -amount,

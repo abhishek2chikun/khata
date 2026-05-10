@@ -963,6 +963,109 @@ void main() {
     );
     expect(await database.select(database.invoices).get(), isEmpty);
   });
+
+  test(
+      'canceling PARTIAL_PAID invoice zeroes customer pending balance via COLLECTION_REVERSAL',
+      () async {
+    await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        paymentState: 'PARTIAL_PAID',
+        paidAmount: 100,
+      ),
+      requestId: _uuid(40),
+    );
+
+    final transactionsBefore =
+        await database.select(database.customerTransactions).get();
+    expect(
+      transactionsBefore
+          .map((t) => (t.entryType, t.amount)),
+      <(String, String)>[
+        ('CREDIT_SALE', '236'),
+        ('COLLECTION', '100'),
+      ],
+    );
+
+    final customersBefore = await customersService.fetchCustomers();
+    expect(
+      customersBefore.single.pendingBalance,
+      closeTo(136, 0.001),
+    );
+
+    final invoices =
+        await database.select(database.invoices).get();
+    await invoicesService.cancelInvoice(
+      invoiceId: invoices.single.id,
+      reason: 'Customer canceled order',
+    );
+
+    final customersAfter = await customersService.fetchCustomers();
+    expect(
+      customersAfter.single.pendingBalance,
+      closeTo(0, 0.001),
+    );
+
+    final transactionsAfter =
+        await database.select(database.customerTransactions).get();
+    final reversal = transactionsAfter
+        .where((t) => t.entryType == 'COLLECTION_REVERSAL')
+        .single;
+    expect(reversal.amount, '100');
+  });
+
+  test('invoice item stores revenue, buying, and profit analytics columns',
+      () async {
+    await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 2),
+      requestId: _uuid(41),
+    );
+
+    final storedItem =
+        await database.select(database.invoiceItems).getSingle();
+    expect(storedItem.revenueAmount, '200.00');
+    expect(storedItem.buyingAmount, '160.00');
+    expect(storedItem.profitAmount, '40.00');
+  });
+
+  test('paidAmount with more than 2 decimal places is rejected', () async {
+    await expectLater(
+      () => invoicesService.createInvoice(
+        draft: _draft(
+          customer: customer,
+          product: product,
+          quantity: 2,
+          paymentState: 'PARTIAL_PAID',
+          paidAmount: 100.005,
+        ),
+        requestId: _uuid(42),
+      ),
+      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 422)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
+
+  test('invoice hash payload excludes invoice_date and uses fixed decimals',
+      () async {
+    final first = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 2),
+      requestId: _uuid(43),
+    );
+
+    final storedInvoice =
+        await database.select(database.invoices).getSingle();
+
+    final second = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 2),
+      requestId: _uuid(43),
+    );
+
+    expect(second.invoice.id, first.invoice.id);
+    expect(storedInvoice.requestHash, isNotNull);
+    expect(storedInvoice.requestHash, isNotEmpty);
+  });
 }
 
 UpsertCompanyProfileInput _companyInput({

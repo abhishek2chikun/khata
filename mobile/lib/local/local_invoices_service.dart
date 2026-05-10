@@ -9,6 +9,7 @@ import '../models/invoice_draft.dart';
 import '../models/invoice_quote.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
+import '../services/money_validator.dart';
 import 'local_database.dart';
 import 'local_customers_service.dart';
 
@@ -142,6 +143,12 @@ class LocalInvoicesService implements InvoicesService {
                 sgstAmount: _normalizeDecimal(line.sgstAmount),
                 igstAmount: _normalizeDecimal(line.igstAmount),
                 lineTotal: _normalizeDecimal(line.lineTotal),
+                revenueAmount: Value(_normalizeMoneyDecimal(line.taxableAmount)),
+                buyingAmount: Value(_normalizeMoneyDecimal(
+                    line.item.quantity * double.parse(line.product.buyingPrice))),
+                profitAmount: Value(_normalizeMoneyDecimal(line.taxableAmount -
+                    _roundMoney(line.item.quantity *
+                        double.parse(line.product.buyingPrice)))),
               ),
             );
         await _database.into(_database.stockMovements).insert(
@@ -894,6 +901,9 @@ class LocalInvoicesService implements InvoicesService {
     double paidAmount,
     double grandTotal,
   ) {
+    if (paidAmount > 0 && paymentState != 'CREDIT') {
+      validateMoneyAmount(paidAmount.toString());
+    }
     switch (paymentState) {
       case 'CREDIT':
         if (paidAmount != 0) {
@@ -992,19 +1002,18 @@ class LocalInvoicesService implements InvoicesService {
     final payload = <String, dynamic>{
       'customer_id': draft.customer?.id,
       'invoice_datetime': prepared.invoiceDatetime,
-      'invoice_date': prepared.invoiceDate,
       'payment_state': prepared.paymentState,
-      'paid_amount': _normalizeDecimal(prepared.paidAmount),
+      'paid_amount': _normalizeMoneyDecimal(prepared.paidAmount),
       'place_of_supply_state_code': prepared.placeOfSupplyStateCode,
       'notes': _emptyToNull(draft.notes),
       'items': prepared.lines
           .map((line) => <String, dynamic>{
                 'product_id': line.product.id,
-                'quantity': _normalizeDecimal(line.item.quantity),
+                'quantity': _normalizeQuantityDecimal(line.item.quantity),
                 'pricing_mode': line.item.pricingMode,
-                'unit_price': _normalizeDecimal(line.enteredUnitPrice),
-                'gst_rate': _normalizeDecimal(line.gstRate),
-                'discount_percent': _normalizeDecimal(line.discountPercent),
+                'unit_price': _normalizeMoneyDecimal(line.enteredUnitPrice),
+                'gst_rate': _normalizeMoneyDecimal(line.gstRate),
+                'discount_percent': _normalizeMoneyDecimal(line.discountPercent),
               })
           .toList(),
     };
@@ -1139,6 +1148,12 @@ class LocalInvoicesService implements InvoicesService {
     return negative ? -rounded : rounded;
   }
 
+  // NOTE: This service uses double for money fields (structural Dart limitation).
+  // The buyer service uses String-based input instead (see local_buyers_service.dart).
+  // _roundHalfUp() and string normalization mitigate the worst cases, but a future
+  // migration to String-based money input (like the buyer service pattern) is recommended
+  // for full precision safety.
+
   int _pow10(int exponent) {
     var result = 1;
     for (var index = 0; index < exponent; index += 1) {
@@ -1155,6 +1170,20 @@ class LocalInvoicesService implements InvoicesService {
       return value.toInt().toString();
     }
     return value.toString();
+  }
+
+  String _normalizeMoneyDecimal(double value) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  String _normalizeQuantityDecimal(double value) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    return value.toStringAsFixed(3);
   }
 
   String? _emptyToNull(String? value) {

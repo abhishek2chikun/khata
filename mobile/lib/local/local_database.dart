@@ -279,6 +279,12 @@ class InvoiceItems extends Table {
   TextColumn get sgstAmount => text()();
   TextColumn get igstAmount => text()();
   TextColumn get lineTotal => text()();
+  TextColumn get revenueAmount =>
+      text().withDefault(const Constant('0.00'))();
+  TextColumn get buyingAmount =>
+      text().withDefault(const Constant('0.00'))();
+  TextColumn get profitAmount =>
+      text().withDefault(const Constant('0.00'))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -345,7 +351,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -511,6 +517,19 @@ class LocalDatabase extends _$LocalDatabase {
                   "UPDATE invoice_items SET buying_price = '0' WHERE buying_price = ''");
               await customStatement(
                   "UPDATE invoice_items SET selling_price = unit_price_incl_tax WHERE selling_price = ''");
+            }
+          }
+          if (from < 6) {
+            if (await _tableExists('invoice_items')) {
+              await m.addColumn(invoiceItems, invoiceItems.revenueAmount);
+              await m.addColumn(invoiceItems, invoiceItems.buyingAmount);
+              await m.addColumn(invoiceItems, invoiceItems.profitAmount);
+              await customStatement(
+                  "UPDATE invoice_items SET revenue_amount = taxable_amount WHERE revenue_amount = '0.00'");
+              await customStatement(
+                  "UPDATE invoice_items SET buying_amount = ROUND(CAST(quantity AS REAL) * CAST(buying_price AS REAL), 2) WHERE buying_amount = '0.00'");
+              await customStatement(
+                  "UPDATE invoice_items SET profit_amount = ROUND(CAST(revenue_amount AS REAL) - CAST(buying_amount AS REAL), 2) WHERE profit_amount = '0.00'");
             }
           }
         },
