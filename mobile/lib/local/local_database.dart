@@ -60,6 +60,7 @@ class Customers extends Table {
   TextColumn get stateCode => text().nullable()();
   TextColumn get phone => text().nullable()();
   TextColumn get gstin => text().nullable()();
+  TextColumn get whatsappNumber => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   TextColumn get createdAt => text()();
   TextColumn get updatedAt => text()();
@@ -81,6 +82,7 @@ class Buyers extends Table {
   TextColumn get stateCode => text().nullable()();
   TextColumn get phone => text().nullable()();
   TextColumn get gstin => text().nullable()();
+  TextColumn get whatsappNumber => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   TextColumn get createdAt => text()();
   TextColumn get updatedAt => text()();
@@ -351,7 +353,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -530,6 +532,16 @@ class LocalDatabase extends _$LocalDatabase {
                   "UPDATE invoice_items SET buying_amount = ROUND(CAST(quantity AS REAL) * CAST(buying_price AS REAL), 2) WHERE buying_amount = '0.00'");
               await customStatement(
                   "UPDATE invoice_items SET profit_amount = ROUND(CAST(revenue_amount AS REAL) - CAST(buying_amount AS REAL), 2) WHERE profit_amount = '0.00'");
+            }
+          }
+          if (from < 7) {
+            if (await _tableExists('buyers') &&
+                !await _columnExists('buyers', 'whatsapp_number')) {
+              await m.addColumn(buyers, buyers.whatsappNumber);
+            }
+            if (await _tableExists('customers') &&
+                !await _columnExists('customers', 'whatsapp_number')) {
+              await m.addColumn(customers, customers.whatsappNumber);
             }
           }
         },

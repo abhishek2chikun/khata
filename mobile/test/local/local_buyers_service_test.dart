@@ -363,6 +363,28 @@ void main() {
         await database.select(database.buyerTransactions).get(), hasLength(1));
   });
 
+  test('creates buyer with whatsapp number and persists it', () async {
+    final buyer = await buyersService.createBuyer(
+      _buyerInput(whatsappNumber: '9876543210'),
+    );
+
+    expect(buyer.whatsappNumber, '9876543210');
+
+    final storedBuyer = await database.select(database.buyers).getSingle();
+    expect(storedBuyer.whatsappNumber, '9876543210');
+  });
+
+  test('creates buyer without whatsapp number stores null', () async {
+    final buyer = await buyersService.createBuyer(
+      _buyerInput(whatsappNumber: null),
+    );
+
+    expect(buyer.whatsappNumber, isNull);
+
+    final storedBuyer = await database.select(database.buyers).getSingle();
+    expect(storedBuyer.whatsappNumber, isNull);
+  });
+
   test('accepts timezone-aware occurred_at offsets', () async {
     final buyer = await buyersService.createBuyer(_buyerInput());
 
@@ -388,6 +410,7 @@ CreateBuyerInput _buyerInput({
   String gstin = '27ABCDE1234F1Z5',
   String state = 'Maharashtra',
   String stateCode = '27',
+  String? whatsappNumber,
 }) {
   return CreateBuyerInput(
     name: name,
@@ -396,6 +419,7 @@ CreateBuyerInput _buyerInput({
     gstin: gstin,
     state: state,
     stateCode: stateCode,
+    whatsappNumber: whatsappNumber,
   );
 }
 

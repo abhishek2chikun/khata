@@ -12,6 +12,7 @@ class CreateCustomerInput {
     this.gstin,
     this.state,
     this.stateCode,
+    this.whatsappNumber,
   });
 
   final String name;
@@ -20,6 +21,7 @@ class CreateCustomerInput {
   final String? gstin;
   final String? state;
   final String? stateCode;
+  final String? whatsappNumber;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -29,6 +31,7 @@ class CreateCustomerInput {
       'gstin': gstin,
       'state': state,
       'state_code': stateCode,
+      'whatsapp_number': whatsappNumber,
     };
   }
 }

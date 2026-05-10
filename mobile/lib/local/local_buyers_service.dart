@@ -34,6 +34,7 @@ class LocalBuyersService implements BuyersService {
               gstin: Value(input.gstin),
               state: Value(input.state),
               stateCode: Value(input.stateCode),
+              whatsappNumber: Value(input.whatsappNumber),
               createdAt: now,
               updatedAt: now,
             ),
@@ -338,6 +339,7 @@ class LocalBuyersService implements BuyersService {
       stateCode: buyer.stateCode,
       isActive: buyer.isActive,
       pendingPayable: pendingPayable,
+      whatsappNumber: buyer.whatsappNumber,
     );
   }
 

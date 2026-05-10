@@ -31,6 +31,7 @@ class LocalCustomersService implements CustomersService {
               gstin: Value(input.gstin),
               state: Value(input.state),
               stateCode: Value(input.stateCode),
+              whatsappNumber: Value(input.whatsappNumber),
               createdAt: now,
               updatedAt: now,
             ),
@@ -189,6 +190,7 @@ class LocalCustomersService implements CustomersService {
       stateCode: customer.stateCode,
       isActive: customer.isActive,
       pendingBalance: pendingBalance,
+      whatsappNumber: customer.whatsappNumber,
     );
   }
 
