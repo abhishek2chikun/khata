@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/product.dart';
+import '../services/buyers_service.dart';
 import 'product_form_screen.dart';
 import '../services/payments_service.dart';
 import '../services/products_service.dart';
@@ -12,11 +13,13 @@ class ProductDetailScreen extends StatefulWidget {
     super.key,
     required this.product,
     required this.productsService,
+    this.buyersService,
     this.supportsProductReactivation = false,
   });
 
   final Product product;
   final ProductsService productsService;
+  final BuyersService? buyersService;
   final bool supportsProductReactivation;
 
   @override
@@ -192,6 +195,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       MaterialPageRoute<Product>(
         builder: (_) => ProductFormScreen(
           productsService: widget.productsService,
+          buyersService: widget.buyersService,
           product: _product,
         ),
       ),
