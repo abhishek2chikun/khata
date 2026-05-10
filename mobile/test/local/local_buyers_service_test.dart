@@ -363,6 +363,122 @@ void main() {
         await database.select(database.buyerTransactions).get(), hasLength(1));
   });
 
+  test('updateBuyer updates name and persists', () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+
+    final updated = await buyersService.updateBuyer(
+      id: buyer.id,
+      input: UpdateBuyerInput(
+        name: 'Global Suppliers Updated',
+        address: '10 New Market',
+        phone: '9999999999',
+        gstin: '27ABCDE1234F1Z6',
+        state: 'Karnataka',
+        stateCode: '29',
+      ),
+    );
+
+    expect(updated.id, buyer.id);
+    expect(updated.name, 'Global Suppliers Updated');
+    expect(updated.address, '10 New Market');
+    expect(updated.phone, '9999999999');
+    expect(updated.gstin, '27ABCDE1234F1Z6');
+    expect(updated.state, 'Karnataka');
+    expect(updated.stateCode, '29');
+
+    final storedBuyer = await database.select(database.buyers).getSingle();
+    expect(storedBuyer.name, 'Global Suppliers Updated');
+    expect(storedBuyer.address, '10 New Market');
+    expect(storedBuyer.phone, '9999999999');
+    expect(storedBuyer.isActive, isTrue);
+  });
+
+  test('updateBuyer with non-existent id throws NOT_FOUND', () async {
+    await expectLater(
+      () => buyersService.updateBuyer(
+        id: 'non-existent-id',
+        input: UpdateBuyerInput(
+          name: 'Test',
+          address: 'Test Address',
+        ),
+      ),
+      throwsA(_apiError(code: 'NOT_FOUND', statusCode: 404)),
+    );
+  });
+
+  test('updateBuyer with duplicate name throws DUPLICATE_BUYER', () async {
+    await buyersService.createBuyer(
+      _buyerInput(name: 'Alpha Mills', phone: '1111111111'),
+    );
+    final beta = await buyersService.createBuyer(
+      _buyerInput(name: 'Beta Fabrics', phone: '2222222222'),
+    );
+
+    await expectLater(
+      () => buyersService.updateBuyer(
+        id: beta.id,
+        input: UpdateBuyerInput(
+          name: 'Alpha Mills',
+          address: 'New Address',
+          phone: '1111111111',
+        ),
+      ),
+      throwsA(_apiError(code: 'DUPLICATE_BUYER', statusCode: 409)),
+    );
+  });
+
+  test('updateBuyer with same name (self) succeeds', () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+
+    final updated = await buyersService.updateBuyer(
+      id: buyer.id,
+      input: UpdateBuyerInput(
+        name: 'Global Suppliers',
+        address: 'Updated Address',
+        phone: '8888888888',
+      ),
+    );
+
+    expect(updated.name, 'Global Suppliers');
+    expect(updated.address, 'Updated Address');
+  });
+
+  test('updateBuyer persists whatsappNumber', () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+
+    final updated = await buyersService.updateBuyer(
+      id: buyer.id,
+      input: UpdateBuyerInput(
+        name: 'Global Suppliers',
+        address: '9 Wholesale Market',
+        phone: '8888888888',
+        whatsappNumber: '9876543210',
+      ),
+    );
+
+    expect(updated.whatsappNumber, '9876543210');
+
+    final storedBuyer = await database.select(database.buyers).getSingle();
+    expect(storedBuyer.whatsappNumber, '9876543210');
+  });
+
+  test('updateBuyer updates updated_at timestamp', () async {
+    final buyer = await buyersService.createBuyer(_buyerInput());
+    final originalUpdatedAt =
+        (await database.select(database.buyers).getSingle()).updatedAt;
+
+    await buyersService.updateBuyer(
+      id: buyer.id,
+      input: UpdateBuyerInput(
+        name: 'Global Suppliers',
+        address: '9 Wholesale Market',
+      ),
+    );
+
+    final storedBuyer = await database.select(database.buyers).getSingle();
+    expect(storedBuyer.updatedAt, isNot(equals(originalUpdatedAt)));
+  });
+
   test('creates buyer with whatsapp number and persists it', () async {
     final buyer = await buyersService.createBuyer(
       _buyerInput(whatsappNumber: '9876543210'),

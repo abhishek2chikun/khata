@@ -8,6 +8,7 @@ import '../models/buyer_ledger.dart';
 import '../services/buyers_service.dart';
 import '../services/money_validator.dart';
 import '../widgets/error_banner.dart';
+import 'buyer_form_screen.dart';
 
 class BuyerDetailScreen extends StatefulWidget {
   const BuyerDetailScreen({
@@ -78,6 +79,13 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
                     Text(
                       'Pending Payable: ${buyer.pendingPayable.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      key: const Key('editBuyerButton'),
+                      onPressed: _isLoading ? null : _handleEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit buyer'),
                     ),
                     const SizedBox(height: 16),
                     Wrap(
@@ -176,6 +184,22 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _handleEdit() async {
+    final buyer = _ledger?.buyer;
+    if (buyer == null) return;
+    final result = await Navigator.of(context).push<Buyer>(
+      MaterialPageRoute<Buyer>(
+        builder: (_) => BuyerFormScreen(
+          buyersService: widget.buyersService,
+          buyer: buyer,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      await _loadBuyer();
     }
   }
 
