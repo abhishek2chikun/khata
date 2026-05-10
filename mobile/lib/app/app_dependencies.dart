@@ -8,6 +8,7 @@ import '../auth/session_store.dart';
 import '../backup/backup_scheduler.dart';
 import '../backup/drive_backup_service.dart';
 import '../config/api_base_url.dart';
+import '../local/local_analytics_service.dart';
 import '../local/local_auth_service.dart';
 import '../local/local_buyers_service.dart';
 import '../local/local_company_profile_service.dart';
@@ -16,7 +17,9 @@ import '../local/local_invoices_service.dart';
 import '../local/local_payments_service.dart';
 import '../local/local_products_service.dart';
 import '../local/local_customers_service.dart';
+import '../services/api_analytics_service.dart';
 import '../services/api_client.dart';
+import '../services/analytics_service.dart';
 import '../services/buyers_service.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
@@ -40,6 +43,7 @@ class AppDependencies {
     required this.companyProfileService,
     required this.paymentsService,
     required this.invoicesService,
+    required this.analyticsService,
     this.localAuthService,
     this.hasLocalUsers,
     this.driveBackupService,
@@ -55,6 +59,7 @@ class AppDependencies {
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final AnalyticsService analyticsService;
   final LocalAuthService? localAuthService;
   final Future<bool> Function()? hasLocalUsers;
   final DriveBackupService? driveBackupService;
@@ -104,6 +109,7 @@ class AppDependencies {
           LocalCompanyProfileService(database: localDatabase),
       paymentsService: LocalPaymentsService(database: localDatabase),
       invoicesService: LocalInvoicesService(database: localDatabase),
+      analyticsService: LocalAnalyticsService(database: localDatabase),
       localAuthService: authService,
       driveBackupService: backupService,
       backupScheduler: BackupScheduler(
@@ -154,6 +160,7 @@ class AppDependencies {
       companyProfileService: ApiCompanyProfileService(apiClient: apiClient),
       paymentsService: ApiPaymentsService(apiClient: apiClient),
       invoicesService: ApiInvoicesService(apiClient: apiClient),
+      analyticsService: ApiAnalyticsService(apiClient: apiClient),
       dispose: () async {
         authHttpClient.close(force: true);
         apiHttpClient.close(force: true);

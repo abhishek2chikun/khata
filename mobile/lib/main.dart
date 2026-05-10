@@ -8,6 +8,7 @@ import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
 import 'models/customer.dart';
 import 'screens/buyer_list_screen.dart';
+import 'screens/analytics_screen.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
@@ -18,6 +19,7 @@ import 'screens/product_detail_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
 import 'screens/customer_list_screen.dart';
+import 'services/analytics_service.dart';
 import 'services/company_profile_service.dart';
 import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
@@ -48,6 +50,7 @@ class BillingApp extends StatefulWidget {
     CompanyProfileService? companyProfileService,
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
+    AnalyticsService? analyticsService,
     DriveBackupService? driveBackupService,
     BackupScheduler? backupScheduler,
   })  : dependencies = dependencies,
@@ -59,6 +62,7 @@ class BillingApp extends StatefulWidget {
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
         invoicesService = invoicesService ?? dependencies!.invoicesService,
+        analyticsService = analyticsService ?? dependencies!.analyticsService,
         driveBackupService =
             driveBackupService ?? dependencies?.driveBackupService,
         backupScheduler = backupScheduler ?? dependencies?.backupScheduler;
@@ -71,6 +75,7 @@ class BillingApp extends StatefulWidget {
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final AnalyticsService analyticsService;
   final DriveBackupService? driveBackupService;
   final BackupScheduler? backupScheduler;
 
@@ -195,6 +200,11 @@ class _BillingAppState extends State<BillingApp> {
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
             customersService: widget.customersService,
+          );
+        case AppDestination.analytics:
+          return AnalyticsScreen(
+            analyticsService: widget.analyticsService,
+            drawer: drawer,
           );
         case AppDestination.companyProfile:
           return CompanyProfileScreen(
