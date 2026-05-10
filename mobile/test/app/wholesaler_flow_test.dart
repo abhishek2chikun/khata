@@ -1,3 +1,16 @@
+// Task 17 E2E QA — Environment Smoke Test Blockers
+//
+// APK smoke test (attempted `flutter build apk --release --dart-define=DATA_MODE=local`):
+//   BLOCKED: No Java runtime on this host. Gradle exits with:
+//     "The operation couldn't be completed. Unable to locate a Java Runtime."
+//     Gradle task assembleRelease failed with exit code 1
+//
+// Backend API smoke test (attempted `pytest tests/api/test_wholesaler_end_to_end.py`):
+//   BLOCKED: Database URL is postgresql+psycopg://localhost/internal_billing
+//   which does not contain "test" in its name, so conftest.py refuses to run:
+//     "Refusing to run backend tests against a non-test database."
+//   Requires either a test-named database or BILLING_ALLOW_TEST_DATABASE_RESET=1.
+
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
