@@ -1,6 +1,14 @@
 # Mobile — agent.md
 
-Role: Flutter client for login, inventory, customer khata ledger, collections, invoice creation, and offline-first local mode.
+Role: Flutter client for login, inventory, customer khata ledger, buyer payable ledger, collections, invoice creation, analytics dashboard, and offline-first local mode.
+
+## Wholesaler Terminology
+
+- **Buyer**: a supplier/vendor. Products are associated with buyers via `buyer_id` and `company_name`. Buyers have a payable ledger (opening payables, purchase amounts, payments made, adjustments).
+- **Customer**: a retail customer/shop. Customers have a receivable ledger (opening balance, collections, balance adjustments, invoice debits).
+- **Product**: inventory item with V2 fields: `buyer_id`, `company_name`, `buying_price`, `selling_price` (GST-inclusive).
+- **Invoice**: sale document with multi-line items, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), stock/ledger side effects.
+- **Analytics**: dashboard aggregating revenue/profit by buyer, company, customer; top products; low-stock; khata balances. Available in both API and local modes.
 
 ## How to use this system
 
@@ -11,6 +19,21 @@ Role: Flutter client for login, inventory, customer khata ledger, collections, i
 - Keep local Drift tables backend-aligned so future server migration can map local IDs, request IDs, invoice numbers, ledger rows, stock movements, and decimal string fields to the backend/Postgres model.
 - Secure storage is for auth session data. Invoice draft state is transient in memory.
 
+### Build Release APK (local mode)
+
+```bash
+(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+```
+
+Requires JDK 17+. If the build fails with `Unable to locate a Java Runtime`, install `openjdk@17` via Homebrew or Android Studio and set `JAVA_HOME`.
+
+### Run In API Mode
+
+```bash
+(cd mobile && flutter pub get)
+(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=api)
+```
+
 ## Project overview
 
 The app currently supports:
@@ -18,10 +41,13 @@ The app currently supports:
 - username/password login
 - secure session restore via refresh token
 - local first-user setup when `DATA_MODE=local` has no users
-- inventory list with add/edit product flow
+- inventory list with add/edit product flow (V2: buyer_id, company_name, buying_price, selling_price)
 - customer list and customer khata detail
+- buyer list and buyer payable ledger detail
 - collection recording, opening balance, and balance adjustment
-- invoice create → preview → confirm flow
+- invoice create → preview → confirm flow (multi-line, payment state)
+- invoice list and invoice detail screens
+- analytics dashboard (revenue/profit by buyer/company/customer, top products, low stock, khata balances)
 - local Backup/Restore UI and automatic backup scheduler plumbing
 
 Important live behavior:
@@ -49,9 +75,15 @@ mobile/
     services/
     state/
     widgets/
+    local/
+    backup/
+    app/
   test/
+    app/
     auth/
+    backup/
     config/
+    local/
     services/
     state/
     widgets/
@@ -68,9 +100,11 @@ mobile/
 | Shared API client | Done | `mobile/lib/services/api_client.dart` | None yet |
 | Products flow | Done | `mobile/lib/services/products_service.dart`, `mobile/lib/screens/inventory_list_screen.dart`, `mobile/lib/screens/product_form_screen.dart` | None yet |
 | Customers/Khata flow | Done | `mobile/lib/services/customers_service.dart`, `mobile/lib/screens/customer_list_screen.dart`, `mobile/lib/screens/customer_detail_screen.dart` | None yet |
+| Buyers/Payable flow | Done | `mobile/lib/services/buyers_service.dart`, `mobile/lib/screens/buyer_list_screen.dart`, `mobile/lib/screens/buyer_detail_screen.dart` | None yet |
 | Collections/khata flow | Done | `mobile/lib/services/payments_service.dart`, `mobile/lib/screens/record_payment_screen.dart`, `mobile/lib/screens/opening_balance_screen.dart`, `mobile/lib/screens/balance_adjustment_screen.dart` | None yet |
-| Invoice flow | Done — needs UX expansion | `mobile/lib/services/invoices_service.dart`, `mobile/lib/state/invoice_draft_controller.dart`, `mobile/lib/screens/create_invoice_screen.dart`, `mobile/lib/screens/invoice_preview_screen.dart` | None yet |
-| Company profile client | In Progress | `mobile/lib/services/company_profile_service.dart` | None yet |
+| Invoice flow | Done | `mobile/lib/services/invoices_service.dart`, `mobile/lib/state/invoice_draft_controller.dart`, `mobile/lib/screens/create_invoice_screen.dart`, `mobile/lib/screens/invoice_preview_screen.dart`, `mobile/lib/screens/invoice_list_screen.dart`, `mobile/lib/screens/invoice_detail_screen.dart` | None yet |
+| Analytics dashboard | Done | `mobile/lib/services/analytics_service.dart`, `mobile/lib/screens/analytics_screen.dart`, `mobile/lib/local/local_analytics_service.dart` | None yet |
+| Company profile client | Done | `mobile/lib/services/company_profile_service.dart` | None yet |
 | Local data mode | Done | `mobile/lib/app/app_mode.dart`, `mobile/lib/app/app_dependencies.dart`, `mobile/lib/local/` | None yet |
 | Backup/restore | Done — Drive production config external | `mobile/lib/backup/`, `mobile/lib/widgets/app_navigation_drawer.dart` | None yet |
 | Widget/test coverage | Done — focused flows covered | `mobile/test/` | None yet |
@@ -192,11 +226,13 @@ adb reverse tcp:8010 tcp:8010
 - The app can create and confirm invoices, and customer khata detail refreshes can reflect resulting ledger changes.
 - Local backend discovery now handles `8010` and emulator-friendly hosts.
 - Offline-first local mode is available through `DATA_MODE=local` with first-user setup, Drift-backed services, encrypted backup import/export foundations, and automatic Drive backup scheduler plumbing.
+- Wholesaler workflow complete: buyer CRUD and payable ledger, invoice list/detail screens, multi-line invoice creation, product V2 fields, analytics dashboard (both API and local modes).
+- 291 mobile tests passing (auth, config, services, state, widgets, backup, local mode, wholesaler flow).
 
 ## Deferred work
 
-- There is no dedicated invoice list/detail/cancel UI outside customer khata detail history and the create flow.
+- There is no dedicated invoice cancel UI outside invoice detail.
 - There is no UI for product archive, customer archive, or manual stock adjustment even though backend APIs exist.
-- The invoice screen currently exposes a single line-item form; multi-line invoice authoring is not surfaced yet.
 - Real Google Drive backup upload/download requires external Google Cloud/Firebase/app configuration; the repository currently provides interfaces, scheduler plumbing, and UI skeleton behavior.
+- Platform background scheduling (Android WorkManager / iOS BGTaskScheduler) requires native configuration outside the current skeleton.
 - `mobile/analysis_options.yaml` includes `package:flutter_lints/flutter.yaml`, but `flutter_lints` is not listed in `pubspec.yaml`, so analyzer/format tooling may warn until that is reconciled.

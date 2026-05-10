@@ -8,6 +8,16 @@ Implementation is tracked in:
 - `docs/superpowers/specs/2026-04-19-internal-billing-khata-design.md`
 - `docs/superpowers/plans/2026-04-19-internal-billing-khata-implementation.md`
 
+## Wholesaler Workflow Terminology
+
+The app models a wholesaler (distributor) business. Key entity names:
+
+- **Buyer**: a supplier/vendor from whom the wholesaler purchases goods. Each product is associated with a buyer. Buyers have their own payable ledger (opening payables, purchase amounts, payments made, adjustments).
+- **Customer**: a retail customer/shop that buys goods from the wholesaler. Customers have their own receivable ledger (opening balance, collections, balance adjustments, invoice debits).
+- **Product**: an inventory item with `item_number`, `item_name`, `category`, `buyer_id`, `company_name`, `buying_price` (purchase cost from buyer), and `selling_price` (sale price to customer). Prices are GST-inclusive.
+- **Invoice**: a sale document to a customer with line items, tax computation, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), and stock/ledger side effects.
+- **Analytics**: dashboard aggregating revenue/profit by buyer, company, and customer; top products; low-stock alerts; customer khata balances; buyer pending payables. Available in both API and local modes.
+
 ## PostgreSQL Setup
 
 Start the local PostgreSQL test database container:
@@ -178,6 +188,79 @@ The local schema is intentionally backend-aligned for future server migration:
 local tables keep stable IDs, request IDs/request hashes, invoice numbers,
 ledger transactions, stock movements, user references, and decimal values as
 string payloads so exported data can be mapped to the Postgres/API model later.
+
+### Local/Server Schema Alignment
+
+Both local (Drift/SQLite) and server (PostgreSQL) schemas share the same table
+and column naming. Local mode stores all monetary values as canonical decimal
+strings (e.g. `"123.45"`) to preserve precision; the server uses `Numeric`
+columns. Key alignment expectations:
+
+- Local `products` V2 columns (`buyer_id`, `company_name`, `buying_price`,
+  `selling_price`) match server `products` columns exactly.
+- Local `invoice_items` snapshot columns (`product_item_number`,
+  `product_buyer_id`, `product_company_name`, `buying_price`, `selling_price`)
+  match server columns. The server additionally computes `revenue_amount`,
+  `buying_amount`, and `profit_amount` during migration.
+- Local `invoices.payment_state` (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`) and
+  `invoices.paid_amount` match server semantics.
+- Local `buyer_transactions` and `customer_transactions` have full column
+  alignment with server counterparts.
+- Local text IDs map to server UUIDs during migration; `salt` and
+  `password_hash_version` are local-only.
+
+Backup schema version: **6**. Backend compatibility version: **`local-v2`**.
+
+### Backup and Migration Compatibility
+
+Backups are encrypted (AES-256-GCM, PBKDF2-HMAC-SHA256) JSON envelopes
+containing `schema_version`, `backend_compatibility_version`, `exported_at`,
+and per-table payloads. Import validates both version fields and required
+tables before replacing local data in a transaction. A backup from one device
+can restore on another device running the same schema version. Future schema
+changes must bump `schema_version` and/or `backend_compatibility_version` to
+prevent cross-version restore corruption.
+
+### Drive/Background Scheduling Limitations
+
+- Google Drive integration is plumbing only: `DriveBackupService` interface,
+  local settings persistence, scheduler wiring, UI actions, and a Drive service
+  skeleton. Real OAuth, file picker/selection, upload/download, and Firebase
+  configuration must be set up outside this repository.
+- `BackupScheduler` handles daily due/missed-backup decisions and app-launch
+  catch-up. Automatic backup attempts currently call the Drive skeleton and
+  record a configuration-required failure event until a real implementation is
+  provided.
+- Platform background execution (`BackupScheduleAdapter`) requires Android/iOS
+  scheduling setup (e.g. WorkManager) outside the current skeleton.
+
+## Build Release APK
+
+Build a local-mode release APK:
+
+```bash
+(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+```
+
+The APK is output at `mobile/build/app/outputs/flutter-apk/app-release.apk`.
+
+### APK Build Blocker: Java Runtime
+
+The `flutter build apk` command requires a JDK (Gradle needs `java`). If the
+build fails with `Unable to locate a Java Runtime`, install JDK 17+:
+
+```bash
+brew install openjdk@17
+```
+
+Then set `JAVA_HOME` before building:
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || echo /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home)
+(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+```
+
+Alternatively, install Android Studio which bundles a JDK.
 
 ## Run The Flutter App
 
