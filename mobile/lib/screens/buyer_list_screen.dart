@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/buyer.dart';
 import '../services/buyers_service.dart';
+import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
 import 'buyer_detail_screen.dart';
 import 'buyer_form_screen.dart';
@@ -13,10 +14,12 @@ class BuyerListScreen extends StatefulWidget {
   const BuyerListScreen({
     super.key,
     required this.buyersService,
+    this.productsService,
     this.drawer,
   });
 
   final BuyersService buyersService;
+  final ProductsService? productsService;
   final Widget? drawer;
 
   @override
@@ -167,6 +170,7 @@ class _BuyerListScreenState extends State<BuyerListScreen> {
         builder: (_) => BuyerDetailScreen(
           buyerId: buyer.id,
           buyersService: widget.buyersService,
+          productsService: widget.productsService,
         ),
       ),
     );

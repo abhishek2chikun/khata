@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
+import 'package:internal_billing_khata_mobile/models/buyer.dart';
+import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/screens/product_form_screen.dart';
+import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
@@ -235,6 +238,106 @@ void main() {
     expect(returnedProduct?.itemNumber, 'PEN-1');
     expect(find.text('Open form'), findsOneWidget);
   });
+
+  testWidgets('selecting buyer from autocomplete sets companyName and buyerId',
+      (tester) async {
+    final productsService = FakeProductsService();
+    final buyersService = FakeBuyersService([
+      const Buyer(
+        id: 'buyer-1',
+        name: 'Acme Corp',
+        address: '123 Main St',
+        phone: null,
+        gstin: null,
+        state: null,
+        stateCode: null,
+        isActive: true,
+        pendingPayable: 0,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductFormScreen(
+          productsService: productsService,
+          buyersService: buyersService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Acme');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acme Corp'), findsWidgets);
+    await tester.tap(find.text('Acme Corp').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
+    await tester.enterText(find.bySemanticsLabel('Selling price'), '10');
+    await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pumpAndSettle();
+
+    expect(productsService.createdInputs, hasLength(1));
+    final input = productsService.createdInputs.single;
+    expect(input.companyName, 'Acme Corp');
+    expect(input.buyerId, 'buyer-1');
+  });
+
+  testWidgets('free text company without buyer selection has null buyerId',
+      (tester) async {
+    final productsService = FakeProductsService();
+    final buyersService = FakeBuyersService([
+      const Buyer(
+        id: 'buyer-1',
+        name: 'Acme Corp',
+        address: '123 Main St',
+        phone: null,
+        gstin: null,
+        state: null,
+        stateCode: null,
+        isActive: true,
+        pendingPayable: 0,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProductFormScreen(
+          productsService: productsService,
+          buyersService: buyersService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.bySemanticsLabel('Company / buyer'), 'Custom');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.bySemanticsLabel('Category'), 'Pens');
+    await tester.enterText(find.bySemanticsLabel('Item name'), 'Blue Pen');
+    await tester.enterText(find.bySemanticsLabel('Item number'), 'PEN-1');
+    await tester.enterText(find.bySemanticsLabel('Buying price'), '8');
+    await tester.enterText(find.bySemanticsLabel('Selling price'), '10');
+    await tester.enterText(find.bySemanticsLabel('GST rate'), '18');
+    await tester.enterText(find.bySemanticsLabel('Quantity on hand'), '3');
+    await tester.enterText(find.bySemanticsLabel('Low stock threshold'), '2');
+    await tester.ensureVisible(find.text('Create product'));
+    await tester.tap(find.text('Create product'));
+    await tester.pumpAndSettle();
+
+    expect(productsService.createdInputs, hasLength(1));
+    final input = productsService.createdInputs.single;
+    expect(input.companyName, 'Custom');
+    expect(input.buyerId, isNull);
+  });
 }
 
 class FakeProductsService implements ProductsService {
@@ -250,6 +353,7 @@ class FakeProductsService implements ProductsService {
       category: input.category,
       itemName: input.itemName,
       itemNumber: input.itemNumber,
+      buyerId: input.buyerId,
       buyingPrice: input.buyingPrice,
       sellingPrice: input.sellingPrice,
       unit: input.unit,
@@ -293,6 +397,7 @@ class FakeProductsService implements ProductsService {
       category: input.category,
       itemName: input.itemName,
       itemNumber: input.itemNumber,
+      buyerId: input.buyerId,
       buyingPrice: input.buyingPrice,
       sellingPrice: input.sellingPrice,
       unit: input.unit,
@@ -301,5 +406,58 @@ class FakeProductsService implements ProductsService {
       lowStockThreshold: input.lowStockThreshold,
       isActive: true,
     );
+  }
+}
+
+class FakeBuyersService implements BuyersService {
+  final List<Buyer> buyers;
+  FakeBuyersService([this.buyers = const <Buyer>[]]);
+
+  @override
+  Future<List<Buyer>> fetchBuyers({String search = ''}) async => buyers;
+
+  @override
+  Future<Buyer> createBuyer(CreateBuyerInput input) async {
+    return Buyer(
+      id: 'buyer-new',
+      name: input.name,
+      address: input.address,
+      phone: input.phone,
+      gstin: input.gstin,
+      state: input.state,
+      stateCode: input.stateCode,
+      isActive: true,
+      pendingPayable: 0,
+    );
+  }
+
+  @override
+  Future<Buyer> updateBuyer({required String id, required UpdateBuyerInput input}) async {
+    throw ApiError(message: 'not used');
+  }
+
+  @override
+  Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
+    throw ApiError(message: 'not used');
+  }
+
+  @override
+  Future<void> addOpeningPayable({required String buyerId, required BuyerLedgerEntryInput input}) {
+    throw ApiError(message: 'not used');
+  }
+
+  @override
+  Future<void> addPurchaseAmount({required String buyerId, required BuyerLedgerEntryInput input}) {
+    throw ApiError(message: 'not used');
+  }
+
+  @override
+  Future<void> addPaymentMade({required String buyerId, required BuyerLedgerEntryInput input}) {
+    throw ApiError(message: 'not used');
+  }
+
+  @override
+  Future<void> addPayableAdjustment({required String buyerId, required BuyerPayableAdjustmentInput input}) {
+    throw ApiError(message: 'not used');
   }
 }

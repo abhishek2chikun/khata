@@ -466,6 +466,136 @@ void main() {
       throwsA(_duplicateProductError()),
     );
   });
+
+  test('create product with buyerId persists buyerId in database', () async {
+    final product = await service.createProduct(
+      CreateProductInput(
+        companyName: 'Acme',
+        category: 'Pens',
+        itemName: 'Blue Pen',
+        itemNumber: 'PEN-1',
+        buyingPrice: 8.25,
+        sellingPrice: 10.5,
+        unit: 'box',
+        gstRate: 18,
+        quantityOnHand: 3.25,
+        lowStockThreshold: 2,
+        buyerId: 'buyer-123',
+      ),
+    );
+
+    expect(product.buyerId, 'buyer-123');
+    expect(product.companyName, 'Acme');
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.buyerId, 'buyer-123');
+  });
+
+  test('create product without buyerId leaves buyerId null', () async {
+    final product = await service.createProduct(_createProductInput());
+
+    expect(product.buyerId, isNull);
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.buyerId, isNull);
+  });
+
+  test('update product with buyerId persists buyerId in database', () async {
+    final product = await service.createProduct(_createProductInput());
+
+    final updated = await service.updateProduct(
+      id: product.id,
+      input: const UpdateProductInput(
+        companyName: 'Acme',
+        category: 'Pens',
+        itemName: 'Blue Pen',
+        itemNumber: 'PEN-1',
+        buyingPrice: 8.25,
+        sellingPrice: 10.5,
+        unit: 'box',
+        gstRate: 18,
+        lowStockThreshold: 2,
+        buyerId: 'buyer-456',
+      ),
+    );
+
+    expect(updated.buyerId, 'buyer-456');
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.buyerId, 'buyer-456');
+  });
+
+  test('update product clears buyerId when set to null', () async {
+    final product = await service.createProduct(
+      CreateProductInput(
+        companyName: 'Acme',
+        category: 'Pens',
+        itemName: 'Blue Pen',
+        itemNumber: 'PEN-1',
+        buyingPrice: 8.25,
+        sellingPrice: 10.5,
+        unit: 'box',
+        gstRate: 18,
+        quantityOnHand: 3.25,
+        lowStockThreshold: 2,
+        buyerId: 'buyer-123',
+      ),
+    );
+    expect(product.buyerId, 'buyer-123');
+
+    final updated = await service.updateProduct(
+      id: product.id,
+      input: const UpdateProductInput(
+        companyName: 'Acme',
+        category: 'Pens',
+        itemName: 'Blue Pen',
+        itemNumber: 'PEN-1',
+        buyingPrice: 8.25,
+        sellingPrice: 10.5,
+        unit: 'box',
+        gstRate: 18,
+        lowStockThreshold: 2,
+        buyerId: null,
+      ),
+    );
+
+    expect(updated.buyerId, isNull);
+    final storedProduct = await database.select(database.products).getSingle();
+    expect(storedProduct.buyerId, isNull);
+  });
+
+  test('fetchProducts filters by buyerId', () async {
+    await service.createProduct(
+      _createProductInput(itemName: 'Blue Pen', itemNumber: 'PEN-1')
+          .copyWith(buyerId: 'buyer-1'),
+    );
+    await service.createProduct(
+      _createProductInput(itemName: 'Red Pen', itemNumber: 'PEN-2')
+          .copyWith(buyerId: 'buyer-1'),
+    );
+    await service.createProduct(
+      _createProductInput(itemName: 'Marker', itemNumber: 'MRK-1')
+          .copyWith(buyerId: 'buyer-2'),
+    );
+    await service.createProduct(
+      _createProductInput(itemName: 'Notebook', itemNumber: 'NOTE-1'),
+    );
+
+    final buyer1Products = await service.fetchProducts(
+      filter: const ProductFilter(buyerId: 'buyer-1'),
+    );
+    expect(buyer1Products.length, 2);
+    expect(
+      buyer1Products.every((p) => p.buyerId == 'buyer-1'), isTrue);
+
+    final buyer2Products = await service.fetchProducts(
+      filter: const ProductFilter(buyerId: 'buyer-2'),
+    );
+    expect(buyer2Products.length, 1);
+    expect(buyer2Products.single.itemName, 'Marker');
+
+    final noBuyerProducts = await service.fetchProducts(
+      filter: const ProductFilter(buyerId: 'none'),
+    );
+    expect(noBuyerProducts, isEmpty);
+  });
 }
 
 CreateProductInput _createProductInput({
@@ -479,6 +609,7 @@ CreateProductInput _createProductInput({
   double gstRate = 18,
   double quantityOnHand = 3.25,
   double lowStockThreshold = 2,
+  String? buyerId,
 }) {
   return CreateProductInput(
     companyName: companyName,
@@ -491,6 +622,7 @@ CreateProductInput _createProductInput({
     gstRate: gstRate,
     quantityOnHand: quantityOnHand,
     lowStockThreshold: lowStockThreshold,
+    buyerId: buyerId,
   );
 }
 

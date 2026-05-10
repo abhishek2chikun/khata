@@ -162,7 +162,8 @@ class _BillingAppState extends State<BillingApp> {
               final result = await Navigator.of(context).push<Product>(
                 MaterialPageRoute<Product>(
                   builder: (_) => ProductFormScreen(
-                      productsService: widget.productsService),
+                      productsService: widget.productsService,
+                      buyersService: widget.buyersService),
                 ),
               );
               return result != null;
@@ -172,6 +173,7 @@ class _BillingAppState extends State<BillingApp> {
                 MaterialPageRoute<Product>(
                   builder: (_) => ProductDetailScreen(
                     productsService: widget.productsService,
+                    buyersService: widget.buyersService,
                     product: product,
                     supportsProductReactivation:
                         widget.dependencies?.mode == DataMode.local,
@@ -192,6 +194,7 @@ class _BillingAppState extends State<BillingApp> {
           return BuyerListScreen(
             drawer: drawer,
             buyersService: widget.buyersService,
+            productsService: widget.productsService,
           );
         case AppDestination.invoices:
           return InvoiceListScreen(
