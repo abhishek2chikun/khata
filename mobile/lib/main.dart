@@ -173,7 +173,6 @@ class _BillingAppState extends State<BillingApp> {
                   builder: (_) => ProductDetailScreen(
                     productsService: widget.productsService,
                     product: product,
-                    onEditProduct: _openProductForm,
                     supportsProductReactivation:
                         widget.dependencies?.mode == DataMode.local,
                   ),
@@ -238,18 +237,6 @@ class _BillingAppState extends State<BillingApp> {
         ) ??
         false;
     return created;
-  }
-
-  Future<Product?> _openProductForm(Product product) async {
-    final result = await Navigator.of(context).push<Product>(
-      MaterialPageRoute<Product>(
-        builder: (_) => ProductFormScreen(
-          productsService: widget.productsService,
-          product: product,
-        ),
-      ),
-    );
-    return result;
   }
 
   Future<void> _checkLocalUsers() async {

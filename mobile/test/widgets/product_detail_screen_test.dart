@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/screens/product_detail_screen.dart';
+import 'package:internal_billing_khata_mobile/screens/product_form_screen.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
@@ -12,7 +13,6 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: FakeProductsService(product: _product),
-          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -38,18 +38,12 @@ void main() {
     expect(find.text('Active'), findsWidgets);
   });
 
-  testWidgets('edit opens product form callback', (tester) async {
-    Product? editedProduct;
-
+  testWidgets('edit navigates to ProductFormScreen', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ProductDetailScreen(
           product: _product,
           productsService: FakeProductsService(product: _product),
-          onEditProduct: (product) async {
-            editedProduct = product;
-            return null;
-          },
           supportsProductReactivation: true,
         ),
       ),
@@ -57,14 +51,16 @@ void main() {
 
     await tester.ensureVisible(find.byKey(const Key('editProductButton')));
     await tester.tap(find.byKey(const Key('editProductButton')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(editedProduct?.id, _product.id);
+    expect(find.byType(ProductFormScreen), findsOneWidget);
+    expect(find.text('Edit product'), findsOneWidget);
   });
 
-  testWidgets('edit returns updated product from callback', (tester) async {
+  testWidgets('edit updates detail and returns product on back',
+      (tester) async {
+    final service = FakeProductsService(product: _product);
     Product? returnedProduct;
-    final updatedProduct = _product.copyWith(itemName: 'Blue Pen Updated');
 
     await tester.pumpWidget(
       MaterialApp(
@@ -76,8 +72,7 @@ void main() {
                   MaterialPageRoute<Product>(
                     builder: (_) => ProductDetailScreen(
                       product: _product,
-                      productsService: FakeProductsService(product: _product),
-                      onEditProduct: (_) async => updatedProduct,
+                      productsService: service,
                       supportsProductReactivation: true,
                     ),
                   ),
@@ -92,11 +87,71 @@ void main() {
 
     await tester.tap(find.text('Open detail'));
     await tester.pumpAndSettle();
+
     await tester.ensureVisible(find.byKey(const Key('editProductButton')));
     await tester.tap(find.byKey(const Key('editProductButton')));
     await tester.pumpAndSettle();
 
-    expect(returnedProduct?.itemName, 'Blue Pen Updated');
+    expect(find.text('Edit product'), findsOneWidget);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Item name'), 'Updated Pen');
+    await tester.ensureVisible(find.text('Save changes'));
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Updated Pen'), findsOneWidget);
+    expect(returnedProduct, isNull);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(returnedProduct?.itemName, 'Updated Pen');
+  });
+
+  testWidgets('edit cancel keeps original product', (tester) async {
+    Product? returnedProduct;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                returnedProduct = await Navigator.of(context).push<Product>(
+                  MaterialPageRoute<Product>(
+                    builder: (_) => ProductDetailScreen(
+                      product: _product,
+                      productsService:
+                          FakeProductsService(product: _product),
+                      supportsProductReactivation: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Open detail'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open detail'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('editProductButton')));
+    await tester.tap(find.byKey(const Key('editProductButton')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(BackButton).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Blue Pen'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(returnedProduct, isNull);
   });
 
   testWidgets('archive marks product inactive and returns refresh result',
@@ -115,7 +170,6 @@ void main() {
                     builder: (_) => ProductDetailScreen(
                       product: _product,
                       productsService: service,
-                      onEditProduct: (_) async => null,
                       supportsProductReactivation: true,
                     ),
                   ),
@@ -149,7 +203,6 @@ void main() {
         home: ProductDetailScreen(
           product: archived,
           productsService: service,
-          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -173,7 +226,6 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: service,
-          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -207,7 +259,6 @@ void main() {
         home: ProductDetailScreen(
           product: archived,
           productsService: FakeProductsService(product: archived),
-          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -225,7 +276,6 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: service,
-          onEditProduct: (_) async => null,
           supportsProductReactivation: true,
         ),
       ),
@@ -253,7 +303,6 @@ void main() {
           productsService: FakeProductsService(
             product: _product.copyWith(isActive: false),
           ),
-          onEditProduct: (_) async => null,
           supportsProductReactivation: false,
         ),
       ),
@@ -274,7 +323,6 @@ void main() {
         home: ProductDetailScreen(
           product: _product,
           productsService: service,
-          onEditProduct: (_) async => null,
           supportsProductReactivation: false,
         ),
       ),
