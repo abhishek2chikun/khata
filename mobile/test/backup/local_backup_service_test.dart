@@ -391,7 +391,7 @@ void main() {
 
   test('backup schema version and compatibility version are updated for V2',
       () async {
-    expect(LocalBackupPayload.currentSchemaVersion, 7);
+    expect(LocalBackupPayload.currentSchemaVersion, 8);
     expect(
         LocalBackupPayload.currentBackendCompatibilityVersion, 'local-v2');
   });

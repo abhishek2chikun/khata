@@ -45,6 +45,39 @@ void main() {
     expect(names, isNot(contains('seller_transactions')));
   });
 
+  test('creates customer with whatsapp number and persists it', () async {
+    final customer = await customersService.createCustomer(
+      const CreateCustomerInput(
+        name: 'WhatsApp Customer',
+        address: '1 Market Road',
+        phone: '9999999999',
+        whatsappNumber: '9876543210',
+      ),
+    );
+
+    expect(customer.whatsappNumber, '9876543210');
+
+    final storedCustomer =
+        await database.select(database.customers).getSingle();
+    expect(storedCustomer.whatsappNumber, '9876543210');
+  });
+
+  test('creates customer without whatsapp number stores null', () async {
+    final customer = await customersService.createCustomer(
+      const CreateCustomerInput(
+        name: 'No WhatsApp Customer',
+        address: '1 Market Road',
+        phone: '9999999999',
+      ),
+    );
+
+    expect(customer.whatsappNumber, isNull);
+
+    final storedCustomer =
+        await database.select(database.customers).getSingle();
+    expect(storedCustomer.whatsappNumber, isNull);
+  });
+
   test(
       'customer khata ledger preserves balance math and deterministic ordering',
       () async {
