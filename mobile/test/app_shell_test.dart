@@ -14,6 +14,8 @@ import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/services/analytics_service.dart';
+import 'package:internal_billing_khata_mobile/models/analytics.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
@@ -38,6 +40,7 @@ void main() {
           companyProfileService: FakeCompanyProfileService(),
           paymentsService: FakePaymentsService(),
           invoicesService: FakeInvoicesService(),
+          analyticsService: FakeAnalyticsService(),
         ),
       ),
     );
@@ -250,5 +253,12 @@ class FakeCompanyProfileService implements CompanyProfileService {
   @override
   Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input) {
     throw UnimplementedError();
+  }
+}
+
+class FakeAnalyticsService implements AnalyticsService {
+  @override
+  Future<Dashboard> getDashboard({String? fromDate, String? toDate}) async {
+    return Dashboard.empty();
   }
 }

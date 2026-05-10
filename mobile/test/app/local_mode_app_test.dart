@@ -19,12 +19,15 @@ import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/services/analytics_service.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
+
+import 'package:internal_billing_khata_mobile/models/analytics.dart';
 
 void main() {
   testWidgets(
@@ -107,6 +110,7 @@ void main() {
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
       dispose: () async {
         disposed = true;
       },
@@ -137,36 +141,7 @@ void main() {
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
-      hasLocalUsers: () async => true,
-    );
-
-    await tester.pumpWidget(
-      BillingApp(
-        dependencies: dependencies,
-        backupScheduler: scheduler,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(scheduler.catchUpRuns, 1);
-    expect(scheduler.registerRuns, 1);
-  });
-
-  testWidgets('local mode runs catch-up when schedule registration fails',
-      (tester) async {
-    final scheduler = _FakeBackupScheduler(throwOnRegister: true);
-    final dependencies = AppDependencies(
-      mode: DataMode.local,
-      controller: AuthController(
-        authService: _AuthenticatedAuthService(),
-        sessionStore: _AuthenticatedSessionStore(),
-      ),
-      productsService: _FakeProductsService(),
-      customersService: _FakeCustomersService(),
-      buyersService: _FakeBuyersService(),
-      companyProfileService: _FakeCompanyProfileService(),
-      paymentsService: _FakePaymentsService(),
-      invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
       hasLocalUsers: () async => true,
     );
 
@@ -198,6 +173,39 @@ void main() {
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
+      hasLocalUsers: () async => true,
+    );
+
+    await tester.pumpWidget(
+      BillingApp(
+        dependencies: dependencies,
+        backupScheduler: scheduler,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inventory'), findsWidgets);
+    expect(scheduler.registerRuns, 1);
+    expect(scheduler.catchUpRuns, 1);
+  });
+
+  testWidgets('local mode keeps app shell open when catch-up fails',
+      (tester) async {
+    final scheduler = _FakeBackupScheduler(throwOnCatchUp: true);
+    final dependencies = AppDependencies(
+      mode: DataMode.local,
+      controller: AuthController(
+        authService: _AuthenticatedAuthService(),
+        sessionStore: _AuthenticatedSessionStore(),
+      ),
+      productsService: _FakeProductsService(),
+      customersService: _FakeCustomersService(),
+      buyersService: _FakeBuyersService(),
+      companyProfileService: _FakeCompanyProfileService(),
+      paymentsService: _FakePaymentsService(),
+      invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
       hasLocalUsers: () async => true,
     );
 
@@ -227,6 +235,7 @@ void main() {
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
     );
 
     await tester.pumpWidget(
@@ -532,5 +541,12 @@ class _FakeInvoicesService implements InvoicesService {
   @override
   Future<InvoiceQuote> quoteInvoice(InvoiceDraft draft) {
     throw UnimplementedError();
+  }
+}
+
+class _FakeAnalyticsService implements AnalyticsService {
+  @override
+  Future<Dashboard> getDashboard({String? fromDate, String? toDate}) async {
+    return Dashboard.empty();
   }
 }
