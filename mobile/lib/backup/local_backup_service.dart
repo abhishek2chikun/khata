@@ -197,6 +197,9 @@ class LocalBackupService {
       'sgst_amount',
       'igst_amount',
       'line_total',
+      'revenue_amount',
+      'buying_amount',
+      'profit_amount',
     },
     'stock_movements': {
       'id',

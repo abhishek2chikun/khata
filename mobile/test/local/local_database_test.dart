@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 5);
+    expect(database.schemaVersion, 6);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[

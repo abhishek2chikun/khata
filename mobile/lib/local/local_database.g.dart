@@ -7155,6 +7155,30 @@ class $InvoiceItemsTable extends InvoiceItems
   late final GeneratedColumn<String> lineTotal = GeneratedColumn<String>(
       'line_total', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _revenueAmountMeta =
+      const VerificationMeta('revenueAmount');
+  @override
+  late final GeneratedColumn<String> revenueAmount = GeneratedColumn<String>(
+      'revenue_amount', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('0.00'));
+  static const VerificationMeta _buyingAmountMeta =
+      const VerificationMeta('buyingAmount');
+  @override
+  late final GeneratedColumn<String> buyingAmount = GeneratedColumn<String>(
+      'buying_amount', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('0.00'));
+  static const VerificationMeta _profitAmountMeta =
+      const VerificationMeta('profitAmount');
+  @override
+  late final GeneratedColumn<String> profitAmount = GeneratedColumn<String>(
+      'profit_amount', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('0.00'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -7189,7 +7213,10 @@ class $InvoiceItemsTable extends InvoiceItems
         cgstAmount,
         sgstAmount,
         igstAmount,
-        lineTotal
+        lineTotal,
+        revenueAmount,
+        buyingAmount,
+        profitAmount
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7422,6 +7449,24 @@ class $InvoiceItemsTable extends InvoiceItems
     } else if (isInserting) {
       context.missing(_lineTotalMeta);
     }
+    if (data.containsKey('revenue_amount')) {
+      context.handle(
+          _revenueAmountMeta,
+          revenueAmount.isAcceptableOrUnknown(
+              data['revenue_amount']!, _revenueAmountMeta));
+    }
+    if (data.containsKey('buying_amount')) {
+      context.handle(
+          _buyingAmountMeta,
+          buyingAmount.isAcceptableOrUnknown(
+              data['buying_amount']!, _buyingAmountMeta));
+    }
+    if (data.containsKey('profit_amount')) {
+      context.handle(
+          _profitAmountMeta,
+          profitAmount.isAcceptableOrUnknown(
+              data['profit_amount']!, _profitAmountMeta));
+    }
     return context;
   }
 
@@ -7497,6 +7542,12 @@ class $InvoiceItemsTable extends InvoiceItems
           .read(DriftSqlType.string, data['${effectivePrefix}igst_amount'])!,
       lineTotal: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}line_total'])!,
+      revenueAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}revenue_amount'])!,
+      buyingAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}buying_amount'])!,
+      profitAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}profit_amount'])!,
     );
   }
 
@@ -7540,6 +7591,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
   final String sgstAmount;
   final String igstAmount;
   final String lineTotal;
+  final String revenueAmount;
+  final String buyingAmount;
+  final String profitAmount;
   const InvoiceItem(
       {required this.id,
       required this.invoiceId,
@@ -7573,7 +7627,10 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       required this.cgstAmount,
       required this.sgstAmount,
       required this.igstAmount,
-      required this.lineTotal});
+      required this.lineTotal,
+      required this.revenueAmount,
+      required this.buyingAmount,
+      required this.profitAmount});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -7614,6 +7671,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
     map['sgst_amount'] = Variable<String>(sgstAmount);
     map['igst_amount'] = Variable<String>(igstAmount);
     map['line_total'] = Variable<String>(lineTotal);
+    map['revenue_amount'] = Variable<String>(revenueAmount);
+    map['buying_amount'] = Variable<String>(buyingAmount);
+    map['profit_amount'] = Variable<String>(profitAmount);
     return map;
   }
 
@@ -7654,6 +7714,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       sgstAmount: Value(sgstAmount),
       igstAmount: Value(igstAmount),
       lineTotal: Value(lineTotal),
+      revenueAmount: Value(revenueAmount),
+      buyingAmount: Value(buyingAmount),
+      profitAmount: Value(profitAmount),
     );
   }
 
@@ -7695,6 +7758,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       sgstAmount: serializer.fromJson<String>(json['sgstAmount']),
       igstAmount: serializer.fromJson<String>(json['igstAmount']),
       lineTotal: serializer.fromJson<String>(json['lineTotal']),
+      revenueAmount: serializer.fromJson<String>(json['revenueAmount']),
+      buyingAmount: serializer.fromJson<String>(json['buyingAmount']),
+      profitAmount: serializer.fromJson<String>(json['profitAmount']),
     );
   }
   @override
@@ -7734,6 +7800,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       'sgstAmount': serializer.toJson<String>(sgstAmount),
       'igstAmount': serializer.toJson<String>(igstAmount),
       'lineTotal': serializer.toJson<String>(lineTotal),
+      'revenueAmount': serializer.toJson<String>(revenueAmount),
+      'buyingAmount': serializer.toJson<String>(buyingAmount),
+      'profitAmount': serializer.toJson<String>(profitAmount),
     };
   }
 
@@ -7770,7 +7839,10 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           String? cgstAmount,
           String? sgstAmount,
           String? igstAmount,
-          String? lineTotal}) =>
+          String? lineTotal,
+          String? revenueAmount,
+          String? buyingAmount,
+          String? profitAmount}) =>
       InvoiceItem(
         id: id ?? this.id,
         invoiceId: invoiceId ?? this.invoiceId,
@@ -7806,6 +7878,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         sgstAmount: sgstAmount ?? this.sgstAmount,
         igstAmount: igstAmount ?? this.igstAmount,
         lineTotal: lineTotal ?? this.lineTotal,
+        revenueAmount: revenueAmount ?? this.revenueAmount,
+        buyingAmount: buyingAmount ?? this.buyingAmount,
+        profitAmount: profitAmount ?? this.profitAmount,
       );
   InvoiceItem copyWithCompanion(InvoiceItemsCompanion data) {
     return InvoiceItem(
@@ -7874,6 +7949,15 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       igstAmount:
           data.igstAmount.present ? data.igstAmount.value : this.igstAmount,
       lineTotal: data.lineTotal.present ? data.lineTotal.value : this.lineTotal,
+      revenueAmount: data.revenueAmount.present
+          ? data.revenueAmount.value
+          : this.revenueAmount,
+      buyingAmount: data.buyingAmount.present
+          ? data.buyingAmount.value
+          : this.buyingAmount,
+      profitAmount: data.profitAmount.present
+          ? data.profitAmount.value
+          : this.profitAmount,
     );
   }
 
@@ -7912,7 +7996,10 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           ..write('cgstAmount: $cgstAmount, ')
           ..write('sgstAmount: $sgstAmount, ')
           ..write('igstAmount: $igstAmount, ')
-          ..write('lineTotal: $lineTotal')
+          ..write('lineTotal: $lineTotal, ')
+          ..write('revenueAmount: $revenueAmount, ')
+          ..write('buyingAmount: $buyingAmount, ')
+          ..write('profitAmount: $profitAmount')
           ..write(')'))
         .toString();
   }
@@ -7951,7 +8038,10 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         cgstAmount,
         sgstAmount,
         igstAmount,
-        lineTotal
+        lineTotal,
+        revenueAmount,
+        buyingAmount,
+        profitAmount
       ]);
   @override
   bool operator ==(Object other) =>
@@ -7989,7 +8079,10 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           other.cgstAmount == this.cgstAmount &&
           other.sgstAmount == this.sgstAmount &&
           other.igstAmount == this.igstAmount &&
-          other.lineTotal == this.lineTotal);
+          other.lineTotal == this.lineTotal &&
+          other.revenueAmount == this.revenueAmount &&
+          other.buyingAmount == this.buyingAmount &&
+          other.profitAmount == this.profitAmount);
 }
 
 class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
@@ -8026,6 +8119,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
   final Value<String> sgstAmount;
   final Value<String> igstAmount;
   final Value<String> lineTotal;
+  final Value<String> revenueAmount;
+  final Value<String> buyingAmount;
+  final Value<String> profitAmount;
   final Value<int> rowid;
   const InvoiceItemsCompanion({
     this.id = const Value.absent(),
@@ -8061,6 +8157,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     this.sgstAmount = const Value.absent(),
     this.igstAmount = const Value.absent(),
     this.lineTotal = const Value.absent(),
+    this.revenueAmount = const Value.absent(),
+    this.buyingAmount = const Value.absent(),
+    this.profitAmount = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InvoiceItemsCompanion.insert({
@@ -8097,6 +8196,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     required String sgstAmount,
     required String igstAmount,
     required String lineTotal,
+    this.revenueAmount = const Value.absent(),
+    this.buyingAmount = const Value.absent(),
+    this.profitAmount = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         invoiceId = Value(invoiceId),
@@ -8157,6 +8259,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     Expression<String>? sgstAmount,
     Expression<String>? igstAmount,
     Expression<String>? lineTotal,
+    Expression<String>? revenueAmount,
+    Expression<String>? buyingAmount,
+    Expression<String>? profitAmount,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -8194,6 +8299,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       if (sgstAmount != null) 'sgst_amount': sgstAmount,
       if (igstAmount != null) 'igst_amount': igstAmount,
       if (lineTotal != null) 'line_total': lineTotal,
+      if (revenueAmount != null) 'revenue_amount': revenueAmount,
+      if (buyingAmount != null) 'buying_amount': buyingAmount,
+      if (profitAmount != null) 'profit_amount': profitAmount,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8232,6 +8340,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       Value<String>? sgstAmount,
       Value<String>? igstAmount,
       Value<String>? lineTotal,
+      Value<String>? revenueAmount,
+      Value<String>? buyingAmount,
+      Value<String>? profitAmount,
       Value<int>? rowid}) {
     return InvoiceItemsCompanion(
       id: id ?? this.id,
@@ -8267,6 +8378,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       sgstAmount: sgstAmount ?? this.sgstAmount,
       igstAmount: igstAmount ?? this.igstAmount,
       lineTotal: lineTotal ?? this.lineTotal,
+      revenueAmount: revenueAmount ?? this.revenueAmount,
+      buyingAmount: buyingAmount ?? this.buyingAmount,
+      profitAmount: profitAmount ?? this.profitAmount,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8373,6 +8487,15 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     if (lineTotal.present) {
       map['line_total'] = Variable<String>(lineTotal.value);
     }
+    if (revenueAmount.present) {
+      map['revenue_amount'] = Variable<String>(revenueAmount.value);
+    }
+    if (buyingAmount.present) {
+      map['buying_amount'] = Variable<String>(buyingAmount.value);
+    }
+    if (profitAmount.present) {
+      map['profit_amount'] = Variable<String>(profitAmount.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8415,6 +8538,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
           ..write('sgstAmount: $sgstAmount, ')
           ..write('igstAmount: $igstAmount, ')
           ..write('lineTotal: $lineTotal, ')
+          ..write('revenueAmount: $revenueAmount, ')
+          ..write('buyingAmount: $buyingAmount, ')
+          ..write('profitAmount: $profitAmount, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -14697,6 +14823,9 @@ typedef $$InvoiceItemsTableCreateCompanionBuilder = InvoiceItemsCompanion
   required String sgstAmount,
   required String igstAmount,
   required String lineTotal,
+  Value<String> revenueAmount,
+  Value<String> buyingAmount,
+  Value<String> profitAmount,
   Value<int> rowid,
 });
 typedef $$InvoiceItemsTableUpdateCompanionBuilder = InvoiceItemsCompanion
@@ -14734,6 +14863,9 @@ typedef $$InvoiceItemsTableUpdateCompanionBuilder = InvoiceItemsCompanion
   Value<String> sgstAmount,
   Value<String> igstAmount,
   Value<String> lineTotal,
+  Value<String> revenueAmount,
+  Value<String> buyingAmount,
+  Value<String> profitAmount,
   Value<int> rowid,
 });
 
@@ -14883,6 +15015,15 @@ class $$InvoiceItemsTableFilterComposer
 
   ColumnFilters<String> get lineTotal => $composableBuilder(
       column: $table.lineTotal, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get revenueAmount => $composableBuilder(
+      column: $table.revenueAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get buyingAmount => $composableBuilder(
+      column: $table.buyingAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get profitAmount => $composableBuilder(
+      column: $table.profitAmount, builder: (column) => ColumnFilters(column));
 
   $$InvoicesTableFilterComposer get invoiceId {
     final $$InvoicesTableFilterComposer composer = $composerBuilder(
@@ -15039,6 +15180,18 @@ class $$InvoiceItemsTableOrderingComposer
   ColumnOrderings<String> get lineTotal => $composableBuilder(
       column: $table.lineTotal, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get revenueAmount => $composableBuilder(
+      column: $table.revenueAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get buyingAmount => $composableBuilder(
+      column: $table.buyingAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get profitAmount => $composableBuilder(
+      column: $table.profitAmount,
+      builder: (column) => ColumnOrderings(column));
+
   $$InvoicesTableOrderingComposer get invoiceId {
     final $$InvoicesTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -15182,6 +15335,15 @@ class $$InvoiceItemsTableAnnotationComposer
   GeneratedColumn<String> get lineTotal =>
       $composableBuilder(column: $table.lineTotal, builder: (column) => column);
 
+  GeneratedColumn<String> get revenueAmount => $composableBuilder(
+      column: $table.revenueAmount, builder: (column) => column);
+
+  GeneratedColumn<String> get buyingAmount => $composableBuilder(
+      column: $table.buyingAmount, builder: (column) => column);
+
+  GeneratedColumn<String> get profitAmount => $composableBuilder(
+      column: $table.profitAmount, builder: (column) => column);
+
   $$InvoicesTableAnnotationComposer get invoiceId {
     final $$InvoicesTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -15279,6 +15441,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             Value<String> sgstAmount = const Value.absent(),
             Value<String> igstAmount = const Value.absent(),
             Value<String> lineTotal = const Value.absent(),
+            Value<String> revenueAmount = const Value.absent(),
+            Value<String> buyingAmount = const Value.absent(),
+            Value<String> profitAmount = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvoiceItemsCompanion(
@@ -15315,6 +15480,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             sgstAmount: sgstAmount,
             igstAmount: igstAmount,
             lineTotal: lineTotal,
+            revenueAmount: revenueAmount,
+            buyingAmount: buyingAmount,
+            profitAmount: profitAmount,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -15351,6 +15519,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             required String sgstAmount,
             required String igstAmount,
             required String lineTotal,
+            Value<String> revenueAmount = const Value.absent(),
+            Value<String> buyingAmount = const Value.absent(),
+            Value<String> profitAmount = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvoiceItemsCompanion.insert(
@@ -15387,6 +15558,9 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             sgstAmount: sgstAmount,
             igstAmount: igstAmount,
             lineTotal: lineTotal,
+            revenueAmount: revenueAmount,
+            buyingAmount: buyingAmount,
+            profitAmount: profitAmount,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

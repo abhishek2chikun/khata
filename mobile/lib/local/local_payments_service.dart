@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 
 import '../models/api_error.dart';
+import '../services/money_validator.dart';
 import '../services/payments_service.dart';
 import 'local_database.dart';
 import 'local_customers_service.dart';
@@ -208,14 +209,7 @@ class LocalPaymentsService implements PaymentsService {
         statusCode: 422,
       );
     }
-    final scaledAmount = amount * 100;
-    if ((scaledAmount - scaledAmount.round()).abs() > 0.000001) {
-      throw const ApiError(
-        code: 'VALIDATION_ERROR',
-        message: 'amount must have at most two decimal places',
-        statusCode: 422,
-      );
-    }
+    validateMoneyAmount(amount.toString());
   }
 
   void _validateRequestId(String requestId) {
