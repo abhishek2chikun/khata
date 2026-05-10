@@ -9,6 +9,7 @@ import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
 import 'balance_adjustment_screen.dart';
+import 'customer_form_screen.dart';
 import 'opening_balance_screen.dart';
 import 'record_payment_screen.dart';
 
@@ -110,6 +111,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     if (customer.state != null && customer.state!.isNotEmpty)
                       Text(
                           'State: ${customer.state} (${customer.stateCode ?? ''})'),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      key: const Key('editCustomerButton'),
+                      onPressed: _isLoading ? null : _handleEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit customer'),
+                    ),
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
@@ -216,6 +224,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         trailing: Text(invoice.grandTotal.toStringAsFixed(2)),
       ),
     );
+  }
+
+  Future<void> _handleEdit() async {
+    final customer = _ledger?.customer;
+    if (customer == null) return;
+    final result = await Navigator.of(context).push<Customer>(
+      MaterialPageRoute<Customer>(
+        builder: (_) => CustomerFormScreen(
+          customersService: widget.customersService,
+          customer: customer,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      await _loadCustomer();
+    }
   }
 
   Future<void> _loadCustomer() async {

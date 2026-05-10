@@ -50,6 +50,58 @@ class LocalCustomersService implements CustomersService {
   }
 
   @override
+  Future<customer_model.Customer> updateCustomer({
+    required String id,
+    required UpdateCustomerInput input,
+  }) async {
+    final existing = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(id)))
+        .getSingleOrNull();
+    if (existing == null) {
+      throw const ApiError(
+        code: 'NOT_FOUND',
+        message: 'Customer not found',
+        statusCode: 404,
+      );
+    }
+
+    await _throwIfDuplicateUpdate(
+      name: input.name,
+      phone: input.phone,
+      excludeId: id,
+    );
+
+    try {
+      await (_database.update(_database.customers)
+            ..where((customer) => customer.id.equals(id)))
+          .write(
+        CustomersCompanion(
+          name: Value(input.name),
+          address: Value(input.address),
+          phone: Value(input.phone),
+          gstin: Value(input.gstin),
+          state: Value(input.state),
+          stateCode: Value(input.stateCode),
+          whatsappNumber: Value(input.whatsappNumber),
+          updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+        ),
+      );
+    } on Object catch (error) {
+      if (await _hasDuplicateExcluding(
+          name: input.name, phone: input.phone, excludeId: id)) {
+        throw _duplicateCustomerError();
+      }
+      throw error;
+    }
+
+    final balances = await _pendingBalancesByCustomerId();
+    final updated = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(id)))
+        .getSingle();
+    return _toCustomer(updated, pendingBalance: balances[id] ?? 0);
+  }
+
+  @override
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate}) async {
     final customer = await _getCustomer(customerId);
@@ -140,6 +192,36 @@ class LocalCustomersService implements CustomersService {
           ..where(
             (customer) =>
                 customer.name.equals(name) & customer.phone.equals(phone),
+          ))
+        .get();
+    return duplicates.isNotEmpty;
+  }
+
+  Future<void> _throwIfDuplicateUpdate({
+    required String name,
+    String? phone,
+    required String excludeId,
+  }) async {
+    if (await _hasDuplicateExcluding(
+        name: name, phone: phone, excludeId: excludeId)) {
+      throw _duplicateCustomerError();
+    }
+  }
+
+  Future<bool> _hasDuplicateExcluding({
+    required String name,
+    String? phone,
+    required String excludeId,
+  }) async {
+    if (phone == null) {
+      return false;
+    }
+    final duplicates = await (_database.select(_database.customers)
+          ..where(
+            (customer) =>
+                customer.name.equals(name) &
+                customer.phone.equals(phone) &
+                customer.id.equals(excludeId).not(),
           ))
         .get();
     return duplicates.isNotEmpty;
