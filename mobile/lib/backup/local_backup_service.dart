@@ -128,6 +128,7 @@ class LocalBackupService {
       'customer_state',
       'customer_state_code',
       'customer_phone',
+      'customer_whatsapp_number',
       'customer_gstin',
       'place_of_supply_state',
       'place_of_supply_state_code',

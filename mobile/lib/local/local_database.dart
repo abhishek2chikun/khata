@@ -130,6 +130,7 @@ class Invoices extends Table {
   TextColumn get customerState => text().nullable()();
   TextColumn get customerStateCode => text().nullable()();
   TextColumn get customerPhone => text().nullable()();
+  TextColumn get customerWhatsappNumber => text().nullable()();
   TextColumn get customerGstin => text().nullable()();
   TextColumn get placeOfSupplyState => text()();
   TextColumn get placeOfSupplyStateCode => text()();
@@ -353,7 +354,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -542,6 +543,12 @@ class LocalDatabase extends _$LocalDatabase {
             if (await _tableExists('customers') &&
                 !await _columnExists('customers', 'whatsapp_number')) {
               await m.addColumn(customers, customers.whatsappNumber);
+            }
+          }
+          if (from < 8) {
+            if (await _tableExists('invoices') &&
+                !await _columnExists('invoices', 'customer_whatsapp_number')) {
+              await m.addColumn(invoices, invoices.customerWhatsappNumber);
             }
           }
         },

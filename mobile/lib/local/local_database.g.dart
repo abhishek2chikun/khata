@@ -1840,6 +1840,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   late final GeneratedColumn<String> customerPhone = GeneratedColumn<String>(
       'customer_phone', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _customerWhatsappNumberMeta =
+      const VerificationMeta('customerWhatsappNumber');
+  @override
+  late final GeneratedColumn<String> customerWhatsappNumber =
+      GeneratedColumn<String>('customer_whatsapp_number', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _customerGstinMeta =
       const VerificationMeta('customerGstin');
   @override
@@ -2083,6 +2089,7 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         customerState,
         customerStateCode,
         customerPhone,
+        customerWhatsappNumber,
         customerGstin,
         placeOfSupplyState,
         placeOfSupplyStateCode,
@@ -2198,6 +2205,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _customerPhoneMeta,
           customerPhone.isAcceptableOrUnknown(
               data['customer_phone']!, _customerPhoneMeta));
+    }
+    if (data.containsKey('customer_whatsapp_number')) {
+      context.handle(
+          _customerWhatsappNumberMeta,
+          customerWhatsappNumber.isAcceptableOrUnknown(
+              data['customer_whatsapp_number']!, _customerWhatsappNumberMeta));
     }
     if (data.containsKey('customer_gstin')) {
       context.handle(
@@ -2475,6 +2488,9 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           DriftSqlType.string, data['${effectivePrefix}customer_state_code']),
       customerPhone: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}customer_phone']),
+      customerWhatsappNumber: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}customer_whatsapp_number']),
       customerGstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}customer_gstin']),
       placeOfSupplyState: attachedDatabase.typeMapping.read(DriftSqlType.string,
@@ -2568,6 +2584,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String? customerState;
   final String? customerStateCode;
   final String? customerPhone;
+  final String? customerWhatsappNumber;
   final String? customerGstin;
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;
@@ -2615,6 +2632,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       this.customerState,
       this.customerStateCode,
       this.customerPhone,
+      this.customerWhatsappNumber,
       this.customerGstin,
       required this.placeOfSupplyState,
       required this.placeOfSupplyStateCode,
@@ -2669,6 +2687,10 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     }
     if (!nullToAbsent || customerPhone != null) {
       map['customer_phone'] = Variable<String>(customerPhone);
+    }
+    if (!nullToAbsent || customerWhatsappNumber != null) {
+      map['customer_whatsapp_number'] =
+          Variable<String>(customerWhatsappNumber);
     }
     if (!nullToAbsent || customerGstin != null) {
       map['customer_gstin'] = Variable<String>(customerGstin);
@@ -2758,6 +2780,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerPhone: customerPhone == null && nullToAbsent
           ? const Value.absent()
           : Value(customerPhone),
+      customerWhatsappNumber: customerWhatsappNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerWhatsappNumber),
       customerGstin: customerGstin == null && nullToAbsent
           ? const Value.absent()
           : Value(customerGstin),
@@ -2841,6 +2866,8 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerStateCode:
           serializer.fromJson<String?>(json['customerStateCode']),
       customerPhone: serializer.fromJson<String?>(json['customerPhone']),
+      customerWhatsappNumber:
+          serializer.fromJson<String?>(json['customerWhatsappNumber']),
       customerGstin: serializer.fromJson<String?>(json['customerGstin']),
       placeOfSupplyState:
           serializer.fromJson<String>(json['placeOfSupplyState']),
@@ -2899,6 +2926,8 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'customerState': serializer.toJson<String?>(customerState),
       'customerStateCode': serializer.toJson<String?>(customerStateCode),
       'customerPhone': serializer.toJson<String?>(customerPhone),
+      'customerWhatsappNumber':
+          serializer.toJson<String?>(customerWhatsappNumber),
       'customerGstin': serializer.toJson<String?>(customerGstin),
       'placeOfSupplyState': serializer.toJson<String>(placeOfSupplyState),
       'placeOfSupplyStateCode':
@@ -2950,6 +2979,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           Value<String?> customerState = const Value.absent(),
           Value<String?> customerStateCode = const Value.absent(),
           Value<String?> customerPhone = const Value.absent(),
+          Value<String?> customerWhatsappNumber = const Value.absent(),
           Value<String?> customerGstin = const Value.absent(),
           String? placeOfSupplyState,
           String? placeOfSupplyStateCode,
@@ -3001,6 +3031,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
             : this.customerStateCode,
         customerPhone:
             customerPhone.present ? customerPhone.value : this.customerPhone,
+        customerWhatsappNumber: customerWhatsappNumber.present
+            ? customerWhatsappNumber.value
+            : this.customerWhatsappNumber,
         customerGstin:
             customerGstin.present ? customerGstin.value : this.customerGstin,
         placeOfSupplyState: placeOfSupplyState ?? this.placeOfSupplyState,
@@ -3086,6 +3119,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerPhone: data.customerPhone.present
           ? data.customerPhone.value
           : this.customerPhone,
+      customerWhatsappNumber: data.customerWhatsappNumber.present
+          ? data.customerWhatsappNumber.value
+          : this.customerWhatsappNumber,
       customerGstin: data.customerGstin.present
           ? data.customerGstin.value
           : this.customerGstin,
@@ -3191,6 +3227,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ..write('customerState: $customerState, ')
           ..write('customerStateCode: $customerStateCode, ')
           ..write('customerPhone: $customerPhone, ')
+          ..write('customerWhatsappNumber: $customerWhatsappNumber, ')
           ..write('customerGstin: $customerGstin, ')
           ..write('placeOfSupplyState: $placeOfSupplyState, ')
           ..write('placeOfSupplyStateCode: $placeOfSupplyStateCode, ')
@@ -3243,6 +3280,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         customerState,
         customerStateCode,
         customerPhone,
+        customerWhatsappNumber,
         customerGstin,
         placeOfSupplyState,
         placeOfSupplyStateCode,
@@ -3294,6 +3332,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           other.customerState == this.customerState &&
           other.customerStateCode == this.customerStateCode &&
           other.customerPhone == this.customerPhone &&
+          other.customerWhatsappNumber == this.customerWhatsappNumber &&
           other.customerGstin == this.customerGstin &&
           other.placeOfSupplyState == this.placeOfSupplyState &&
           other.placeOfSupplyStateCode == this.placeOfSupplyStateCode &&
@@ -3343,6 +3382,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String?> customerState;
   final Value<String?> customerStateCode;
   final Value<String?> customerPhone;
+  final Value<String?> customerWhatsappNumber;
   final Value<String?> customerGstin;
   final Value<String> placeOfSupplyState;
   final Value<String> placeOfSupplyStateCode;
@@ -3391,6 +3431,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.customerState = const Value.absent(),
     this.customerStateCode = const Value.absent(),
     this.customerPhone = const Value.absent(),
+    this.customerWhatsappNumber = const Value.absent(),
     this.customerGstin = const Value.absent(),
     this.placeOfSupplyState = const Value.absent(),
     this.placeOfSupplyStateCode = const Value.absent(),
@@ -3440,6 +3481,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.customerState = const Value.absent(),
     this.customerStateCode = const Value.absent(),
     this.customerPhone = const Value.absent(),
+    this.customerWhatsappNumber = const Value.absent(),
     this.customerGstin = const Value.absent(),
     required String placeOfSupplyState,
     required String placeOfSupplyStateCode,
@@ -3513,6 +3555,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? customerState,
     Expression<String>? customerStateCode,
     Expression<String>? customerPhone,
+    Expression<String>? customerWhatsappNumber,
     Expression<String>? customerGstin,
     Expression<String>? placeOfSupplyState,
     Expression<String>? placeOfSupplyStateCode,
@@ -3562,6 +3605,8 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       if (customerState != null) 'customer_state': customerState,
       if (customerStateCode != null) 'customer_state_code': customerStateCode,
       if (customerPhone != null) 'customer_phone': customerPhone,
+      if (customerWhatsappNumber != null)
+        'customer_whatsapp_number': customerWhatsappNumber,
       if (customerGstin != null) 'customer_gstin': customerGstin,
       if (placeOfSupplyState != null)
         'place_of_supply_state': placeOfSupplyState,
@@ -3617,6 +3662,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       Value<String?>? customerState,
       Value<String?>? customerStateCode,
       Value<String?>? customerPhone,
+      Value<String?>? customerWhatsappNumber,
       Value<String?>? customerGstin,
       Value<String>? placeOfSupplyState,
       Value<String>? placeOfSupplyStateCode,
@@ -3665,6 +3711,8 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       customerState: customerState ?? this.customerState,
       customerStateCode: customerStateCode ?? this.customerStateCode,
       customerPhone: customerPhone ?? this.customerPhone,
+      customerWhatsappNumber:
+          customerWhatsappNumber ?? this.customerWhatsappNumber,
       customerGstin: customerGstin ?? this.customerGstin,
       placeOfSupplyState: placeOfSupplyState ?? this.placeOfSupplyState,
       placeOfSupplyStateCode:
@@ -3738,6 +3786,10 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     }
     if (customerPhone.present) {
       map['customer_phone'] = Variable<String>(customerPhone.value);
+    }
+    if (customerWhatsappNumber.present) {
+      map['customer_whatsapp_number'] =
+          Variable<String>(customerWhatsappNumber.value);
     }
     if (customerGstin.present) {
       map['customer_gstin'] = Variable<String>(customerGstin.value);
@@ -3867,6 +3919,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           ..write('customerState: $customerState, ')
           ..write('customerStateCode: $customerStateCode, ')
           ..write('customerPhone: $customerPhone, ')
+          ..write('customerWhatsappNumber: $customerWhatsappNumber, ')
           ..write('customerGstin: $customerGstin, ')
           ..write('placeOfSupplyState: $placeOfSupplyState, ')
           ..write('placeOfSupplyStateCode: $placeOfSupplyStateCode, ')
@@ -11395,6 +11448,7 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> customerState,
   Value<String?> customerStateCode,
   Value<String?> customerPhone,
+  Value<String?> customerWhatsappNumber,
   Value<String?> customerGstin,
   required String placeOfSupplyState,
   required String placeOfSupplyStateCode,
@@ -11444,6 +11498,7 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> customerState,
   Value<String?> customerStateCode,
   Value<String?> customerPhone,
+  Value<String?> customerWhatsappNumber,
   Value<String?> customerGstin,
   Value<String> placeOfSupplyState,
   Value<String> placeOfSupplyStateCode,
@@ -11619,6 +11674,10 @@ class $$InvoicesTableFilterComposer
 
   ColumnFilters<String> get customerPhone => $composableBuilder(
       column: $table.customerPhone, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin, builder: (column) => ColumnFilters(column));
@@ -11901,6 +11960,10 @@ class $$InvoicesTableOrderingComposer
       column: $table.customerPhone,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin,
       builder: (column) => ColumnOrderings(column));
@@ -12120,6 +12183,9 @@ class $$InvoicesTableAnnotationComposer
 
   GeneratedColumn<String> get customerPhone => $composableBuilder(
       column: $table.customerPhone, builder: (column) => column);
+
+  GeneratedColumn<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber, builder: (column) => column);
 
   GeneratedColumn<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin, builder: (column) => column);
@@ -12388,6 +12454,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> customerState = const Value.absent(),
             Value<String?> customerStateCode = const Value.absent(),
             Value<String?> customerPhone = const Value.absent(),
+            Value<String?> customerWhatsappNumber = const Value.absent(),
             Value<String?> customerGstin = const Value.absent(),
             Value<String> placeOfSupplyState = const Value.absent(),
             Value<String> placeOfSupplyStateCode = const Value.absent(),
@@ -12437,6 +12504,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             customerState: customerState,
             customerStateCode: customerStateCode,
             customerPhone: customerPhone,
+            customerWhatsappNumber: customerWhatsappNumber,
             customerGstin: customerGstin,
             placeOfSupplyState: placeOfSupplyState,
             placeOfSupplyStateCode: placeOfSupplyStateCode,
@@ -12486,6 +12554,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> customerState = const Value.absent(),
             Value<String?> customerStateCode = const Value.absent(),
             Value<String?> customerPhone = const Value.absent(),
+            Value<String?> customerWhatsappNumber = const Value.absent(),
             Value<String?> customerGstin = const Value.absent(),
             required String placeOfSupplyState,
             required String placeOfSupplyStateCode,
@@ -12535,6 +12604,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             customerState: customerState,
             customerStateCode: customerStateCode,
             customerPhone: customerPhone,
+            customerWhatsappNumber: customerWhatsappNumber,
             customerGstin: customerGstin,
             placeOfSupplyState: placeOfSupplyState,
             placeOfSupplyStateCode: placeOfSupplyStateCode,

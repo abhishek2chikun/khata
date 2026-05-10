@@ -74,6 +74,20 @@ void main() {
     expect(invoice.customerGstin, '27ABCDE1234F1Z5');
   });
 
+  test('InvoiceDetail maps customerWhatsappNumber from DB', () async {
+    final customer = await customersService.createCustomer(_customerInput(
+      whatsappNumber: '919876543210',
+    ));
+    final product = await productsService.createProduct(_productInput());
+    final result = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 1),
+      requestId: _uuid(7),
+    );
+    final invoice = result.invoice;
+
+    expect(invoice.customerWhatsappNumber, '919876543210');
+  });
+
   test('InvoiceDetail maps tax and totals fields from DB', () async {
     final customer = await customersService.createCustomer(_customerInput());
     final product = await productsService.createProduct(_productInput());
@@ -305,6 +319,7 @@ CreateCustomerInput _customerInput({
   String phone = '9999999999',
   String state = 'Maharashtra',
   String stateCode = '27',
+  String? whatsappNumber,
 }) {
   return CreateCustomerInput(
     name: name,
@@ -313,6 +328,7 @@ CreateCustomerInput _customerInput({
     gstin: '27ABCDE1234F1Z5',
     state: state,
     stateCode: stateCode,
+    whatsappNumber: whatsappNumber,
   );
 }
 

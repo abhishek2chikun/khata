@@ -12,6 +12,7 @@ class InvoiceDetail {
     this.customerState,
     this.customerStateCode,
     this.customerPhone,
+    this.customerWhatsappNumber,
     this.customerGstin,
     required this.invoiceDate,
     this.invoiceDatetime = '',
@@ -52,6 +53,7 @@ class InvoiceDetail {
   final String? customerState;
   final String? customerStateCode;
   final String? customerPhone;
+  final String? customerWhatsappNumber;
   final String? customerGstin;
   final String invoiceDate;
   final String invoiceDatetime;
@@ -111,6 +113,10 @@ class InvoiceDetail {
                   as Map<String, dynamic>? ??
               const <String, dynamic>{})['phone'] as String? ??
           json['customer_phone'] as String?,
+      customerWhatsappNumber: (json['customer_snapshot']
+                  as Map<String, dynamic>? ??
+              const <String, dynamic>{})['whatsapp_number'] as String? ??
+          json['customer_whatsapp_number'] as String?,
       customerGstin: (json['customer_snapshot']
                   as Map<String, dynamic>? ??
               const <String, dynamic>{})['gstin'] as String? ??
