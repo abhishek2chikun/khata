@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/invoice_summary.dart';
+import '../services/invoice_pdf_service.dart';
 import '../services/invoices_service.dart';
 import '../services/products_service.dart';
 import '../services/customers_service.dart';
@@ -105,12 +106,23 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             subtitle: Text(
               '${invoice.customerName} • ${invoice.invoiceDate} • ${invoice.paymentMode}',
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(invoice.grandTotal.toStringAsFixed(2)),
-                Text(invoice.status),
+                IconButton(
+                  key: Key('pdfButton-${invoice.id}'),
+                  icon: const Icon(Icons.picture_as_pdf),
+                  tooltip: 'Generate PDF',
+                  onPressed: () => _generatePdfForInvoice(invoice),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Text(invoice.grandTotal.toStringAsFixed(2)),
+                    Text(invoice.status),
+                  ],
+                ),
               ],
             ),
           ),
@@ -148,6 +160,24 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _generatePdfForInvoice(InvoiceSummary summary) async {
+    try {
+      final invoice =
+          await widget.invoicesService.fetchInvoiceDetail(summary.id);
+      final service = InvoicePdfService.production();
+      final path = await service.generateInvoicePdf(invoice);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF saved to $path')),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
     }
   }
 

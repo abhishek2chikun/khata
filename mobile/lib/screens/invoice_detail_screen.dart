@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/invoice_detail.dart';
+import '../services/invoice_pdf_service.dart';
 import '../services/invoices_service.dart';
 import '../widgets/error_banner.dart';
 
@@ -23,6 +24,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   InvoiceDetail? _invoice;
   bool _isLoading = true;
   bool _isCanceling = false;
+  bool _isGeneratingPdf = false;
   String? _errorMessage;
 
   @override
@@ -77,6 +79,19 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                               )
                             : const Text('Cancel invoice'),
                       ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      key: const Key('downloadPdfButton'),
+                      onPressed: _isGeneratingPdf ? null : _generatePdf,
+                      child: _isGeneratingPdf
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Download PDF'),
+                    ),
                     const SizedBox(height: 24),
                     Text('Items',
                         style: Theme.of(context).textTheme.titleLarge),
@@ -124,6 +139,33 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _generatePdf() async {
+    if (_invoice == null) return;
+    setState(() {
+      _isGeneratingPdf = true;
+      _errorMessage = null;
+    });
+    try {
+      final service = InvoicePdfService.production();
+      final path = await service.generateInvoicePdf(_invoice!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF saved to $path')),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = error.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingPdf = false;
         });
       }
     }
