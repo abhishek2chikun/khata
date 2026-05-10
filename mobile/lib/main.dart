@@ -23,6 +23,7 @@ import 'services/analytics_service.dart';
 import 'services/company_profile_service.dart';
 import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
+import 'services/invoice_share_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
 import 'services/customers_service.dart';
@@ -202,6 +203,7 @@ class _BillingAppState extends State<BillingApp> {
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
             customersService: widget.customersService,
+            shareService: InvoiceShareService.production(),
           );
         case AppDestination.analytics:
           return AnalyticsScreen(
@@ -235,6 +237,7 @@ class _BillingAppState extends State<BillingApp> {
               productsService: widget.productsService,
               customersService: widget.customersService,
               initialCustomer: customer,
+              shareService: InvoiceShareService.production(),
             ),
           ),
         ) ??
