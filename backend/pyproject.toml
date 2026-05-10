@@ -25,3 +25,6 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "no_db: tests that only inspect importable code or metadata and do not touch PostgreSQL",
+]

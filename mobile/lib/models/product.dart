@@ -1,24 +1,30 @@
 class Product {
   const Product({
     required this.id,
-    required this.company,
+    required this.companyName,
     required this.category,
     required this.itemName,
-    required this.itemCode,
-    required this.defaultSellingPriceExclTax,
-    required this.defaultGstRate,
+    required this.itemNumber,
+    this.buyerId,
+    required this.buyingPrice,
+    required this.sellingPrice,
+    this.unit,
+    required this.gstRate,
     required this.quantityOnHand,
     required this.lowStockThreshold,
     required this.isActive,
   });
 
   final String id;
-  final String company;
+  final String companyName;
   final String category;
   final String itemName;
-  final String itemCode;
-  final double defaultSellingPriceExclTax;
-  final double defaultGstRate;
+  final String itemNumber;
+  final String? buyerId;
+  final double buyingPrice;
+  final double sellingPrice;
+  final String? unit;
+  final double gstRate;
   final double quantityOnHand;
   final double lowStockThreshold;
   final bool isActive;
@@ -27,23 +33,64 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'].toString(),
-      company: json['company'] as String? ?? '',
-      category: json['category'] as String? ?? '',
-      itemName: json['item_name'] as String? ?? '',
-      itemCode: json['item_code'] as String? ?? '',
-      defaultSellingPriceExclTax: _toDouble(json['default_selling_price_excl_tax']),
-      defaultGstRate: _toDouble(json['default_gst_rate']),
-      quantityOnHand: _toDouble(json['quantity_on_hand']),
-      lowStockThreshold: _toDouble(json['low_stock_threshold']),
-      isActive: json['is_active'] as bool? ?? true,
+      id: _requireString(json, 'id'),
+      companyName: _requireString(json, 'company_name'),
+      category: _requireString(json, 'category'),
+      itemName: _requireString(json, 'item_name'),
+      itemNumber: _requireString(json, 'item_number'),
+      buyerId: _optionalString(json, 'buyer_id'),
+      buyingPrice: _requireDouble(json, 'buying_price'),
+      sellingPrice: _requireDouble(json, 'selling_price'),
+      unit: json['unit'] as String?,
+      gstRate: _requireDouble(json, 'gst_rate'),
+      quantityOnHand: _requireDouble(json, 'quantity_on_hand'),
+      lowStockThreshold: _requireDouble(json, 'low_stock_threshold'),
+      isActive: _requireBool(json, 'is_active'),
     );
   }
 
-  static double _toDouble(Object? value) {
+  static String _requireString(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is String) {
+      return value;
+    }
+    throw FormatException('Missing required product field: $key');
+  }
+
+  static String? _optionalString(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      return value;
+    }
+    throw FormatException('Invalid product field: $key');
+  }
+
+  static bool _requireBool(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is bool) {
+      return value;
+    }
+    throw FormatException('Missing required product field: $key');
+  }
+
+  static double _requireDouble(Map<String, dynamic> json, String key) {
+    if (!json.containsKey(key) || json[key] == null) {
+      throw FormatException('Missing required product field: $key');
+    }
+    final value = _toDouble(json[key]);
+    if (value == null) {
+      throw FormatException('Invalid product field: $key');
+    }
+    return value;
+  }
+
+  static double? _toDouble(Object? value) {
     if (value is num) {
       return value.toDouble();
     }
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+    return double.tryParse(value?.toString() ?? '');
   }
 }

@@ -6,21 +6,26 @@ import 'app/app_mode.dart';
 import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
-import 'models/seller.dart';
+import 'models/customer.dart';
+import 'screens/buyer_list_screen.dart';
+import 'screens/analytics_screen.dart';
 import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
 import 'screens/inventory_list_screen.dart';
 import 'screens/local_first_user_setup_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/product_detail_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'models/product.dart';
-import 'screens/seller_list_screen.dart';
+import 'screens/customer_list_screen.dart';
+import 'services/analytics_service.dart';
 import 'services/company_profile_service.dart';
+import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
-import 'services/sellers_service.dart';
+import 'services/customers_service.dart';
 import 'widgets/app_navigation_drawer.dart';
 
 Future<void> main() async {
@@ -40,20 +45,24 @@ class BillingApp extends StatefulWidget {
     AppDependencies? dependencies,
     AuthController? controller,
     ProductsService? productsService,
-    SellersService? sellersService,
+    CustomersService? customersService,
+    BuyersService? buyersService,
     CompanyProfileService? companyProfileService,
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
+    AnalyticsService? analyticsService,
     DriveBackupService? driveBackupService,
     BackupScheduler? backupScheduler,
   })  : dependencies = dependencies,
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
-        sellersService = sellersService ?? dependencies!.sellersService,
+        customersService = customersService ?? dependencies!.customersService,
+        buyersService = buyersService ?? dependencies!.buyersService,
         companyProfileService =
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
         invoicesService = invoicesService ?? dependencies!.invoicesService,
+        analyticsService = analyticsService ?? dependencies!.analyticsService,
         driveBackupService =
             driveBackupService ?? dependencies?.driveBackupService,
         backupScheduler = backupScheduler ?? dependencies?.backupScheduler;
@@ -61,10 +70,12 @@ class BillingApp extends StatefulWidget {
   final AppDependencies? dependencies;
   final AuthController controller;
   final ProductsService productsService;
-  final SellersService sellersService;
+  final CustomersService customersService;
+  final BuyersService buyersService;
   final CompanyProfileService companyProfileService;
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
+  final AnalyticsService analyticsService;
   final DriveBackupService? driveBackupService;
   final BackupScheduler? backupScheduler;
 
@@ -101,13 +112,13 @@ class _BillingAppState extends State<BillingApp> {
       builder: (context, _) {
         return MaterialApp(
           title: 'Internal Billing',
-          home: _buildBody(),
+          home: Builder(builder: _buildBody),
         );
       },
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
     if (_isCheckingLocalUsers || widget.controller.isRestoringSession) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -156,31 +167,44 @@ class _BillingAppState extends State<BillingApp> {
               );
               return result != null;
             },
-            onEditProduct: (product) async {
+            onProductSelected: (product) async {
               final result = await Navigator.of(context).push<Product>(
                 MaterialPageRoute<Product>(
-                  builder: (_) => ProductFormScreen(
+                  builder: (_) => ProductDetailScreen(
                     productsService: widget.productsService,
                     product: product,
+                    onEditProduct: _openProductForm,
+                    supportsProductReactivation:
+                        widget.dependencies?.mode == DataMode.local,
                   ),
                 ),
               );
-              return result != null;
+              return result;
             },
           );
-        case AppDestination.sellers:
-          return SellerListScreen(
+        case AppDestination.customers:
+          return CustomerListScreen(
             drawer: drawer,
-            sellersService: widget.sellersService,
+            customersService: widget.customersService,
             paymentsService: widget.paymentsService,
-            onCreateInvoice: _openCreateInvoiceForSeller,
+            onCreateInvoice: _openCreateInvoiceForCustomer,
+          );
+        case AppDestination.buyers:
+          return BuyerListScreen(
+            drawer: drawer,
+            buyersService: widget.buyersService,
           );
         case AppDestination.invoices:
           return InvoiceListScreen(
             drawer: drawer,
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
-            sellersService: widget.sellersService,
+            customersService: widget.customersService,
+          );
+        case AppDestination.analytics:
+          return AnalyticsScreen(
+            analyticsService: widget.analyticsService,
+            drawer: drawer,
           );
         case AppDestination.companyProfile:
           return CompanyProfileScreen(
@@ -201,19 +225,31 @@ class _BillingAppState extends State<BillingApp> {
     );
   }
 
-  Future<bool> _openCreateInvoiceForSeller(Seller seller) async {
+  Future<bool> _openCreateInvoiceForCustomer(Customer customer) async {
     final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => CreateInvoiceScreen(
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
-              sellersService: widget.sellersService,
-              initialSeller: seller,
+              customersService: widget.customersService,
+              initialCustomer: customer,
             ),
           ),
         ) ??
         false;
     return created;
+  }
+
+  Future<Product?> _openProductForm(Product product) async {
+    final result = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (_) => ProductFormScreen(
+          productsService: widget.productsService,
+          product: product,
+        ),
+      ),
+    );
+    return result;
   }
 
   Future<void> _checkLocalUsers() async {

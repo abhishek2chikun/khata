@@ -10,13 +10,13 @@ class InventoryListScreen extends StatefulWidget {
     super.key,
     required this.productsService,
     required this.onAddProduct,
-    required this.onEditProduct,
+    required this.onProductSelected,
     this.drawer,
   });
 
   final ProductsService productsService;
   final Future<bool> Function() onAddProduct;
-  final Future<bool> Function(Product product) onEditProduct;
+  final Future<Product?> Function(Product product) onProductSelected;
   final Widget? drawer;
 
   @override
@@ -65,7 +65,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                     key: const Key('addProductButton'),
                     onPressed: _handleAddProduct,
                     icon: const Icon(Icons.add),
-                    label: const Text('Add product'),
+                    label: const Text('Add Product'),
                   ),
                 ),
               ],
@@ -128,13 +128,27 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
         final product = _products[index];
         return Card(
           child: ListTile(
+            key: Key('productRow-${product.id}'),
+            onTap: () => _handleProductSelected(product),
             title: Text(product.itemName),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(
-                    '${product.company} • ${product.category} • ${product.itemCode}'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    _InfoChip(product.itemNumber),
+                    _InfoChip(product.companyName),
+                    _InfoChip(product.category),
+                    _InfoChip('Stock: ${_formatQuantity(product)}'),
+                    _InfoChip(
+                        'Selling: ${product.sellingPrice.toStringAsFixed(2)}'),
+                    _InfoChip('GST: ${_formatPercent(product.gstRate)}'),
+                    _InfoChip(product.isActive ? 'Active' : 'Archived'),
+                  ],
+                ),
                 if (product.isLowStock)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
@@ -155,14 +169,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                     padding: EdgeInsets.only(right: 8),
                     child: Chip(label: Text('Archived')),
                   ),
-                IconButton(
-                  key: Key('editProductButton-${product.id}'),
-                  onPressed: product.isActive
-                      ? () => _handleEditProduct(product)
-                      : null,
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit product',
-                ),
+                const Icon(Icons.chevron_right),
               ],
             ),
           ),
@@ -181,7 +188,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       final products = await widget.productsService.fetchProducts(
         filter: ProductFilter(
           search: _searchController.text.trim(),
-          company: _companyController.text.trim(),
+          companyName: _companyController.text.trim(),
           category: _categoryController.text.trim(),
         ),
       );
@@ -215,10 +222,36 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     }
   }
 
-  Future<void> _handleEditProduct(Product product) async {
-    final shouldRefresh = await widget.onEditProduct(product);
-    if (shouldRefresh && mounted) {
+  Future<void> _handleProductSelected(Product product) async {
+    final updatedProduct = await widget.onProductSelected(product);
+    if (updatedProduct != null && mounted) {
       await _loadProducts();
     }
+  }
+
+  String _formatQuantity(Product product) {
+    final quantity = _formatNumber(product.quantityOnHand);
+    final unit = product.unit;
+    return unit == null || unit.isEmpty ? quantity : '$quantity $unit';
+  }
+
+  String _formatPercent(double value) => '${_formatNumber(value)}%';
+
+  String _formatNumber(double value) {
+    if (value == value.truncateToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(2);
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(label);
   }
 }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 enum AppDestination {
   inventory('Inventory', Icons.inventory_2_outlined),
-  sellers('Sellers', Icons.people_outline),
+  customers('Customers/Khata', Icons.people_outline),
+  buyers('Buyers', Icons.storefront_outlined),
   invoices('Invoices', Icons.receipt_long_outlined),
+  analytics('Analytics', Icons.bar_chart_outlined),
   companyProfile('Company profile', Icons.business_outlined),
   backup('Backup & Restore', Icons.backup_outlined);
 
@@ -42,25 +44,31 @@ class AppNavigationDrawer extends StatelessWidget {
                 ),
               ),
             ),
-            ..._destinations.map(
-              (destination) => ListTile(
-                leading: Icon(destination.icon),
-                title: Text(destination.label),
-                selected: destination == selected,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onSelect(destination);
-                },
+            Expanded(
+              child: ListView(
+                children: [
+                  ..._destinations.map(
+                    (destination) => ListTile(
+                      leading: Icon(destination.icon),
+                      title: Text(destination.label),
+                      selected: destination == selected,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSelect(destination);
+                      },
+                    ),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text('Log out'),
+                    onTap: () async {
+                      Navigator.of(context).pop();
+                      await onLogout();
+                    },
+                  ),
+                ],
               ),
-            ),
-            const Spacer(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Log out'),
-              onTap: () async {
-                Navigator.of(context).pop();
-                await onLogout();
-              },
             ),
           ],
         ),

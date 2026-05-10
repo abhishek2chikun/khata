@@ -17,7 +17,14 @@ class Invoice(Base):
     __table_args__ = (
         CheckConstraint("tax_regime IN ('INTRA_STATE', 'INTER_STATE')", name="ck_invoices_tax_regime"),
         CheckConstraint("status IN ('ACTIVE', 'CANCELED')", name="ck_invoices_status"),
-        CheckConstraint("payment_mode IN ('PAID', 'CREDIT')", name="ck_invoices_payment_mode"),
+        CheckConstraint("payment_state IN ('CREDIT', 'TOTAL_PAID', 'PARTIAL_PAID')", name="ck_invoices_payment_state"),
+        CheckConstraint("paid_amount >= 0", name="ck_invoices_paid_amount_non_negative"),
+        CheckConstraint(
+            "(payment_state = 'CREDIT' AND paid_amount = 0) OR "
+            "(payment_state = 'TOTAL_PAID' AND paid_amount = grand_total) OR "
+            "(payment_state = 'PARTIAL_PAID' AND paid_amount > 0 AND paid_amount < grand_total)",
+            name="ck_invoices_payment_amount_matches_state",
+        ),
         CheckConstraint(
             "(status = 'ACTIVE' AND cancel_request_id IS NULL AND cancel_request_hash IS NULL AND canceled_by_user_id IS NULL AND cancel_reason IS NULL AND canceled_at IS NULL) OR "
             "(status = 'CANCELED' AND cancel_request_id IS NOT NULL AND cancel_request_hash IS NOT NULL AND canceled_by_user_id IS NOT NULL AND cancel_reason IS NOT NULL AND canceled_at IS NOT NULL)",
@@ -35,13 +42,13 @@ class Invoice(Base):
         nullable=False,
         unique=True,
     )
-    seller_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=False)
-    seller_name: Mapped[str] = mapped_column(Text, nullable=False)
-    seller_address: Mapped[str] = mapped_column(Text, nullable=False)
-    seller_state: Mapped[str | None] = mapped_column(Text, nullable=True)
-    seller_state_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    seller_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    seller_gstin: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    customer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
+    customer_name: Mapped[str] = mapped_column(Text, nullable=False)
+    customer_address: Mapped[str] = mapped_column(Text, nullable=False)
+    customer_state: Mapped[str | None] = mapped_column(Text, nullable=True)
+    customer_state_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    customer_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    customer_gstin: Mapped[str | None] = mapped_column(String(50), nullable=True)
     place_of_supply_state: Mapped[str] = mapped_column(Text, nullable=False)
     place_of_supply_state_code: Mapped[str] = mapped_column(String(50), nullable=False)
     company_name: Mapped[str] = mapped_column(Text, nullable=False)
@@ -58,9 +65,11 @@ class Invoice(Base):
     company_bank_branch: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_jurisdiction: Mapped[str | None] = mapped_column(Text, nullable=True)
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
+    invoice_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     tax_regime: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
-    payment_mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    payment_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    paid_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal("0.00"))
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     discount_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     taxable_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)

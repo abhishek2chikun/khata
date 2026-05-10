@@ -4,19 +4,24 @@ import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/main.dart' as app;
+import 'package:internal_billing_khata_mobile/models/buyer.dart';
+import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/services/analytics_service.dart';
+import 'package:internal_billing_khata_mobile/models/analytics.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
+import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   testWidgets('BillingApp builds the login shell on startup', (tester) async {
@@ -30,10 +35,12 @@ void main() {
         home: app.BillingApp(
           controller: controller,
           productsService: FakeProductsService(),
-          sellersService: FakeSellersService(),
+          customersService: FakeCustomersService(),
+          buyersService: FakeBuyersService(),
           companyProfileService: FakeCompanyProfileService(),
           paymentsService: FakePaymentsService(),
           invoicesService: FakeInvoicesService(),
+          analyticsService: FakeAnalyticsService(),
         ),
       ),
     );
@@ -93,6 +100,24 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
+  Future<Product> archiveProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Product>> fetchProducts({ProductFilter? filter}) {
     throw UnimplementedError();
   }
@@ -104,19 +129,69 @@ class FakeProductsService implements ProductsService {
   }
 }
 
-class FakeSellersService implements SellersService {
+class FakeCustomersService implements CustomersService {
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) {
+  Future<List<Customer>> fetchCustomers({String search = ''}) {
+    throw UnimplementedError();
+  }
+}
+
+class FakeBuyersService implements BuyersService {
+  @override
+  Future<void> addOpeningPayable({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPayableAdjustment({
+    required String buyerId,
+    required BuyerPayableAdjustmentInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPaymentMade({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPurchaseAmount({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Buyer> createBuyer(CreateBuyerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Buyer>> fetchBuyers({String search = ''}) {
     throw UnimplementedError();
   }
 }
@@ -124,18 +199,18 @@ class FakeSellersService implements SellersService {
 class FakePaymentsService implements PaymentsService {
   @override
   Future<void> addBalanceAdjustment(
-      {required String sellerId, required BalanceAdjustmentInput input}) {
+      {required String customerId, required BalanceAdjustmentInput input}) {
     throw UnimplementedError();
   }
 
   @override
   Future<void> addOpeningBalance(
-      {required String sellerId, required OpeningBalanceInput input}) {
+      {required String customerId, required OpeningBalanceInput input}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) {
+  Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
 }
@@ -178,5 +253,12 @@ class FakeCompanyProfileService implements CompanyProfileService {
   @override
   Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input) {
     throw UnimplementedError();
+  }
+}
+
+class FakeAnalyticsService implements AnalyticsService {
+  @override
+  Future<Dashboard> getDashboard({String? fromDate, String? toDate}) async {
+    return Dashboard.empty();
   }
 }

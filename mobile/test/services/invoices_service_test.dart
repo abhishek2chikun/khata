@@ -7,7 +7,7 @@ import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/api_client.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 
@@ -78,7 +78,8 @@ void main() {
       expect(quote.totals.grandTotal, 236);
     });
 
-    test('create parses nested seller snapshot and full item objects', () async {
+    test('create parses nested customer snapshot and full item objects',
+        () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 201,
@@ -87,7 +88,7 @@ void main() {
               'id': 'inv-1',
               'request_id': 'request-1',
               'invoice_number': 1001,
-              'seller_id': 'seller-1',
+              'customer_id': 'customer-1',
               'invoice_date': '2026-04-20',
               'tax_regime': 'INTRA_STATE',
               'status': 'ACTIVE',
@@ -104,8 +105,8 @@ void main() {
               'cancel_request_id': null,
               'cancel_reason': null,
               'canceled_at': null,
-              'seller_snapshot': <String, dynamic>{
-                'id': 'seller-1',
+              'customer_snapshot': <String, dynamic>{
+                'id': 'customer-1',
                 'name': 'ABC Stores',
                 'address': 'Market Yard',
                 'state': 'Maharashtra',
@@ -175,25 +176,95 @@ void main() {
         ),
       );
 
-      final result = await service.createInvoice(draft: _draft, requestId: 'request-1');
+      final result =
+          await service.createInvoice(draft: _draft, requestId: 'request-1');
 
       expect(httpClient.lastMethod, 'POST');
       expect(httpClient.lastPath, '/invoices');
       expect(result.invoice.id, 'inv-1');
       expect(result.invoice.invoiceNumber, '1001');
-      expect(result.invoice.sellerName, 'ABC Stores');
+      expect(result.invoice.customerName, 'ABC Stores');
       expect(result.invoice.grandTotal, 236);
       expect(result.invoice.items.single.productName, 'Blue Pen');
       expect(result.invoice.items.single.quantity, 2);
       expect(result.invoice.items.single.lineTotal, 236);
-      expect(result.warnings.single.message, 'Stock will go negative for Blue Pen');
+      expect(result.warnings.single.message,
+          'Stock will go negative for Blue Pen');
+    });
+
+    test('create serializes legacy PAID as TOTAL_PAID without payment_mode',
+        () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 201,
+          body: jsonEncode(<String, dynamic>{
+            'invoice': <String, dynamic>{
+              'id': 'inv-1',
+              'request_id': 'request-1',
+              'invoice_number': 1001,
+              'customer_id': 'customer-1',
+              'invoice_date': '2026-04-20',
+              'tax_regime': 'INTRA_STATE',
+              'status': 'ACTIVE',
+              'payment_state': 'TOTAL_PAID',
+              'paid_amount': '236.00',
+              'payment_mode': 'TOTAL_PAID',
+              'place_of_supply_state': 'Maharashtra',
+              'place_of_supply_state_code': '27',
+              'subtotal': '200.00',
+              'discount_total': '0.00',
+              'taxable_total': '200.00',
+              'gst_total': '36.00',
+              'grand_total': '236.00',
+              'notes': null,
+              'created_at': '2026-04-20T10:00:00Z',
+              'cancel_request_id': null,
+              'cancel_reason': null,
+              'canceled_at': null,
+              'customer_snapshot': <String, dynamic>{
+                'id': 'customer-1',
+                'name': 'ABC Stores',
+                'address': 'Market Yard',
+                'state': 'Maharashtra',
+                'state_code': '27',
+              },
+              'company_snapshot': <String, dynamic>{
+                'name': 'Acme Traders',
+                'address': 'Main Road',
+                'city': 'Pune',
+                'state': 'Maharashtra',
+                'state_code': '27',
+              },
+              'items': <Map<String, dynamic>>[],
+            },
+            'warnings': <Map<String, dynamic>>[],
+          }),
+        ),
+      );
+      final service = ApiInvoicesService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      await service.createInvoice(
+        draft: _draft.copyWith(paymentMode: 'PAID'),
+        requestId: 'request-1',
+      );
+
+      final body = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
+      expect(body['payment_state'], 'TOTAL_PAID');
+      expect(body.containsKey('payment_mode'), isFalse);
     });
   });
 }
 
 const _draft = InvoiceDraft(
-  seller: Seller(
-    id: 'seller-1',
+  customer: Customer(
+    id: 'customer-1',
     name: 'ABC Stores',
     address: 'Market Yard',
     phone: '9999999999',
@@ -209,12 +280,13 @@ const _draft = InvoiceDraft(
     InvoiceDraftItem(
       product: Product(
         id: 'product-1',
-        company: 'Acme',
+        companyName: 'Acme',
         category: 'Pens',
         itemName: 'Blue Pen',
-        itemCode: 'PEN-1',
-        defaultSellingPriceExclTax: 100,
-        defaultGstRate: 18,
+        itemNumber: 'PEN-1',
+        buyingPrice: 100,
+        sellingPrice: 100,
+        gstRate: 18,
         quantityOnHand: 5,
         lowStockThreshold: 2,
         isActive: true,
@@ -230,7 +302,8 @@ const _draft = InvoiceDraft(
 
 class FakeAuthService implements AuthService {
   @override
-  Future<AuthSessionTokens> login({required String username, required String password}) {
+  Future<AuthSessionTokens> login(
+      {required String username, required String password}) {
     throw UnimplementedError();
   }
 
@@ -312,7 +385,8 @@ class RecordingHttpRequest implements HttpClientRequest {
 
 class FakeHttpResponse extends Stream<List<int>> implements HttpClientResponse {
   FakeHttpResponse({required this.statusCode, required String body})
-      : _bodyStream = Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
+      : _bodyStream =
+            Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
 
   @override
   final int statusCode;

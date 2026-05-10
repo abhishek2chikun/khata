@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/seller.dart';
+import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
 
@@ -9,14 +9,17 @@ class BalanceAdjustmentScreen extends StatefulWidget {
   const BalanceAdjustmentScreen({
     super.key,
     required this.paymentsService,
-    required this.seller,
+    required this.customer,
+    this.initialDirection = 'INCREASE',
   });
 
   final PaymentsService paymentsService;
-  final Seller seller;
+  final Customer customer;
+  final String initialDirection;
 
   @override
-  State<BalanceAdjustmentScreen> createState() => _BalanceAdjustmentScreenState();
+  State<BalanceAdjustmentScreen> createState() =>
+      _BalanceAdjustmentScreenState();
 }
 
 class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
@@ -25,8 +28,16 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
   final _notesController = TextEditingController();
 
   bool _isSaving = false;
-  String _direction = 'INCREASE';
+  late String _direction;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _direction = widget.initialDirection;
+    _occurredOnController.text =
+        DateTime.now().toIso8601String().substring(0, 10);
+  }
 
   @override
   void dispose() {
@@ -146,13 +157,15 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
 
     try {
       await widget.paymentsService.addBalanceAdjustment(
-        sellerId: widget.seller.id,
+        customerId: widget.customer.id,
         input: BalanceAdjustmentInput(
           requestId: generateRequestId(),
           direction: _direction,
           amount: amount,
           occurredOn: occurredOn,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         ),
       );
       if (!mounted) {

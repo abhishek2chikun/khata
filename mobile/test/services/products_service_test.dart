@@ -5,16 +5,100 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
+import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/services/api_client.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
+  group('Product', () {
+    test('requires canonical V2 JSON fields', () {
+      expect(
+        () => Product.fromJson(<String, dynamic>{
+          'id': 'p1',
+          'company': 'Acme',
+          'category': 'Pens',
+          'item_name': 'Blue Pen',
+          'item_code': 'PEN-1',
+          'default_selling_price_excl_tax': '10',
+          'default_gst_rate': '18',
+          'quantity_on_hand': '5',
+          'low_stock_threshold': '2',
+          'is_active': true,
+        }),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('requires canonical numeric JSON fields', () {
+      for (final key in <String>[
+        'buying_price',
+        'selling_price',
+        'gst_rate',
+        'quantity_on_hand',
+        'low_stock_threshold',
+      ]) {
+        expect(
+          () => Product.fromJson(_productJson()..remove(key)),
+          throwsA(isA<FormatException>()),
+          reason: '$key should be required',
+        );
+      }
+    });
+
+    test('requires canonical non-numeric JSON fields', () {
+      for (final key in <String>[
+        'id',
+        'company_name',
+        'category',
+        'item_name',
+        'item_number',
+        'is_active',
+      ]) {
+        expect(
+          () => Product.fromJson(_productJson()..remove(key)),
+          throwsA(isA<FormatException>()),
+          reason: '$key should be required',
+        );
+      }
+    });
+
+    test('preserves nullable buyer id from canonical JSON', () {
+      final product = Product.fromJson(
+        _productJson(buyerId: '11111111-1111-4111-8111-111111111111'),
+      );
+
+      expect(product.buyerId, '11111111-1111-4111-8111-111111111111');
+      expect(Product.fromJson(_productJson(buyerId: null)).buyerId, null);
+    });
+
+    test('rejects invalid canonical numeric JSON fields', () {
+      expect(
+        () => Product.fromJson(<String, dynamic>{
+          'id': 'p1',
+          'company_name': 'Acme',
+          'category': 'Pens',
+          'item_name': 'Blue Pen',
+          'item_number': 'PEN-1',
+          'buying_price': 'not-a-number',
+          'selling_price': '10',
+          'unit': null,
+          'gst_rate': '18',
+          'quantity_on_hand': '5',
+          'low_stock_threshold': '2',
+          'is_active': true,
+        }),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('ApiProductsService', () {
     test('create payload omits unsupported is_active field', () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 200,
-          body: '{"id":"p1","company":"Acme","category":"Pens","item_name":"Blue Pen","item_code":"PEN-1","default_selling_price_excl_tax":10,"default_gst_rate":18,"quantity_on_hand":5,"low_stock_threshold":2,"is_active":true}',
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":true}',
         ),
       );
       final service = ApiProductsService(
@@ -28,12 +112,14 @@ void main() {
 
       await service.createProduct(
         const CreateProductInput(
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'pcs',
+          gstRate: 18,
           quantityOnHand: 5,
           lowStockThreshold: 2,
         ),
@@ -45,13 +131,25 @@ void main() {
       final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(payload['quantity_on_hand'], 5);
       expect(payload.containsKey('is_active'), isFalse);
+      expect(payload.containsKey('company'), isFalse);
+      expect(payload.containsKey('item_code'), isFalse);
+      expect(payload.containsKey('default_selling_price_excl_tax'), isFalse);
+      expect(payload.containsKey('default_gst_rate'), isFalse);
+      expect(payload['company_name'], 'Acme');
+      expect(payload['item_number'], 'PEN-1');
+      expect(payload['buying_price'], 8);
+      expect(payload['selling_price'], 10);
+      expect(payload['unit'], 'pcs');
+      expect(payload['gst_rate'], 18);
     });
 
-    test('update payload omits forbidden quantity_on_hand and is_active fields', () async {
+    test('update payload omits forbidden quantity_on_hand and is_active fields',
+        () async {
       final httpClient = RecordingHttpClient(
         response: FakeHttpResponse(
           statusCode: 200,
-          body: '{"id":"p1","company":"Acme","category":"Pens","item_name":"Blue Pen","item_code":"PEN-1","default_selling_price_excl_tax":10,"default_gst_rate":18,"quantity_on_hand":5,"low_stock_threshold":2,"is_active":true}',
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":true}',
         ),
       );
       final service = ApiProductsService(
@@ -66,12 +164,14 @@ void main() {
       await service.updateProduct(
         id: 'p1',
         input: const UpdateProductInput(
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 8,
+          sellingPrice: 10,
+          unit: 'pcs',
+          gstRate: 18,
           lowStockThreshold: 2,
         ),
       );
@@ -82,14 +182,121 @@ void main() {
       final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(payload.containsKey('quantity_on_hand'), isFalse);
       expect(payload.containsKey('is_active'), isFalse);
+      expect(payload.containsKey('company'), isFalse);
+      expect(payload.containsKey('item_code'), isFalse);
+      expect(payload.containsKey('default_selling_price_excl_tax'), isFalse);
+      expect(payload.containsKey('default_gst_rate'), isFalse);
       expect(payload['low_stock_threshold'], 2);
+    });
+
+    test('fetch query emits canonical product filter keys only', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(statusCode: 200, body: '[]'),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      await service.fetchProducts(
+        filter: const ProductFilter(companyName: 'Acme', category: 'Pens'),
+      );
+
+      expect(httpClient.lastQueryParameters, isNot(contains('company')));
+      expect(httpClient.lastQueryParameters['company_name'], 'Acme');
+      expect(httpClient.lastQueryParameters['category'], 'Pens');
+    });
+
+    test('archive calls backend delete endpoint', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 200,
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"5","low_stock_threshold":"2","is_active":false}',
+        ),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final archived = await service.archiveProduct(id: 'p1');
+
+      expect(httpClient.lastMethod, 'DELETE');
+      expect(httpClient.lastPath, '/products/p1');
+      expect(httpClient.lastBody, isEmpty);
+      expect(archived.isActive, isFalse);
+    });
+
+    test('adjust stock calls backend route with idempotent request body',
+        () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 200,
+          body:
+              '{"id":"p1","company_name":"Acme","category":"Pens","item_name":"Blue Pen","item_number":"PEN-1","buying_price":"8","selling_price":"10","unit":"pcs","gst_rate":"18","quantity_on_hand":"7","low_stock_threshold":"2","is_active":true}',
+        ),
+      );
+      final service = ApiProductsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final adjusted = await service.adjustStock(
+        id: 'p1',
+        input: const AdjustStockInput(
+          requestId: 'req-1',
+          quantityDelta: 2,
+          reason: 'Cycle count',
+        ),
+      );
+
+      expect(httpClient.lastMethod, 'POST');
+      expect(httpClient.lastPath, '/products/p1/adjust-stock');
+      final payload = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
+      expect(payload['request_id'], 'req-1');
+      expect(payload['quantity_delta'], 2);
+      expect(payload['reason'], 'Cycle count');
+      expect(payload.containsKey('delta'), isFalse);
+      expect(adjusted.quantityOnHand, 7);
     });
   });
 }
 
+Map<String, dynamic> _productJson({Object? buyerId = null}) {
+  return <String, dynamic>{
+    'id': 'p1',
+    'company_name': 'Acme',
+    'category': 'Pens',
+    'item_name': 'Blue Pen',
+    'item_number': 'PEN-1',
+    'buyer_id': buyerId,
+    'buying_price': '8',
+    'selling_price': '10',
+    'unit': null,
+    'gst_rate': '18',
+    'quantity_on_hand': '5',
+    'low_stock_threshold': '2',
+    'is_active': true,
+  };
+}
+
 class FakeAuthService implements AuthService {
   @override
-  Future<AuthSessionTokens> login({required String username, required String password}) {
+  Future<AuthSessionTokens> login(
+      {required String username, required String password}) {
     throw UnimplementedError();
   }
 
@@ -130,7 +337,19 @@ class RecordingHttpClient implements HttpClient {
   final HttpClientResponse response;
   String? lastMethod;
   String? lastPath;
+  Map<String, String> lastQueryParameters = const <String, String>{};
   String? lastBody;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    lastMethod = 'GET';
+    lastPath = url.path;
+    lastQueryParameters = url.queryParameters;
+    return RecordingHttpRequest(
+      response: response,
+      onClose: (body) => lastBody = body,
+    );
+  }
 
   @override
   Future<HttpClientRequest> postUrl(Uri url) async {
@@ -145,6 +364,16 @@ class RecordingHttpClient implements HttpClient {
   @override
   Future<HttpClientRequest> putUrl(Uri url) async {
     lastMethod = 'PUT';
+    lastPath = url.path;
+    return RecordingHttpRequest(
+      response: response,
+      onClose: (body) => lastBody = body,
+    );
+  }
+
+  @override
+  Future<HttpClientRequest> deleteUrl(Uri url) async {
+    lastMethod = 'DELETE';
     lastPath = url.path;
     return RecordingHttpRequest(
       response: response,
@@ -181,7 +410,8 @@ class RecordingHttpRequest implements HttpClientRequest {
 
 class FakeHttpResponse extends Stream<List<int>> implements HttpClientResponse {
   FakeHttpResponse({required this.statusCode, required String body})
-      : _bodyStream = Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
+      : _bodyStream =
+            Stream<List<int>>.fromIterable(<List<int>>[utf8.encode(body)]);
 
   final int statusCode;
   final Stream<List<int>> _bodyStream;

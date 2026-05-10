@@ -24,13 +24,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _categoryController;
   late final TextEditingController _itemNameController;
   late final TextEditingController _itemCodeController;
-  late final TextEditingController _priceController;
+  late final TextEditingController _buyingPriceController;
+  late final TextEditingController _sellingPriceController;
+  late final TextEditingController _unitController;
   late final TextEditingController _gstController;
   late final TextEditingController _quantityController;
   late final TextEditingController _thresholdController;
 
   bool _isSaving = false;
   String? _errorMessage;
+  final Map<String, String> _fieldErrors = <String, String>{};
 
   bool get _isEditing => widget.product != null;
 
@@ -38,15 +41,21 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   void initState() {
     super.initState();
     final product = widget.product;
-    _companyController = TextEditingController(text: product?.company ?? '');
+    _companyController =
+        TextEditingController(text: product?.companyName ?? '');
     _categoryController = TextEditingController(text: product?.category ?? '');
     _itemNameController = TextEditingController(text: product?.itemName ?? '');
-    _itemCodeController = TextEditingController(text: product?.itemCode ?? '');
-    _priceController = TextEditingController(
-      text: product == null ? '' : product.defaultSellingPriceExclTax.toString(),
+    _itemCodeController =
+        TextEditingController(text: product?.itemNumber ?? '');
+    _buyingPriceController = TextEditingController(
+      text: product == null ? '' : product.buyingPrice.toString(),
     );
+    _sellingPriceController = TextEditingController(
+      text: product == null ? '' : product.sellingPrice.toString(),
+    );
+    _unitController = TextEditingController(text: product?.unit ?? '');
     _gstController = TextEditingController(
-      text: product == null ? '' : product.defaultGstRate.toString(),
+      text: product == null ? '' : product.gstRate.toString(),
     );
     _quantityController = TextEditingController(
       text: product == null ? '' : product.quantityOnHand.toString(),
@@ -62,7 +71,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _categoryController.dispose();
     _itemNameController.dispose();
     _itemCodeController.dispose();
-    _priceController.dispose();
+    _buyingPriceController.dispose();
+    _sellingPriceController.dispose();
+    _unitController.dispose();
     _gstController.dispose();
     _quantityController.dispose();
     _thresholdController.dispose();
@@ -82,19 +93,31 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            _buildField(_companyController, 'Company'),
+            _buildField(_companyController, 'Company / buyer',
+                errorKey: 'Company'),
             _buildField(_categoryController, 'Category'),
             _buildField(_itemNameController, 'Item name'),
-            _buildField(_itemCodeController, 'Item code'),
-            _buildField(_priceController, 'Selling price (excl tax)', keyboardType: TextInputType.number),
-            _buildField(_gstController, 'GST rate', keyboardType: TextInputType.number),
+            _buildField(_itemCodeController, 'Item number'),
+            _buildField(_buyingPriceController, 'Buying price',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
+            _buildField(_sellingPriceController, 'Selling price',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
+            _buildField(_unitController, 'Unit'),
+            _buildField(_gstController, 'GST rate',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             if (!_isEditing)
               _buildField(
                 _quantityController,
                 'Quantity on hand',
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
               ),
-            _buildField(_thresholdController, 'Low stock threshold', keyboardType: TextInputType.number),
+            _buildField(_thresholdController, 'Low stock threshold',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _isSaving ? null : _save,
@@ -116,6 +139,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     TextEditingController controller,
     String label, {
     TextInputType? keyboardType,
+    String? errorKey,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -125,6 +149,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         enabled: !_isSaving,
         decoration: InputDecoration(
           labelText: label,
+          errorText: _fieldErrors[errorKey ?? label],
           border: const OutlineInputBorder(),
         ),
       ),
@@ -132,6 +157,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   }
 
   Future<void> _save() async {
+    final validation = _validateInput();
+    if (validation == null) {
+      return;
+    }
+
     setState(() {
       _isSaving = true;
       _errorMessage = null;
@@ -142,25 +172,29 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           ? await widget.productsService.updateProduct(
               id: widget.product!.id,
               input: UpdateProductInput(
-                company: _companyController.text.trim(),
+                companyName: _companyController.text.trim(),
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
-                itemCode: _itemCodeController.text.trim(),
-                defaultSellingPriceExclTax: double.tryParse(_priceController.text.trim()) ?? 0,
-                defaultGstRate: double.tryParse(_gstController.text.trim()) ?? 0,
-                lowStockThreshold: double.tryParse(_thresholdController.text.trim()) ?? 0,
+                itemNumber: _itemCodeController.text.trim(),
+                buyingPrice: validation.buyingPrice,
+                sellingPrice: validation.sellingPrice,
+                unit: validation.unit,
+                gstRate: validation.gstRate,
+                lowStockThreshold: validation.lowStockThreshold,
               ),
             )
           : await widget.productsService.createProduct(
               CreateProductInput(
-                company: _companyController.text.trim(),
+                companyName: _companyController.text.trim(),
                 category: _categoryController.text.trim(),
                 itemName: _itemNameController.text.trim(),
-                itemCode: _itemCodeController.text.trim(),
-                defaultSellingPriceExclTax: double.tryParse(_priceController.text.trim()) ?? 0,
-                defaultGstRate: double.tryParse(_gstController.text.trim()) ?? 0,
-                quantityOnHand: double.tryParse(_quantityController.text.trim()) ?? 0,
-                lowStockThreshold: double.tryParse(_thresholdController.text.trim()) ?? 0,
+                itemNumber: _itemCodeController.text.trim(),
+                buyingPrice: validation.buyingPrice,
+                sellingPrice: validation.sellingPrice,
+                unit: validation.unit,
+                gstRate: validation.gstRate,
+                quantityOnHand: validation.quantityOnHand,
+                lowStockThreshold: validation.lowStockThreshold,
               ),
             );
       if (!mounted) {
@@ -182,4 +216,122 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       }
     }
   }
+
+  _ValidatedProductInput? _validateInput() {
+    final errors = <String, String>{};
+    _requireText(errors, _companyController, 'Company',
+        message: 'Company or buyer is required.');
+    _requireText(errors, _categoryController, 'Category');
+    _requireText(errors, _itemNameController, 'Item name');
+    _requireText(errors, _itemCodeController, 'Item number');
+    final buyingPrice = _parseRequiredNumber(
+      errors,
+      _buyingPriceController,
+      'Buying price',
+      'Buying price',
+      invalidMessage: 'Buying price must be a valid amount.',
+    );
+    final sellingPrice = _parseRequiredNumber(
+      errors,
+      _sellingPriceController,
+      'Selling price',
+      'Selling price',
+      invalidMessage: 'Selling price must be a valid amount.',
+    );
+    final gstRate = _parseRequiredNumber(
+      errors,
+      _gstController,
+      'GST rate',
+      'GST rate',
+      invalidMessage: 'GST rate must be a valid percentage.',
+    );
+    final quantityOnHand = _isEditing
+        ? widget.product!.quantityOnHand
+        : _parseRequiredNumber(
+            errors,
+            _quantityController,
+            'Quantity on hand',
+            'Quantity on hand',
+          );
+    final lowStockThreshold = _parseRequiredNumber(
+      errors,
+      _thresholdController,
+      'Low stock threshold',
+      'Low stock threshold',
+    );
+
+    setState(() {
+      _fieldErrors
+        ..clear()
+        ..addAll(errors);
+      _errorMessage = null;
+    });
+
+    if (errors.isNotEmpty) {
+      return null;
+    }
+    return _ValidatedProductInput(
+      buyingPrice: buyingPrice!,
+      sellingPrice: sellingPrice!,
+      unit: _unitController.text.trim().isEmpty
+          ? null
+          : _unitController.text.trim(),
+      gstRate: gstRate!,
+      quantityOnHand: quantityOnHand!,
+      lowStockThreshold: lowStockThreshold!,
+    );
+  }
+
+  void _requireText(
+    Map<String, String> errors,
+    TextEditingController controller,
+    String label, {
+    String? message,
+  }) {
+    if (controller.text.trim().isEmpty) {
+      errors[label] = message ?? '$label is required.';
+    }
+  }
+
+  double? _parseRequiredNumber(
+    Map<String, String> errors,
+    TextEditingController controller,
+    String label,
+    String displayName, {
+    String? invalidMessage,
+  }) {
+    final value = controller.text.trim();
+    if (value.isEmpty) {
+      errors[label] = '$displayName is required.';
+      return null;
+    }
+    final parsed = double.tryParse(value);
+    if (parsed == null || !parsed.isFinite) {
+      errors[label] = invalidMessage ?? '$displayName must be a valid number.';
+      return null;
+    }
+    if (parsed < 0) {
+      errors[label] = '$displayName must be zero or greater.';
+      return null;
+    }
+    return parsed;
+  }
+}
+
+class _ValidatedProductInput {
+  const _ValidatedProductInput({
+    required this.buyingPrice,
+    required this.sellingPrice,
+    required this.unit,
+    required this.gstRate,
+    required this.quantityOnHand,
+    required this.lowStockThreshold,
+  });
+
+  final double buyingPrice;
+  final double sellingPrice;
+  final String? unit;
+  final double gstRate;
+  final double quantityOnHand;
+  final double lowStockThreshold;
 }
