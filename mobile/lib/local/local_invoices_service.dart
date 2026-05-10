@@ -9,8 +9,9 @@ import '../models/invoice_draft.dart';
 import '../models/invoice_quote.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
+import '../services/money_validator.dart';
 import 'local_database.dart';
-import 'local_sellers_service.dart';
+import 'local_customers_service.dart';
 
 class LocalInvoicesService implements InvoicesService {
   LocalInvoicesService({required LocalDatabase database})
@@ -32,76 +33,76 @@ class LocalInvoicesService implements InvoicesService {
     required String requestId,
   }) async {
     _validateRequestId(requestId);
-    final existing = await (_database.select(_database.invoices)
-          ..where((invoice) => invoice.requestId.equals(requestId)))
-        .getSingleOrNull();
-    if (existing != null) {
-      final requestHash = _invoiceRequestHash(
-        draft,
-        existing.placeOfSupplyStateCode,
-      );
-      if (existing.requestHash != requestHash) {
-        throw _idempotencyConflictError();
-      }
-      return CreateInvoiceResult(
-        invoice: await _buildInvoiceDetail(existing.id),
-        warnings: const <InvoiceWarning>[],
-      );
-    }
-
-    final prepared = await _prepareInvoice(draft);
-    final requestHash = _invoiceRequestHash(
-      draft,
-      prepared.placeOfSupplyStateCode,
-    );
-    final invoiceId = generateLocalUuid();
     await _ensureSystemUser();
 
-    await _database.transaction(() async {
+    return _database.transaction(() async {
+      final existing = await (_database.select(_database.invoices)
+            ..where((invoice) => invoice.requestId.equals(requestId)))
+          .getSingleOrNull();
+      if (existing != null) {
+        return _replayExistingCreate(draft: draft, existing: existing);
+      }
+
+      final prepared = await _prepareInvoice(draft);
+      final requestHash = _invoiceRequestHash(draft, prepared);
+      final invoiceId = generateLocalUuid();
       final invoiceNumber = await _nextInvoiceNumber();
       final now = DateTime.now().toUtc().toIso8601String();
-      await _database.into(_database.invoices).insert(
-            InvoicesCompanion.insert(
-              id: invoiceId,
-              requestId: requestId,
-              requestHash: requestHash,
-              invoiceNumber: invoiceNumber,
-              sellerId: prepared.seller.id,
-              sellerName: prepared.seller.name,
-              sellerAddress: prepared.seller.address,
-              sellerState: Value(prepared.seller.state),
-              sellerStateCode: Value(prepared.seller.stateCode),
-              sellerPhone: Value(prepared.seller.phone),
-              sellerGstin: Value(prepared.seller.gstin),
-              placeOfSupplyState: prepared.placeOfSupplyState,
-              placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
-              companyName: prepared.company.name,
-              companyAddress: prepared.company.address,
-              companyCity: prepared.company.city,
-              companyState: prepared.company.state,
-              companyStateCode: prepared.company.stateCode,
-              companyGstin: Value(prepared.company.gstin),
-              companyPhone: Value(prepared.company.phone),
-              companyEmail: Value(prepared.company.email),
-              companyBankName: Value(prepared.company.bankName),
-              companyBankAccount: Value(prepared.company.bankAccount),
-              companyBankIfsc: Value(prepared.company.bankIfsc),
-              companyBankBranch: Value(prepared.company.bankBranch),
-              companyJurisdiction: Value(prepared.company.jurisdiction),
-              invoiceDate: draft.invoiceDate,
-              taxRegime: prepared.taxRegime,
-              status: 'ACTIVE',
-              paymentMode: draft.paymentMode,
-              subtotal: _normalizeDecimal(prepared.totals.subtotal),
-              discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
-              taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
-              gstTotal: _normalizeDecimal(prepared.totals.gstTotal),
-              grandTotal: _normalizeDecimal(prepared.totals.grandTotal),
-              notes: Value(_emptyToNull(draft.notes)),
-              createdByUserId: _systemUserId,
-              createdAt: now,
-            ),
-          );
+      try {
+        await _database.into(_database.invoices).insert(
+              InvoicesCompanion.insert(
+                id: invoiceId,
+                requestId: requestId,
+                requestHash: requestHash,
+                invoiceNumber: invoiceNumber,
+                customerId: prepared.customer.id,
+                customerName: prepared.customer.name,
+                customerAddress: prepared.customer.address,
+                customerState: Value(prepared.customer.state),
+                customerStateCode: Value(prepared.customer.stateCode),
+                customerPhone: Value(prepared.customer.phone),
+                customerGstin: Value(prepared.customer.gstin),
+                placeOfSupplyState: prepared.placeOfSupplyState,
+                placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
+                companyName: prepared.company.name,
+                companyAddress: prepared.company.address,
+                companyCity: prepared.company.city,
+                companyState: prepared.company.state,
+                companyStateCode: prepared.company.stateCode,
+                companyGstin: Value(prepared.company.gstin),
+                companyPhone: Value(prepared.company.phone),
+                companyEmail: Value(prepared.company.email),
+                companyBankName: Value(prepared.company.bankName),
+                companyBankAccount: Value(prepared.company.bankAccount),
+                companyBankIfsc: Value(prepared.company.bankIfsc),
+                companyBankBranch: Value(prepared.company.bankBranch),
+                companyJurisdiction: Value(prepared.company.jurisdiction),
+                invoiceDate: prepared.invoiceDate,
+                invoiceDatetime: Value(prepared.invoiceDatetime),
+                taxRegime: prepared.taxRegime,
+                status: 'ACTIVE',
+                paymentState: Value(prepared.paymentState),
+                paidAmount: Value(_normalizeDecimal(prepared.paidAmount)),
+                paymentMode: prepared.paymentState,
+                subtotal: _normalizeDecimal(prepared.totals.subtotal),
+                discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
+                taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
+                gstTotal: _normalizeDecimal(prepared.totals.gstTotal),
+                grandTotal: _normalizeDecimal(prepared.totals.grandTotal),
+                notes: Value(_emptyToNull(draft.notes)),
+                createdByUserId: _systemUserId,
+                createdAt: now,
+              ),
+            );
+      } on Object catch (error) {
+        final duplicate = await (_database.select(_database.invoices)
+              ..where((invoice) => invoice.requestId.equals(requestId)))
+            .getSingleOrNull();
+        if (duplicate != null) {
+          return _replayExistingCreate(draft: draft, existing: duplicate);
+        }
+        throw error;
+      }
 
       final stockQuantitiesByProductId = <String, double>{};
       for (final line in prepared.lines) {
@@ -112,8 +113,18 @@ class LocalInvoicesService implements InvoicesService {
                 productId: line.product.id,
                 lineNumber: line.lineNumber,
                 productName: line.product.itemName,
-                productCode: line.product.itemCode,
-                company: line.product.company,
+                productCode: line.product.itemNumber,
+                productItemNumber: Value(line.product.itemNumber),
+                productItemName: Value(line.product.itemName),
+                productCategory: Value(line.product.category),
+                productBuyerId: Value(line.product.buyerId),
+                productCompanyName: Value(line.product.companyName),
+                buyingPrice: Value(
+                    _normalizeDecimal(double.parse(line.product.buyingPrice))),
+                sellingPrice: Value(
+                    _normalizeDecimal(double.parse(line.product.sellingPrice))),
+                unit: Value(line.product.unit),
+                company: line.product.companyName,
                 category: line.product.category,
                 quantity: _normalizeDecimal(line.item.quantity),
                 pricingMode: line.item.pricingMode,
@@ -132,6 +143,12 @@ class LocalInvoicesService implements InvoicesService {
                 sgstAmount: _normalizeDecimal(line.sgstAmount),
                 igstAmount: _normalizeDecimal(line.igstAmount),
                 lineTotal: _normalizeDecimal(line.lineTotal),
+                revenueAmount: Value(_normalizeMoneyDecimal(line.taxableAmount)),
+                buyingAmount: Value(_normalizeMoneyDecimal(
+                    line.item.quantity * double.parse(line.product.buyingPrice))),
+                profitAmount: Value(_normalizeMoneyDecimal(line.taxableAmount -
+                    _roundMoney(line.item.quantity *
+                        double.parse(line.product.buyingPrice)))),
               ),
             );
         await _database.into(_database.stockMovements).insert(
@@ -169,27 +186,40 @@ class LocalInvoicesService implements InvoicesService {
         );
       }
 
-      if (draft.paymentMode == 'CREDIT') {
-        await _database.into(_database.sellerTransactions).insert(
-              SellerTransactionsCompanion.insert(
+      await _database.into(_database.customerTransactions).insert(
+            CustomerTransactionsCompanion.insert(
+              id: generateLocalUuid(),
+              customerId: prepared.customer.id,
+              invoiceId: Value(invoiceId),
+              entryType: 'CREDIT_SALE',
+              amount: _normalizeDecimal(prepared.totals.grandTotal),
+              occurredOn: prepared.invoiceDate,
+              notes: Value('Invoice $invoiceNumber'),
+              createdByUserId: _systemUserId,
+              createdAt: now,
+            ),
+          );
+      if (prepared.paidAmount > 0) {
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
-                sellerId: prepared.seller.id,
+                customerId: prepared.customer.id,
                 invoiceId: Value(invoiceId),
-                entryType: 'CREDIT_SALE',
-                amount: _normalizeDecimal(prepared.totals.grandTotal),
-                occurredOn: draft.invoiceDate,
-                notes: Value('Invoice $invoiceNumber'),
+                entryType: 'COLLECTION',
+                amount: _normalizeDecimal(prepared.paidAmount),
+                occurredOn: prepared.invoiceDate,
+                notes: Value('Invoice $invoiceNumber collection'),
                 createdByUserId: _systemUserId,
                 createdAt: now,
               ),
             );
       }
-    });
 
-    return CreateInvoiceResult(
-      invoice: await _buildInvoiceDetail(invoiceId),
-      warnings: prepared.warnings,
-    );
+      return CreateInvoiceResult(
+        invoice: await _buildInvoiceDetail(invoiceId),
+        warnings: prepared.warnings,
+      );
+    });
   }
 
   @override
@@ -215,31 +245,50 @@ class LocalInvoicesService implements InvoicesService {
     required String invoiceId,
     required String reason,
   }) async {
-    final invoice = await (_database.select(_database.invoices)
+    final existingInvoice = await (_database.select(_database.invoices)
           ..where((invoice) => invoice.id.equals(invoiceId)))
         .getSingleOrNull();
-    if (invoice == null) {
+    if (existingInvoice == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
         message: 'Invoice not found',
         statusCode: 404,
       );
     }
-    if (invoice.status == 'CANCELED') {
-      throw const ApiError(
-        code: 'INVOICE_ALREADY_CANCELED',
-        message: 'Invoice is already canceled',
-        statusCode: 409,
-      );
-    }
     await _ensureSystemUser();
-    final items = await (_database.select(_database.invoiceItems)
-          ..where((item) => item.invoiceId.equals(invoiceId))
-          ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
-        .get();
     final now = DateTime.now().toUtc();
     final nowIso = now.toIso8601String();
     await _database.transaction(() async {
+      final invoice = await (_database.select(_database.invoices)
+            ..where((invoice) => invoice.id.equals(invoiceId)))
+          .getSingle();
+      if (invoice.status == 'CANCELED') {
+        throw const ApiError(
+          code: 'INVOICE_ALREADY_CANCELED',
+          message: 'Invoice is already canceled',
+          statusCode: 409,
+        );
+      }
+      final items = await (_database.select(_database.invoiceItems)
+            ..where((item) => item.invoiceId.equals(invoiceId))
+            ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
+          .get();
+      final existingStockReversals =
+          await (_database.select(_database.stockMovements)
+                ..where((movement) => movement.invoiceId.equals(invoiceId))
+                ..where((movement) =>
+                    movement.movementType.equals('INVOICE_CANCEL_REVERSAL')))
+              .get();
+      final hasStockReversals = existingStockReversals.isNotEmpty;
+      final existingLedgerReversals = await (_database
+              .select(_database.customerTransactions)
+            ..where((transaction) => transaction.invoiceId.equals(invoiceId))
+            ..where((transaction) => transaction.entryType.isIn(
+                const ['INVOICE_CANCEL_REVERSAL', 'COLLECTION_REVERSAL'])))
+          .get();
+      final existingLedgerTypes = existingLedgerReversals
+          .map((transaction) => transaction.entryType)
+          .toSet();
       await (_database.update(_database.invoices)
             ..where((invoice) => invoice.id.equals(invoiceId)))
           .write(
@@ -255,39 +304,41 @@ class LocalInvoicesService implements InvoicesService {
           canceledAt: Value(nowIso),
         ),
       );
-      for (final item in items) {
-        final product = await (_database.select(_database.products)
-              ..where((product) => product.id.equals(item.productId)))
-            .getSingle();
-        final quantity = double.parse(item.quantity);
-        await (_database.update(_database.products)
-              ..where((product) => product.id.equals(item.productId)))
-            .write(
-          ProductsCompanion(
-            quantityOnHand: Value(_normalizeDecimal(
-              double.parse(product.quantityOnHand) + quantity,
-            )),
-            updatedAt: Value(nowIso),
-          ),
-        );
-        await _database.into(_database.stockMovements).insert(
-              StockMovementsCompanion.insert(
-                id: generateLocalUuid(),
-                productId: item.productId,
-                invoiceId: Value(invoiceId),
-                movementType: 'INVOICE_CANCEL_REVERSAL',
-                quantityDelta: _normalizeDecimal(quantity),
-                reason: Value('Cancel invoice ${invoice.invoiceNumber}'),
-                createdByUserId: _systemUserId,
-                createdAt: nowIso,
-              ),
-            );
+      if (!hasStockReversals) {
+        for (final item in items) {
+          final product = await (_database.select(_database.products)
+                ..where((product) => product.id.equals(item.productId)))
+              .getSingle();
+          final quantity = double.parse(item.quantity);
+          await (_database.update(_database.products)
+                ..where((product) => product.id.equals(item.productId)))
+              .write(
+            ProductsCompanion(
+              quantityOnHand: Value(_normalizeDecimal(
+                double.parse(product.quantityOnHand) + quantity,
+              )),
+              updatedAt: Value(nowIso),
+            ),
+          );
+          await _database.into(_database.stockMovements).insert(
+                StockMovementsCompanion.insert(
+                  id: generateLocalUuid(),
+                  productId: item.productId,
+                  invoiceId: Value(invoiceId),
+                  movementType: 'INVOICE_CANCEL_REVERSAL',
+                  quantityDelta: _normalizeDecimal(quantity),
+                  reason: Value('Cancel invoice ${invoice.invoiceNumber}'),
+                  createdByUserId: _systemUserId,
+                  createdAt: nowIso,
+                ),
+              );
+        }
       }
-      if (invoice.paymentMode == 'CREDIT') {
-        await _database.into(_database.sellerTransactions).insert(
-              SellerTransactionsCompanion.insert(
+      if (!existingLedgerTypes.contains('INVOICE_CANCEL_REVERSAL')) {
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
                 id: generateLocalUuid(),
-                sellerId: invoice.sellerId,
+                customerId: invoice.customerId,
                 invoiceId: Value(invoiceId),
                 entryType: 'INVOICE_CANCEL_REVERSAL',
                 amount: invoice.grandTotal,
@@ -298,34 +349,52 @@ class LocalInvoicesService implements InvoicesService {
               ),
             );
       }
+      final paidAmount = double.parse(invoice.paidAmount);
+      if (paidAmount > 0 &&
+          !existingLedgerTypes.contains('COLLECTION_REVERSAL')) {
+        await _database.into(_database.customerTransactions).insert(
+              CustomerTransactionsCompanion.insert(
+                id: generateLocalUuid(),
+                customerId: invoice.customerId,
+                invoiceId: Value(invoiceId),
+                entryType: 'COLLECTION_REVERSAL',
+                amount: invoice.paidAmount,
+                occurredOn: nowIso.substring(0, 10),
+                notes:
+                    Value('Cancel invoice ${invoice.invoiceNumber} collection'),
+                createdByUserId: _systemUserId,
+                createdAt: nowIso,
+              ),
+            );
+      }
     });
     return _buildInvoiceDetail(invoiceId);
   }
 
   Future<_PreparedInvoice> _prepareInvoice(InvoiceDraft draft) async {
-    _validatePaymentMode(draft.paymentMode);
-    final draftSeller = draft.seller;
-    if (draftSeller == null) {
+    final paymentState = _resolvePaymentState(draft);
+    final draftCustomer = draft.customer;
+    if (draftCustomer == null) {
       throw const ApiError(
         code: 'VALIDATION_ERROR',
-        message: 'seller_id is required',
+        message: 'customer_id is required',
         statusCode: 400,
       );
     }
-    final seller = await (_database.select(_database.sellers)
-          ..where((seller) => seller.id.equals(draftSeller.id)))
+    final customer = await (_database.select(_database.customers)
+          ..where((customer) => customer.id.equals(draftCustomer.id)))
         .getSingleOrNull();
-    if (seller == null) {
+    if (customer == null) {
       throw const ApiError(
         code: 'NOT_FOUND',
-        message: 'Seller not found',
+        message: 'Customer not found',
         statusCode: 404,
       );
     }
-    if (!seller.isActive) {
+    if (!customer.isActive) {
       throw const ApiError(
-        code: 'SELLER_ARCHIVED',
-        message: 'Archived seller cannot be invoiced',
+        code: 'CUSTOMER_ARCHIVED',
+        message: 'Archived customer cannot be invoiced',
         statusCode: 400,
       );
     }
@@ -346,17 +415,17 @@ class LocalInvoicesService implements InvoicesService {
       message: 'Company profile state and state_code do not match',
     );
     if (_emptyToNull(draft.placeOfSupplyStateCode) == null &&
-        seller.state != null &&
-        seller.stateCode != null) {
+        customer.state != null &&
+        customer.stateCode != null) {
       _validateStateMetadata(
-        state: seller.state!,
-        stateCode: seller.stateCode!,
-        message: 'Seller state and state_code do not match',
+        state: customer.state!,
+        stateCode: customer.stateCode!,
+        message: 'Customer state and state_code do not match',
       );
     }
 
     final placeOfSupplyStateCode = _resolvePlaceOfSupplyStateCode(
-      seller,
+      customer,
       draft.placeOfSupplyStateCode,
     );
     final placeOfSupplyState = _stateName(placeOfSupplyStateCode);
@@ -364,6 +433,8 @@ class LocalInvoicesService implements InvoicesService {
             _normalizeStateCode(placeOfSupplyStateCode)
         ? 'INTRA_STATE'
         : 'INTER_STATE';
+    final invoiceDatetime = _resolveInvoiceDatetime(draft);
+    final invoiceDate = invoiceDatetime.substring(0, 10);
     final lines = <_PreparedLine>[];
     final warnings = <InvoiceWarning>[];
     final consumedQuantities = <String, double>{};
@@ -424,9 +495,18 @@ class LocalInvoicesService implements InvoicesService {
       }
     }
 
+    final paidAmount = _resolvePaidAmount(
+      paymentState,
+      draft.paidAmount,
+      _roundMoney(grandTotal),
+    );
     return _PreparedInvoice(
-      seller: seller,
+      customer: customer,
       company: company,
+      invoiceDatetime: invoiceDatetime,
+      invoiceDate: invoiceDate,
+      paymentState: paymentState,
+      paidAmount: paidAmount,
       placeOfSupplyState: placeOfSupplyState,
       placeOfSupplyStateCode: placeOfSupplyStateCode,
       taxRegime: taxRegime,
@@ -442,17 +522,117 @@ class LocalInvoicesService implements InvoicesService {
     );
   }
 
+  Future<CreateInvoiceResult> _replayExistingCreate({
+    required InvoiceDraft draft,
+    required Invoice existing,
+  }) async {
+    final items = await (_database.select(_database.invoiceItems)
+          ..where((item) => item.invoiceId.equals(existing.id))
+          ..orderBy([(item) => OrderingTerm.asc(item.lineNumber)]))
+        .get();
+    if (!_matchesExistingCreate(
+        draft: draft, invoice: existing, items: items)) {
+      throw _idempotencyConflictError();
+    }
+    return CreateInvoiceResult(
+      invoice: await _buildInvoiceDetail(existing.id),
+      warnings: const <InvoiceWarning>[],
+    );
+  }
+
+  bool _matchesExistingCreate({
+    required InvoiceDraft draft,
+    required Invoice invoice,
+    required List<InvoiceItem> items,
+  }) {
+    final draftCustomer = draft.customer;
+    if (draftCustomer == null || draftCustomer.id != invoice.customerId) {
+      return false;
+    }
+    final draftInvoiceDatetime = _emptyToNull(draft.invoiceDatetime);
+    if (draftInvoiceDatetime != null &&
+        _resolveInvoiceDatetime(draft) != invoice.invoiceDatetime) {
+      return false;
+    }
+    final draftInvoiceDate = _emptyToNull(draft.invoiceDate);
+    if (draftInvoiceDate != null && draftInvoiceDate != invoice.invoiceDate) {
+      return false;
+    }
+    if (_resolvePaymentState(draft) != invoice.paymentState) {
+      return false;
+    }
+    if (_roundMoney(_resolveReplayPaidAmount(draft, invoice)) !=
+        double.parse(invoice.paidAmount)) {
+      return false;
+    }
+    final placeOfSupplyStateCode = _emptyToNull(draft.placeOfSupplyStateCode);
+    if (placeOfSupplyStateCode != null &&
+        _normalizeStateCode(placeOfSupplyStateCode) !=
+            invoice.placeOfSupplyStateCode) {
+      return false;
+    }
+    if (_emptyToNull(draft.notes) != _emptyToNull(invoice.notes)) {
+      return false;
+    }
+    if (draft.items.length != items.length) {
+      return false;
+    }
+    for (var index = 0; index < draft.items.length; index += 1) {
+      final draftItem = draft.items[index];
+      final storedItem = items[index];
+      if (draftItem.product?.id == null ||
+          draftItem.product!.id != storedItem.productId) {
+        return false;
+      }
+      if (_normalizeDecimal(draftItem.quantity) !=
+          _normalizeDecimal(double.parse(storedItem.quantity))) {
+        return false;
+      }
+      if (draftItem.pricingMode != storedItem.pricingMode) {
+        return false;
+      }
+      final unitPrice = draftItem.unitPrice;
+      if (unitPrice != null &&
+          _normalizeDecimal(_roundMoney(unitPrice)) !=
+              _normalizeDecimal(double.parse(storedItem.enteredUnitPrice))) {
+        return false;
+      }
+      if (draftItem.gstRate != null &&
+          _normalizeDecimal(_roundRate(draftItem.gstRate!)) !=
+              _normalizeDecimal(double.parse(storedItem.gstRate))) {
+        return false;
+      }
+      if (_normalizeDecimal(_roundRate(draftItem.discountPercent)) !=
+          _normalizeDecimal(double.parse(storedItem.discountPercent))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  double _resolveReplayPaidAmount(InvoiceDraft draft, Invoice invoice) {
+    switch (invoice.paymentState) {
+      case 'CREDIT':
+        return 0;
+      case 'TOTAL_PAID':
+        return double.parse(invoice.grandTotal);
+      case 'PARTIAL_PAID':
+        return draft.paidAmount;
+    }
+    return draft.paidAmount;
+  }
+
   _PreparedLine _normalizeLine({
     required Product product,
     required InvoiceDraftItem item,
     required String taxRegime,
     required int lineNumber,
   }) {
+    _validateLine(item);
     final enteredUnitPrice = _roundMoney(
-      item.unitPrice ?? double.parse(product.defaultSellingPriceExclTax),
+      item.unitPrice ?? double.parse(product.sellingPrice),
     );
-    final gstRate =
-        _roundRate(item.gstRate ?? double.parse(product.defaultGstRate));
+    final gstRate = _roundRate(item.gstRate ?? double.parse(product.gstRate));
     final discountPercent = _roundRate(item.discountPercent);
     late final double unitPriceExclTax;
     late final double unitPriceInclTax;
@@ -476,8 +656,21 @@ class LocalInvoicesService implements InvoicesService {
     }
     final lineSubtotal = _roundMoney(item.quantity * unitPriceExclTax);
     final discountAmount = _roundMoney(lineSubtotal * (discountPercent / 100));
-    final taxableAmount = _roundMoney(lineSubtotal - discountAmount);
-    final gstAmount = _roundMoney(taxableAmount * (gstRate / 100));
+    late final double taxableAmount;
+    late final double gstAmount;
+    late final double lineTotal;
+    if (item.pricingMode == 'TAX_INCLUSIVE') {
+      final grossLineTotal = _roundMoney(item.quantity * unitPriceInclTax);
+      final grossDiscountAmount =
+          _roundMoney(grossLineTotal * (discountPercent / 100));
+      lineTotal = _roundMoney(grossLineTotal - grossDiscountAmount);
+      taxableAmount = _roundMoney(lineTotal / (1 + (gstRate / 100)));
+      gstAmount = _roundMoney(lineTotal - taxableAmount);
+    } else {
+      taxableAmount = _roundMoney(lineSubtotal - discountAmount);
+      gstAmount = _roundMoney(taxableAmount * (gstRate / 100));
+      lineTotal = _roundMoney(taxableAmount + gstAmount);
+    }
     final rates = _splitGstRate(gstRate, taxRegime);
     final cgstAmount = taxRegime == 'INTER_STATE'
         ? 0.0
@@ -503,7 +696,7 @@ class LocalInvoicesService implements InvoicesService {
       cgstAmount: cgstAmount,
       sgstAmount: sgstAmount,
       igstAmount: igstAmount,
-      lineTotal: _roundMoney(taxableAmount + gstAmount),
+      lineTotal: lineTotal,
     );
   }
 
@@ -524,19 +717,31 @@ class LocalInvoicesService implements InvoicesService {
         .get();
     return InvoiceDetail(
       id: invoice.id,
-      sellerId: invoice.sellerId,
+      customerId: invoice.customerId,
       invoiceNumber: invoice.invoiceNumber.toString(),
       status: invoice.status,
+      paymentState: invoice.paymentState,
       paymentMode: invoice.paymentMode,
-      sellerName: invoice.sellerName,
+      paidAmount: double.parse(invoice.paidAmount),
+      customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
+      invoiceDatetime: invoice.invoiceDatetime,
       grandTotal: double.parse(invoice.grandTotal),
       notes: invoice.notes,
       cancelReason: invoice.cancelReason,
       items: items
           .map(
             (item) => InvoiceDetailItem(
+              productId: item.productId,
               productName: item.productName,
+              productItemNumber: item.productItemNumber,
+              productItemName: item.productItemName,
+              productCategory: item.productCategory,
+              productBuyerId: item.productBuyerId,
+              productCompanyName: item.productCompanyName,
+              buyingPrice: double.parse(item.buyingPrice),
+              sellingPrice: double.parse(item.sellingPrice),
+              unit: item.unit,
               quantity: double.parse(item.quantity),
               lineTotal: double.parse(item.lineTotal),
             ),
@@ -549,10 +754,11 @@ class LocalInvoicesService implements InvoicesService {
     return InvoiceSummary(
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber.toString(),
-      sellerId: invoice.sellerId,
-      sellerName: invoice.sellerName,
+      customerId: invoice.customerId,
+      customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
       status: invoice.status,
+      paymentState: invoice.paymentState,
       paymentMode: invoice.paymentMode,
       grandTotal: double.parse(invoice.grandTotal),
     );
@@ -567,8 +773,21 @@ class LocalInvoicesService implements InvoicesService {
           .map(
             (line) => InvoiceQuoteItem(
               productId: line.product.id,
+              productItemNumber: line.product.itemNumber,
+              productItemName: line.product.itemName,
+              productCategory: line.product.category,
+              productBuyerId: line.product.buyerId,
+              productCompanyName: line.product.companyName,
+              buyingPrice: double.parse(line.product.buyingPrice),
+              sellingPrice: double.parse(line.product.sellingPrice),
+              unit: line.product.unit,
               quantity: line.item.quantity,
+              pricingMode: line.item.pricingMode,
+              enteredUnitPrice: line.enteredUnitPrice,
               unitPriceExclTax: line.unitPriceExclTax,
+              unitPriceInclTax: line.unitPriceInclTax,
+              gstRate: line.gstRate,
+              gstAmount: line.gstAmount,
               lineTotal: line.lineTotal,
             ),
           )
@@ -613,14 +832,141 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   void _validatePaymentMode(String paymentMode) {
-    if (paymentMode == 'CREDIT' || paymentMode == 'PAID') {
+    if (paymentMode == 'CREDIT' ||
+        paymentMode == 'TOTAL_PAID' ||
+        paymentMode == 'PARTIAL_PAID') {
       return;
     }
     throw const ApiError(
       code: 'VALIDATION_ERROR',
-      message: 'payment_mode must be CREDIT or PAID',
+      message: 'payment_state must be CREDIT, TOTAL_PAID, or PARTIAL_PAID',
       statusCode: 400,
     );
+  }
+
+  String _resolvePaymentState(InvoiceDraft draft) {
+    if (draft.paymentMode == 'PAID') {
+      return 'TOTAL_PAID';
+    }
+    if (draft.paymentMode != draft.paymentState) {
+      _validatePaymentMode(draft.paymentMode);
+      return draft.paymentMode;
+    }
+    if (draft.paymentState == 'CREDIT' ||
+        draft.paymentState == 'TOTAL_PAID' ||
+        draft.paymentState == 'PARTIAL_PAID') {
+      return draft.paymentState;
+    }
+    _validatePaymentMode(draft.paymentState);
+    return draft.paymentState;
+  }
+
+  void _validateLine(InvoiceDraftItem item) {
+    if (item.quantity <= 0) {
+      throw _validationError('quantity must be greater than zero');
+    }
+    if (item.quantity > 99999999999.999) {
+      throw _validationError('quantity exceeds maximum supported value');
+    }
+    if (!_hasAtMostDecimalPlaces(item.quantity, 3)) {
+      throw _validationError('quantity must have at most three decimal places');
+    }
+    if (item.pricingMode == 'PRE_TAX' && item.unitPrice == null) {
+      throw _validationError(
+          'unit_price is required when pricing_mode is PRE_TAX');
+    }
+    if (item.unitPrice != null && item.unitPrice! <= 0) {
+      throw _validationError('unit_price must be greater than zero');
+    }
+    if (item.gstRate != null && (item.gstRate! < 0 || item.gstRate! > 100)) {
+      throw _validationError('gst_rate must be between 0 and 100');
+    }
+    if (item.discountPercent < 0 || item.discountPercent > 100) {
+      throw _validationError('discount_percent must be between 0 and 100');
+    }
+  }
+
+  bool _hasAtMostDecimalPlaces(double value, int places) {
+    final text = value.toString();
+    final exponentParts = text.toLowerCase().split('e');
+    final decimalPart = exponentParts.first.split('.');
+    final decimals = decimalPart.length == 1 ? 0 : decimalPart.last.length;
+    final exponent =
+        exponentParts.length == 1 ? 0 : int.tryParse(exponentParts.last) ?? 0;
+    return decimals - exponent <= places;
+  }
+
+  double _resolvePaidAmount(
+    String paymentState,
+    double paidAmount,
+    double grandTotal,
+  ) {
+    if (paidAmount > 0 && paymentState != 'CREDIT') {
+      validateMoneyAmount(paidAmount.toString());
+    }
+    switch (paymentState) {
+      case 'CREDIT':
+        if (paidAmount != 0) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message: 'paid_amount must be 0 for CREDIT invoices',
+            statusCode: 400,
+          );
+        }
+        return 0;
+      case 'TOTAL_PAID':
+        if (paidAmount != 0 && _roundMoney(paidAmount) != grandTotal) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message:
+                'paid_amount must equal grand_total for TOTAL_PAID invoices',
+            statusCode: 400,
+          );
+        }
+        return grandTotal;
+      case 'PARTIAL_PAID':
+        if (paidAmount <= 0 || paidAmount >= grandTotal) {
+          throw const ApiError(
+            code: 'VALIDATION_ERROR',
+            message:
+                'paid_amount must be greater than zero and less than grand_total for PARTIAL_PAID invoices',
+            statusCode: 400,
+          );
+        }
+        return _roundMoney(paidAmount);
+    }
+    _validatePaymentMode(paymentState);
+    return paidAmount;
+  }
+
+  String _resolveInvoiceDatetime(InvoiceDraft draft) {
+    final value = _emptyToNull(draft.invoiceDatetime);
+    if (value != null) {
+      _validateTimezoneAwareDatetime(value);
+      final date = _emptyToNull(draft.invoiceDate);
+      if (date != null && date != value.substring(0, 10)) {
+        throw _validationError('invoice_date must match invoice_datetime date');
+      }
+      return value;
+    }
+    final date = _emptyToNull(draft.invoiceDate);
+    if (date != null) {
+      return '${date}T00:00:00.000Z';
+    }
+    return DateTime.now().toUtc().toIso8601String();
+  }
+
+  void _validateTimezoneAwareDatetime(String value) {
+    final timezonePattern = RegExp(r'(Z|[+-]\d{2}:\d{2})$');
+    if (!timezonePattern.hasMatch(value)) {
+      throw _validationError(
+          'invoice_datetime must include timezone information');
+    }
+    try {
+      DateTime.parse(value);
+    } on FormatException {
+      throw _validationError('invoice_datetime must be a valid ISO datetime');
+    }
   }
 
   void _validateStateMetadata({
@@ -638,12 +984,12 @@ class LocalInvoicesService implements InvoicesService {
     }
   }
 
-  String _resolvePlaceOfSupplyStateCode(Seller seller, String? provided) {
+  String _resolvePlaceOfSupplyStateCode(Customer customer, String? provided) {
     if (provided != null && provided.trim().isNotEmpty) {
       return _normalizeStateCode(provided);
     }
-    if (seller.stateCode != null && seller.stateCode!.isNotEmpty) {
-      return _normalizeStateCode(seller.stateCode!);
+    if (customer.stateCode != null && customer.stateCode!.isNotEmpty) {
+      return _normalizeStateCode(customer.stateCode!);
     }
     throw const ApiError(
       code: 'VALIDATION_ERROR',
@@ -652,25 +998,34 @@ class LocalInvoicesService implements InvoicesService {
     );
   }
 
-  String _invoiceRequestHash(InvoiceDraft draft, String resolvedStateCode) {
+  String _invoiceRequestHash(InvoiceDraft draft, _PreparedInvoice prepared) {
     final payload = <String, dynamic>{
-      'seller_id': draft.seller?.id,
-      'invoice_date': draft.invoiceDate,
-      'payment_mode': draft.paymentMode,
-      'place_of_supply_state_code': resolvedStateCode,
+      'customer_id': draft.customer?.id,
+      'invoice_datetime': prepared.invoiceDatetime,
+      'payment_state': prepared.paymentState,
+      'paid_amount': _normalizeMoneyDecimal(prepared.paidAmount),
+      'place_of_supply_state_code': prepared.placeOfSupplyStateCode,
       'notes': _emptyToNull(draft.notes),
-      'items': draft.items
-          .map((item) => <String, dynamic>{
-                'product_id': item.product?.id,
-                'quantity': item.quantity.toStringAsFixed(3),
-                'pricing_mode': item.pricingMode,
-                'unit_price': (item.unitPrice ?? 0).toStringAsFixed(2),
-                'gst_rate': (item.gstRate ?? 0).toStringAsFixed(2),
-                'discount_percent': item.discountPercent.toStringAsFixed(2),
+      'items': prepared.lines
+          .map((line) => <String, dynamic>{
+                'product_id': line.product.id,
+                'quantity': _normalizeQuantityDecimal(line.item.quantity),
+                'pricing_mode': line.item.pricingMode,
+                'unit_price': _normalizeMoneyDecimal(line.enteredUnitPrice),
+                'gst_rate': _normalizeMoneyDecimal(line.gstRate),
+                'discount_percent': _normalizeMoneyDecimal(line.discountPercent),
               })
           .toList(),
     };
     return _hash(payload);
+  }
+
+  ApiError _validationError(String message) {
+    return ApiError(
+      code: 'VALIDATION_ERROR',
+      message: message,
+      statusCode: 400,
+    );
   }
 
   String _hash(Map<String, dynamic> payload) {
@@ -769,9 +1124,43 @@ class LocalInvoicesService implements InvoicesService {
     return _GstRates(cgst: cgst, sgst: _roundRate(normalized - cgst), igst: 0);
   }
 
-  double _roundMoney(double value) => (value * 100).round() / 100;
+  double _roundMoney(double value) => _roundHalfUp(value, 2);
 
-  double _roundRate(double value) => (value * 100).round() / 100;
+  double _roundRate(double value) => _roundHalfUp(value, 2);
+
+  double _roundHalfUp(double value, int places) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    final negative = value < 0;
+    final text = value.abs().toStringAsFixed(places + 6);
+    final parts = text.split('.');
+    final whole = int.parse(parts.first);
+    final fraction = parts.length == 1 ? '' : parts.last;
+    final kept = fraction.padRight(places, '0').substring(0, places);
+    final nextDigit =
+        fraction.length > places ? int.parse(fraction[places]) : 0;
+    var scaled = whole * _pow10(places) + int.parse(kept.isEmpty ? '0' : kept);
+    if (nextDigit >= 5) {
+      scaled += 1;
+    }
+    final rounded = scaled / _pow10(places);
+    return negative ? -rounded : rounded;
+  }
+
+  // NOTE: This service uses double for money fields (structural Dart limitation).
+  // The buyer service uses String-based input instead (see local_buyers_service.dart).
+  // _roundHalfUp() and string normalization mitigate the worst cases, but a future
+  // migration to String-based money input (like the buyer service pattern) is recommended
+  // for full precision safety.
+
+  int _pow10(int exponent) {
+    var result = 1;
+    for (var index = 0; index < exponent; index += 1) {
+      result *= 10;
+    }
+    return result;
+  }
 
   String _normalizeDecimal(double value) {
     if (!value.isFinite) {
@@ -781,6 +1170,20 @@ class LocalInvoicesService implements InvoicesService {
       return value.toInt().toString();
     }
     return value.toString();
+  }
+
+  String _normalizeMoneyDecimal(double value) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  String _normalizeQuantityDecimal(double value) {
+    if (!value.isFinite) {
+      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
+    }
+    return value.toStringAsFixed(3);
   }
 
   String? _emptyToNull(String? value) {
@@ -793,8 +1196,12 @@ class LocalInvoicesService implements InvoicesService {
 
 class _PreparedInvoice {
   const _PreparedInvoice({
-    required this.seller,
+    required this.customer,
     required this.company,
+    required this.invoiceDatetime,
+    required this.invoiceDate,
+    required this.paymentState,
+    required this.paidAmount,
     required this.placeOfSupplyState,
     required this.placeOfSupplyStateCode,
     required this.taxRegime,
@@ -803,8 +1210,12 @@ class _PreparedInvoice {
     required this.totals,
   });
 
-  final Seller seller;
+  final Customer customer;
   final CompanyProfile company;
+  final String invoiceDatetime;
+  final String invoiceDate;
+  final String paymentState;
+  final double paidAmount;
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;
   final String taxRegime;

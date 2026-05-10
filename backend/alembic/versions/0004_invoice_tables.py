@@ -26,13 +26,13 @@ def upgrade() -> None:
         sa.Column("request_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("request_hash", sa.String(length=255), nullable=False),
         sa.Column("invoice_number", sa.BigInteger(), server_default=sa.text("nextval('invoice_number_seq')"), nullable=False),
-        sa.Column("seller_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("sellers.id"), nullable=False),
-        sa.Column("seller_name", sa.Text(), nullable=False),
-        sa.Column("seller_address", sa.Text(), nullable=False),
-        sa.Column("seller_state", sa.Text(), nullable=True),
-        sa.Column("seller_state_code", sa.String(length=50), nullable=True),
-        sa.Column("seller_phone", sa.String(length=50), nullable=True),
-        sa.Column("seller_gstin", sa.String(length=50), nullable=True),
+        sa.Column("customer_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("customers.id"), nullable=False),
+        sa.Column("customer_name", sa.Text(), nullable=False),
+        sa.Column("customer_address", sa.Text(), nullable=False),
+        sa.Column("customer_state", sa.Text(), nullable=True),
+        sa.Column("customer_state_code", sa.String(length=50), nullable=True),
+        sa.Column("customer_phone", sa.String(length=50), nullable=True),
+        sa.Column("customer_gstin", sa.String(length=50), nullable=True),
         sa.Column("place_of_supply_state", sa.Text(), nullable=False),
         sa.Column("place_of_supply_state_code", sa.String(length=50), nullable=False),
         sa.Column("company_name", sa.Text(), nullable=False),
@@ -112,7 +112,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("invoice_id", "line_number", name="uq_invoice_items_invoice_id_line_number"),
     )
 
-    op.create_foreign_key("fk_seller_transactions_invoice_id_invoices", "seller_transactions", "invoices", ["invoice_id"], ["id"])
+    op.create_foreign_key("fk_customer_transactions_invoice_id_invoices", "customer_transactions", "invoices", ["invoice_id"], ["id"])
     op.create_foreign_key("fk_stock_movements_invoice_id_invoices", "stock_movements", "invoices", ["invoice_id"], ["id"])
     op.execute(sa.text("ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS ck_stock_movements_shape"))
     op.create_check_constraint(
@@ -134,6 +134,6 @@ def downgrade() -> None:
         "(movement_type IN ('CREDIT_SALE','INVOICE_CANCEL_REVERSAL') AND invoice_id IS NOT NULL AND request_id IS NULL AND request_hash IS NULL)",
     )
     op.drop_constraint("fk_stock_movements_invoice_id_invoices", "stock_movements", type_="foreignkey")
-    op.drop_constraint("fk_seller_transactions_invoice_id_invoices", "seller_transactions", type_="foreignkey")
+    op.drop_constraint("fk_customer_transactions_invoice_id_invoices", "customer_transactions", type_="foreignkey")
     op.drop_table("invoice_items")
     op.drop_table("invoices")

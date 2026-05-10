@@ -23,8 +23,23 @@ void main() {
     final package = await LocalBackupService(database: source).exportEncrypted(
       password: 'backup-password',
     );
+    final payload = LocalBackupPayload.decode(
+      await BackupCrypto()
+          .decrypt(package: package, password: 'backup-password'),
+    );
 
     expect(package.version, LocalBackupPackage.currentVersion);
+    expect(payload.schemaVersion, LocalBackupPayload.currentSchemaVersion);
+    expect(
+        payload.backendCompatibilityVersion,
+        LocalBackupPayload.currentBackendCompatibilityVersion);
+    expect(payload.tables, contains('buyers'));
+    expect(payload.tables, contains('buyer_transactions'));
+    expect(payload.tables, contains('customers'));
+    expect(payload.tables, contains('customer_transactions'));
+    expect(payload.tables, isNot(contains('sellers')));
+    expect(payload.tables, isNot(contains('seller_transactions')));
+    expect(payload.tables, isNot(contains('local_sessions')));
     expect(package.payloadCiphertext, isNot(contains('product-0001')));
     expect(package.payloadCiphertext, isNot(contains('123.4500')));
 
@@ -34,18 +49,72 @@ void main() {
     );
 
     final products = await target.select(target.products).get();
-    final sellers = await target.select(target.sellers).get();
+    final customers = await target.select(target.customers).get();
     final invoices = await target.select(target.invoices).get();
     final items = await target.select(target.invoiceItems).get();
+    final buyers = await target.select(target.buyers).get();
+    final buyerTransactions =
+        await target.select(target.buyerTransactions).get();
+    final customerTransactions =
+        await target.select(target.customerTransactions).get();
 
     expect(products.single.id, 'product-0001');
-    expect(products.single.defaultSellingPriceExclTax, '123.4500');
+    expect(products.single.itemNumber, 'PEN-product-0001');
+    expect(products.single.companyName, 'Acme');
+    expect(products.single.buyingPrice, '99.9900');
+    expect(products.single.sellingPrice, '123.4500');
+    expect(products.single.unit, 'box');
+    expect(products.single.gstRate, '18.000');
     expect(products.single.quantityOnHand, '7.500');
-    expect(sellers.single.id, 'seller-0001');
+    expect(customers.single.id, 'customer-0001');
     expect(invoices.single.id, 'invoice-0001');
     expect(invoices.single.grandTotal, '145.6710');
+    expect(invoices.single.paymentState, 'CREDIT');
+    expect(invoices.single.paidAmount, '0');
     expect(items.single.id, 'invoice-item-0001');
     expect(items.single.quantity, '1.250');
+    expect(items.single.productItemNumber, 'PEN-product-0001');
+    expect(items.single.productItemName, 'Blue Pen');
+    expect(items.single.productCategory, 'Pens');
+    expect(items.single.productCompanyName, 'Acme');
+    expect(items.single.buyingPrice, '99.9900');
+    expect(items.single.sellingPrice, '145.6710');
+    expect(buyers.single.id, 'buyer-0001');
+    expect(buyerTransactions.single.buyerId, 'buyer-0001');
+    expect(buyerTransactions.single.amount, '123.45');
+    expect(customerTransactions.single.id, 'customer-transaction-0001');
+    expect(customerTransactions.single.customerId, 'customer-0001');
+    expect(customerTransactions.single.invoiceId, 'invoice-0001');
+    expect(customerTransactions.single.entryType, 'CREDIT_SALE');
+    expect(customerTransactions.single.amount, '145.6710');
+  });
+
+  test('import clears and restores buyer ledger tables before local users',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+
+    await LocalBackupService(database: target).importEncrypted(
+      package: package,
+      password: 'backup-password',
+    );
+
+    final buyers = await target.select(target.buyers).get();
+    final buyerTransactions =
+        await target.select(target.buyerTransactions).get();
+    expect(buyers.map((buyer) => buyer.id), <String>['buyer-0001']);
+    expect(buyerTransactions.map((transaction) => transaction.id),
+        <String>['buyer-transaction-0001']);
+    expect((await target.select(target.localUsers).get()).single.username,
+        'system-source-product');
   });
 
   test('rejects unsupported schema versions before replacing existing data',
@@ -118,7 +187,7 @@ void main() {
       password: 'backup-password',
       mutate: (payload) {
         final tables = payload['tables'] as Map<String, Object?>;
-        tables.remove('invoice_items');
+        tables.remove('buyer_transactions');
       },
     );
 
@@ -197,6 +266,136 @@ void main() {
     expect(products.single.id, 'target-product');
   });
 
+  test('backup payload includes product V2 fields', () async {
+    final source = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    await _seedRoundTripData(source);
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+    final payload = LocalBackupPayload.decode(
+      await BackupCrypto()
+          .decrypt(package: package, password: 'backup-password'),
+    );
+
+    final productRows =
+        payload.tables['products'] ?? <Map<String, Object?>>[];
+    expect(productRows, isNotEmpty);
+    final product = productRows.single;
+    expect(product['buyer_id'], 'buyer-0001');
+    expect(product['company_name'], 'Acme');
+    expect(product['buying_price'], '99.9900');
+    expect(product['selling_price'], '123.4500');
+    expect(product['unit'], 'box');
+    expect(product['gst_rate'], '18.000');
+    expect(product['quantity_on_hand'], '7.500');
+  });
+
+  test('backup payload includes invoice item snapshots for analytics',
+      () async {
+    final source = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    await _seedRoundTripData(source);
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+    final payload = LocalBackupPayload.decode(
+      await BackupCrypto()
+          .decrypt(package: package, password: 'backup-password'),
+    );
+
+    final itemRows =
+        payload.tables['invoice_items'] ?? <Map<String, Object?>>[];
+    expect(itemRows, isNotEmpty);
+    final item = itemRows.single;
+    expect(item['product_item_number'], 'PEN-product-0001');
+    expect(item['product_item_name'], 'Blue Pen');
+    expect(item['product_category'], 'Pens');
+    expect(item['product_buyer_id'], 'buyer-0001');
+    expect(item['product_company_name'], 'Acme');
+    expect(item['buying_price'], '99.9900');
+    expect(item['selling_price'], '145.6710');
+    expect(item['unit'], isNull);
+  });
+
+  test('restore preserves customer transactions with exact IDs and decimals',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source);
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+    );
+
+    await LocalBackupService(database: target).importEncrypted(
+      package: package,
+      password: 'backup-password',
+    );
+
+    final customerTransactions =
+        await target.select(target.customerTransactions).get();
+    expect(customerTransactions, hasLength(1));
+    final ct = customerTransactions.single;
+    expect(ct.id, 'customer-transaction-0001');
+    expect(ct.customerId, 'customer-0001');
+    expect(ct.invoiceId, 'invoice-0001');
+    expect(ct.entryType, 'CREDIT_SALE');
+    expect(ct.amount, '145.6710');
+    expect(ct.occurredOn, '2026-01-10');
+  });
+
+  test('rejects backup with missing V2 invoice item columns',
+      () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source, productId: 'source-product');
+    await _seedRoundTripData(target, productId: 'target-product');
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        final tables = payload['tables'] as Map<String, Object?>;
+        final items = tables['invoice_items'] as List<Object?>;
+        final item = items.single as Map<String, Object?>;
+        item
+          ..remove('product_item_number')
+          ..remove('product_item_name')
+          ..remove('product_category')
+          ..remove('product_buyer_id')
+          ..remove('product_company_name')
+          ..remove('buying_price')
+          ..remove('selling_price')
+          ..remove('unit');
+      },
+    );
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<InvalidBackupPayloadException>()),
+    );
+
+    final products = await target.select(target.products).get();
+    expect(products.single.id, 'target-product');
+  });
+
+  test('backup schema version and compatibility version are updated for V2',
+      () async {
+    expect(LocalBackupPayload.currentSchemaVersion, 7);
+    expect(
+        LocalBackupPayload.currentBackendCompatibilityVersion, 'local-v2');
+  });
+
   test('does not export sessions and clears existing sessions on import',
       () async {
     final source = db.LocalDatabase.memory();
@@ -266,21 +465,24 @@ Future<void> _seedRoundTripData(
   await database.into(database.products).insert(
         db.ProductsCompanion.insert(
           id: productId,
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-$productId',
-          defaultSellingPriceExclTax: '123.4500',
-          defaultGstRate: '18.000',
+          itemNumber: 'PEN-$productId',
+          buyerId: const Value('buyer-0001'),
+          buyingPrice: '99.9900',
+          sellingPrice: '123.4500',
+          unit: const Value('box'),
+          gstRate: '18.000',
           quantityOnHand: '7.500',
           lowStockThreshold: '2.00',
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         ),
       );
-  await database.into(database.sellers).insert(
-        db.SellersCompanion.insert(
-          id: 'seller-0001',
+  await database.into(database.customers).insert(
+        db.CustomersCompanion.insert(
+          id: 'customer-0001',
           name: 'Acme Stores $productId',
           address: '1 Market Road',
           state: const Value('Maharashtra'),
@@ -291,19 +493,46 @@ Future<void> _seedRoundTripData(
           updatedAt: '2026-01-01T00:00:00.000Z',
         ),
       );
+  await database.into(database.buyers).insert(
+        db.BuyersCompanion.insert(
+          id: 'buyer-0001',
+          name: 'Global Suppliers $productId',
+          address: '9 Wholesale Market',
+          state: const Value('Maharashtra'),
+          stateCode: const Value('27'),
+          phone: Value('8888$productId'),
+          gstin: const Value('27ABCDE1234F1Z5'),
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        ),
+      );
+  await database.into(database.buyerTransactions).insert(
+        db.BuyerTransactionsCompanion.insert(
+          id: 'buyer-transaction-0001',
+          buyerId: 'buyer-0001',
+          requestId: Value('buyer-request-$productId'),
+          requestHash: const Value('buyer-request-hash'),
+          entryType: 'PURCHASE_AMOUNT',
+          amount: '123.45',
+          occurredAt: '2026-01-02T10:30:00+05:30',
+          notes: const Value('Purchase bill'),
+          createdByUserId: 'local-system-user',
+          createdAt: '2026-01-02T05:00:00.000Z',
+        ),
+      );
   await database.into(database.invoices).insert(
         db.InvoicesCompanion.insert(
           id: 'invoice-0001',
           requestId: 'request-$productId',
           requestHash: 'request-hash',
           invoiceNumber: 1,
-          sellerId: 'seller-0001',
-          sellerName: 'Acme Stores $productId',
-          sellerAddress: '1 Market Road',
-          sellerState: const Value('Maharashtra'),
-          sellerStateCode: const Value('27'),
-          sellerPhone: Value('9999$productId'),
-          sellerGstin: const Value('27ABCDE1234F1Z5'),
+          customerId: 'customer-0001',
+          customerName: 'Acme Stores $productId',
+          customerAddress: '1 Market Road',
+          customerState: const Value('Maharashtra'),
+          customerStateCode: const Value('27'),
+          customerPhone: Value('9999$productId'),
+          customerGstin: const Value('27ABCDE1234F1Z5'),
           placeOfSupplyState: 'Maharashtra',
           placeOfSupplyStateCode: '27',
           companyName: 'Khata Traders',
@@ -332,6 +561,13 @@ Future<void> _seedRoundTripData(
           lineNumber: 1,
           productName: 'Blue Pen',
           productCode: 'PEN-$productId',
+          productItemNumber: Value('PEN-$productId'),
+          productItemName: const Value('Blue Pen'),
+          productCategory: const Value('Pens'),
+          productCompanyName: const Value('Acme'),
+          productBuyerId: const Value('buyer-0001'),
+          buyingPrice: const Value('99.9900'),
+          sellingPrice: const Value('145.6710'),
           company: 'Acme',
           category: 'Pens',
           quantity: '1.250',
@@ -351,6 +587,18 @@ Future<void> _seedRoundTripData(
           sgstAmount: '11.1105',
           igstAmount: '0.0000',
           lineTotal: '145.6710',
+        ),
+      );
+  await database.into(database.customerTransactions).insert(
+        db.CustomerTransactionsCompanion.insert(
+          id: 'customer-transaction-0001',
+          customerId: 'customer-0001',
+          invoiceId: const Value('invoice-0001'),
+          entryType: 'CREDIT_SALE',
+          amount: '145.6710',
+          occurredOn: '2026-01-10',
+          createdByUserId: 'local-system-user',
+          createdAt: '2026-01-10T00:00:00.000Z',
         ),
       );
 }

@@ -30,7 +30,8 @@ class ApiClient {
   final SessionStore _sessionStore;
   final Future<void> Function()? onAuthorizationFailed;
 
-  Future<ApiResponse> get(String path, {Map<String, String?>? queryParameters}) {
+  Future<ApiResponse> get(String path,
+      {Map<String, String?>? queryParameters}) {
     return _send(
       method: 'GET',
       path: path,
@@ -44,6 +45,10 @@ class ApiClient {
 
   Future<ApiResponse> put(String path, {Map<String, dynamic>? body}) {
     return _send(method: 'PUT', path: path, body: body);
+  }
+
+  Future<ApiResponse> delete(String path) {
+    return _send(method: 'DELETE', path: path);
   }
 
   Future<ApiResponse> _send({
@@ -128,6 +133,8 @@ class ApiClient {
         request = await _httpClient.postUrl(resolvedUri);
       case 'PUT':
         request = await _httpClient.putUrl(resolvedUri);
+      case 'DELETE':
+        request = await _httpClient.deleteUrl(resolvedUri);
       default:
         throw ArgumentError('Unsupported method $method');
     }
@@ -137,7 +144,8 @@ class ApiClient {
       request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
     }
     if (accessToken != null && accessToken.isNotEmpty) {
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      request.headers
+          .set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
     }
     return request;
   }
@@ -177,8 +185,10 @@ class ApiClient {
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
     final uri = _baseUri.resolve(normalizedPath);
     final filteredQuery = <String, String>{
-      for (final entry in (queryParameters ?? const <String, String?>{}).entries)
-        if (entry.value != null && entry.value!.isNotEmpty) entry.key: entry.value!,
+      for (final entry
+          in (queryParameters ?? const <String, String?>{}).entries)
+        if (entry.value != null && entry.value!.isNotEmpty)
+          entry.key: entry.value!,
     };
     if (filteredQuery.isEmpty) {
       return uri;

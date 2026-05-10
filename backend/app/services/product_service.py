@@ -45,14 +45,14 @@ def create_product(session: Session, payload: ProductCreateRequest, current_user
     return product
 
 
-def list_products(session: Session, company: str | None, category: str | None, search: str | None, active: bool | None, low_stock_only: bool | None) -> list[Product]:
+def list_products(session: Session, company_name: str | None, category: str | None, search: str | None, active: bool | None, low_stock_only: bool | None) -> list[Product]:
     query = select(Product)
-    if company:
-        query = query.where(Product.company == company)
+    if company_name:
+        query = query.where(Product.company_name == company_name)
     if category:
         query = query.where(Product.category == category)
     if search:
-        query = query.where(or_(Product.item_name.ilike(f"%{search}%"), Product.item_code.ilike(f"%{search}%")))
+        query = query.where(or_(Product.item_name.ilike(f"%{search}%"), Product.item_number.ilike(f"%{search}%"), Product.company_name.ilike(f"%{search}%")))
     if active is not None:
         query = query.where(Product.is_active.is_(active))
     if low_stock_only:
@@ -72,7 +72,9 @@ def update_product(session: Session, product_id, payload: ProductUpdateRequest) 
     if payload.quantity_on_hand is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "VALIDATION_ERROR", "message": "quantity_on_hand cannot be updated directly"}})
 
-    for key, value in payload.model_dump(exclude_none=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    update_data.pop("quantity_on_hand", None)
+    for key, value in update_data.items():
         setattr(product, key, value)
 
     try:

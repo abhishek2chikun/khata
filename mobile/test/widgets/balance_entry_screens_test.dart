@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/screens/balance_adjustment_screen.dart';
 import 'package:internal_billing_khata_mobile/screens/opening_balance_screen.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
@@ -14,19 +14,21 @@ void main() {
       MaterialApp(
         home: OpeningBalanceScreen(
           paymentsService: service,
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '300');
-    await tester.enterText(find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '300');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
 
     expect(service.openingBalances, hasLength(1));
     final openingBalance = service.openingBalances.single;
-    expect(openingBalance.sellerId, 'seller-1');
+    expect(openingBalance.customerId, 'customer-1');
     expect(openingBalance.input.amount, 300);
     expect(openingBalance.input.occurredOn, '2026-04-20');
     expect(
@@ -43,54 +45,63 @@ void main() {
       MaterialApp(
         home: OpeningBalanceScreen(
           paymentsService: FakePaymentsService(
-            openingBalanceError: const ApiError(message: 'Unable to save opening balance'),
+            openingBalanceError:
+                const ApiError(message: 'Unable to save opening balance'),
           ),
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '300');
-    await tester.enterText(find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '300');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '2026-04-20');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to save opening balance'), findsOneWidget);
   });
 
-  testWidgets('opening balance requires valid amount and occurred on', (tester) async {
+  testWidgets('opening balance requires valid amount and occurred on',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
         home: OpeningBalanceScreen(
           paymentsService: service,
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
     expect(find.text('Enter a valid amount'), findsOneWidget);
     expect(service.openingBalances, isEmpty);
 
-    await tester.enterText(find.byKey(const Key('openingBalanceAmountField')), '250');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceAmountField')), '250');
+    await tester.enterText(
+        find.byKey(const Key('openingBalanceOccurredOnField')), '');
     await tester.tap(find.byKey(const Key('submitOpeningBalanceButton')));
     await tester.pumpAndSettle();
     expect(find.text('Occurred on is required'), findsOneWidget);
     expect(service.openingBalances, isEmpty);
   });
 
-  testWidgets('balance adjustment submits generated request id', (tester) async {
+  testWidgets('balance adjustment submits generated request id',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
         home: BalanceAdjustmentScreen(
           paymentsService: service,
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
@@ -99,15 +110,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Decrease').last);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '75');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentOccurredOnField')), '2026-04-20');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '75');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')),
+        '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentNotesField')), 'Correction');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
 
     expect(service.adjustments, hasLength(1));
     final adjustment = service.adjustments.single;
-    expect(adjustment.sellerId, 'seller-1');
+    expect(adjustment.customerId, 'customer-1');
     expect(adjustment.input.direction, 'DECREASE');
     expect(adjustment.input.amount, 75);
     expect(adjustment.input.occurredOn, '2026-04-20');
@@ -121,45 +136,55 @@ void main() {
     );
   });
 
-  testWidgets('balance adjustment shows error banner on failure', (tester) async {
+  testWidgets('balance adjustment shows error banner on failure',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: BalanceAdjustmentScreen(
           paymentsService: FakePaymentsService(
-            adjustmentError: const ApiError(message: 'Unable to save adjustment'),
+            adjustmentError:
+                const ApiError(message: 'Unable to save adjustment'),
           ),
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '75');
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentOccurredOnField')), '2026-04-20');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '75');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')),
+        '2026-04-20');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
 
     expect(find.text('Unable to save adjustment'), findsOneWidget);
   });
 
-  testWidgets('balance adjustment requires valid amount and occurred on', (tester) async {
+  testWidgets('balance adjustment requires valid amount and occurred on',
+      (tester) async {
     final service = FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
         home: BalanceAdjustmentScreen(
           paymentsService: service,
-          seller: _seller,
+          customer: _customer,
         ),
       ),
     );
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), 'oops');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), 'oops');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
     expect(find.text('Enter a valid amount'), findsOneWidget);
     expect(service.adjustments, isEmpty);
 
-    await tester.enterText(find.byKey(const Key('balanceAdjustmentAmountField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentAmountField')), '50');
+    await tester.enterText(
+        find.byKey(const Key('balanceAdjustmentOccurredOnField')), '');
     await tester.tap(find.byKey(const Key('submitBalanceAdjustmentButton')));
     await tester.pumpAndSettle();
     expect(find.text('Occurred on is required'), findsOneWidget);
@@ -167,8 +192,8 @@ void main() {
   });
 }
 
-const _seller = Seller(
-  id: 'seller-1',
+const _customer = Customer(
+  id: 'customer-1',
   name: 'ABC Stores',
   address: 'Market Yard',
   phone: '9999999999',
@@ -194,28 +219,30 @@ class FakePaymentsService implements PaymentsService {
 
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) async {
     if (adjustmentError != null) {
       throw adjustmentError!;
     }
-    adjustments.add(_BalanceAdjustmentCall(sellerId: sellerId, input: input));
+    adjustments
+        .add(_BalanceAdjustmentCall(customerId: customerId, input: input));
   }
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) async {
     if (openingBalanceError != null) {
       throw openingBalanceError!;
     }
-    openingBalances.add(_OpeningBalanceCall(sellerId: sellerId, input: input));
+    openingBalances
+        .add(_OpeningBalanceCall(customerId: customerId, input: input));
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) async {
+  Future<void> recordCollection(RecordCollectionInput input) async {
     if (paymentError != null) {
       throw paymentError!;
     }
@@ -223,15 +250,15 @@ class FakePaymentsService implements PaymentsService {
 }
 
 class _OpeningBalanceCall {
-  const _OpeningBalanceCall({required this.sellerId, required this.input});
+  const _OpeningBalanceCall({required this.customerId, required this.input});
 
-  final String sellerId;
+  final String customerId;
   final OpeningBalanceInput input;
 }
 
 class _BalanceAdjustmentCall {
-  const _BalanceAdjustmentCall({required this.sellerId, required this.input});
+  const _BalanceAdjustmentCall({required this.customerId, required this.input});
 
-  final String sellerId;
+  final String customerId;
   final BalanceAdjustmentInput input;
 }

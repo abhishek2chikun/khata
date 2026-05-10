@@ -8,22 +8,28 @@ import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
+import 'package:internal_billing_khata_mobile/local/local_buyers_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_sellers_service.dart';
+import 'package:internal_billing_khata_mobile/local/local_customers_service.dart';
+import 'package:internal_billing_khata_mobile/models/buyer.dart';
+import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
-import 'package:internal_billing_khata_mobile/models/seller_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
+import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/services/analytics_service.dart';
+import 'package:internal_billing_khata_mobile/models/analytics.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
+import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
-import 'package:internal_billing_khata_mobile/services/sellers_service.dart';
+import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
   final testApiBaseUri = Uri.parse('http://example.invalid/');
@@ -45,7 +51,8 @@ void main() {
 
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<ApiProductsService>());
-    expect(dependencies.sellersService, isA<ApiSellersService>());
+    expect(dependencies.customersService, isA<ApiCustomersService>());
+    expect(dependencies.buyersService, isA<ApiBuyersService>());
     expect(dependencies.companyProfileService, isA<ApiCompanyProfileService>());
     expect(dependencies.paymentsService, isA<ApiPaymentsService>());
     expect(dependencies.invoicesService, isA<ApiInvoicesService>());
@@ -86,7 +93,8 @@ void main() {
     expect(dependencies.mode, DataMode.local);
     expect(dependencies.controller, isA<AuthController>());
     expect(dependencies.productsService, isA<LocalProductsService>());
-    expect(dependencies.sellersService, isA<LocalSellersService>());
+    expect(dependencies.customersService, isA<LocalCustomersService>());
+    expect(dependencies.buyersService, isA<LocalBuyersService>());
     expect(dependencies.paymentsService, isA<LocalPaymentsService>());
     await dependencies.dispose();
   });
@@ -144,10 +152,12 @@ void main() {
         sessionStore: _FakeSessionStore(),
       ),
       productsService: _FakeProductsService(),
-      sellersService: _FakeSellersService(),
+      customersService: _FakeCustomersService(),
+      buyersService: _FakeBuyersService(),
       companyProfileService: _FakeCompanyProfileService(),
       paymentsService: _FakePaymentsService(),
       invoicesService: _FakeInvoicesService(),
+      analyticsService: _FakeAnalyticsService(),
       dispose: () async {
         disposed = true;
       },
@@ -204,6 +214,24 @@ class _FakeProductsService implements ProductsService {
   }
 
   @override
+  Future<Product> archiveProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Product>> fetchProducts({ProductFilter? filter}) {
     throw UnimplementedError();
   }
@@ -215,19 +243,69 @@ class _FakeProductsService implements ProductsService {
   }
 }
 
-class _FakeSellersService implements SellersService {
+class _FakeCustomersService implements CustomersService {
   @override
-  Future<Seller> createSeller(CreateSellerInput input) {
+  Future<Customer> createCustomer(CreateCustomerInput input) {
     throw UnimplementedError();
   }
 
   @override
-  Future<SellerLedger> fetchSellerLedger(String sellerId) {
+  Future<CustomerLedger> fetchCustomerLedger(String customerId,
+      {String? onDate}) {
     throw UnimplementedError();
   }
 
   @override
-  Future<List<Seller>> fetchSellers({String search = ''}) {
+  Future<List<Customer>> fetchCustomers({String search = ''}) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeBuyersService implements BuyersService {
+  @override
+  Future<void> addOpeningPayable({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPayableAdjustment({
+    required String buyerId,
+    required BuyerPayableAdjustmentInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPaymentMade({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addPurchaseAmount({
+    required String buyerId,
+    required BuyerLedgerEntryInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Buyer> createBuyer(CreateBuyerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Buyer>> fetchBuyers({String search = ''}) {
     throw UnimplementedError();
   }
 }
@@ -247,7 +325,7 @@ class _FakeCompanyProfileService implements CompanyProfileService {
 class _FakePaymentsService implements PaymentsService {
   @override
   Future<void> addBalanceAdjustment({
-    required String sellerId,
+    required String customerId,
     required BalanceAdjustmentInput input,
   }) {
     throw UnimplementedError();
@@ -255,14 +333,14 @@ class _FakePaymentsService implements PaymentsService {
 
   @override
   Future<void> addOpeningBalance({
-    required String sellerId,
+    required String customerId,
     required OpeningBalanceInput input,
   }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<void> recordPayment(RecordPaymentInput input) {
+  Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
 }
@@ -295,5 +373,12 @@ class _FakeInvoicesService implements InvoicesService {
   @override
   Future<InvoiceQuote> quoteInvoice(InvoiceDraft draft) {
     throw UnimplementedError();
+  }
+}
+
+class _FakeAnalyticsService implements AnalyticsService {
+  @override
+  Future<Dashboard> getDashboard({String? fromDate, String? toDate}) async {
+    return Dashboard.empty();
   }
 }

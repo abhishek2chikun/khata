@@ -4,8 +4,8 @@ from app.commands.seed_demo_data import main
 from app.models.company_profile import CompanyProfile
 from app.models.invoice import Invoice
 from app.models.product import Product
-from app.models.seller import Seller
-from app.models.seller_transaction import SellerTransaction
+from app.models.customer import Customer
+from app.models.customer_transaction import CustomerTransaction
 from app.services.auth_service import bootstrap_user
 
 
@@ -17,9 +17,9 @@ def test_seed_demo_data_creates_reusable_manual_testing_dataset(db_session) -> N
     assert result == 0
     assert db_session.scalar(select(CompanyProfile.id)) is not None
     assert len(db_session.scalars(select(Product)).all()) == 4
-    assert len(db_session.scalars(select(Seller)).all()) == 3
+    assert len(db_session.scalars(select(Customer)).all()) == 3
     assert len(db_session.scalars(select(Invoice)).all()) == 3
-    assert len(db_session.scalars(select(SellerTransaction)).all()) == 4
+    assert len(db_session.scalars(select(CustomerTransaction)).all()) == 4
 
 
 def test_seed_demo_data_is_rerunnable_without_duplicate_financial_data(db_session) -> None:
@@ -31,6 +31,6 @@ def test_seed_demo_data_is_rerunnable_without_duplicate_financial_data(db_sessio
     assert first == 0
     assert second == 0
     assert len(db_session.scalars(select(Product)).all()) == 4
-    assert len(db_session.scalars(select(Seller)).all()) == 3
+    assert len(db_session.scalars(select(Customer)).all()) == 3
     assert len(db_session.scalars(select(Invoice)).all()) == 3
-    assert len(db_session.scalars(select(SellerTransaction)).all()) == 4
+    assert len(db_session.scalars(select(CustomerTransaction)).all()) == 4

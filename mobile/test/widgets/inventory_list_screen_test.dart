@@ -3,32 +3,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/screens/inventory_list_screen.dart';
+import 'package:internal_billing_khata_mobile/screens/product_detail_screen.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
-  testWidgets('loads products, filters by search text, and shows low stock warning', (tester) async {
+  testWidgets(
+      'loads products, filters by search text, and shows low stock warning',
+      (tester) async {
     final service = FakeProductsService(
       products: <Product>[
         Product(
           id: '1',
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 10,
+          sellingPrice: 10,
+          gstRate: 18,
           quantityOnHand: 2,
           lowStockThreshold: 5,
           isActive: true,
         ),
         Product(
           id: '2',
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Books',
           itemName: 'Ledger Book',
-          itemCode: 'BOOK-1',
-          defaultSellingPriceExclTax: 50,
-          defaultGstRate: 12,
+          itemNumber: 'BOOK-1',
+          buyingPrice: 50,
+          sellingPrice: 50,
+          gstRate: 12,
           quantityOnHand: 20,
           lowStockThreshold: 5,
           isActive: true,
@@ -41,7 +46,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -64,12 +69,13 @@ void main() {
       products: <Product>[
         Product(
           id: '1',
-          company: 'Acme',
+          companyName: 'Acme',
           category: 'Pens',
           itemName: 'Blue Pen',
-          itemCode: 'PEN-1',
-          defaultSellingPriceExclTax: 10,
-          defaultGstRate: 18,
+          itemNumber: 'PEN-1',
+          buyingPrice: 10,
+          sellingPrice: 10,
+          gstRate: 18,
           quantityOnHand: 2,
           lowStockThreshold: 5,
           isActive: true,
@@ -82,7 +88,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -90,25 +96,28 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('companyFilterField')), 'Acme');
     await tester.pumpAndSettle();
-    expect(service.lastFilter?.company, 'Acme');
+    expect(service.lastFilter?.companyName, 'Acme');
 
-    await tester.enterText(find.byKey(const Key('categoryFilterField')), 'Pens');
+    await tester.enterText(
+        find.byKey(const Key('categoryFilterField')), 'Pens');
     await tester.pumpAndSettle();
     expect(service.lastFilter?.category, 'Pens');
   });
 
-  testWidgets('refreshes product list after add flow returns success', (tester) async {
+  testWidgets('refreshes product list after add flow returns success',
+      (tester) async {
     final service = SequencedProductsService(
       responses: <List<Product>>[
         <Product>[
           Product(
             id: '1',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Pens',
             itemName: 'Blue Pen',
-            itemCode: 'PEN-1',
-            defaultSellingPriceExclTax: 10,
-            defaultGstRate: 18,
+            itemNumber: 'PEN-1',
+            buyingPrice: 10,
+            sellingPrice: 10,
+            gstRate: 18,
             quantityOnHand: 2,
             lowStockThreshold: 5,
             isActive: true,
@@ -117,24 +126,26 @@ void main() {
         <Product>[
           Product(
             id: '1',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Pens',
             itemName: 'Blue Pen',
-            itemCode: 'PEN-1',
-            defaultSellingPriceExclTax: 10,
-            defaultGstRate: 18,
+            itemNumber: 'PEN-1',
+            buyingPrice: 10,
+            sellingPrice: 10,
+            gstRate: 18,
             quantityOnHand: 2,
             lowStockThreshold: 5,
             isActive: true,
           ),
           Product(
             id: '2',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Books',
             itemName: 'Ledger Book',
-            itemCode: 'BOOK-1',
-            defaultSellingPriceExclTax: 50,
-            defaultGstRate: 12,
+            itemNumber: 'BOOK-1',
+            buyingPrice: 50,
+            sellingPrice: 50,
+            gstRate: 12,
             quantityOnHand: 20,
             lowStockThreshold: 5,
             isActive: true,
@@ -148,7 +159,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => true,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
@@ -164,18 +175,20 @@ void main() {
     expect(find.text('Ledger Book'), findsOneWidget);
   });
 
-  testWidgets('refreshes product list after edit flow returns success', (tester) async {
+  testWidgets('refreshes product list after detail flow returns success',
+      (tester) async {
     final service = SequencedProductsService(
       responses: <List<Product>>[
         <Product>[
           Product(
             id: '1',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Pens',
             itemName: 'Blue Pen',
-            itemCode: 'PEN-1',
-            defaultSellingPriceExclTax: 10,
-            defaultGstRate: 18,
+            itemNumber: 'PEN-1',
+            buyingPrice: 10,
+            sellingPrice: 10,
+            gstRate: 18,
             quantityOnHand: 2,
             lowStockThreshold: 5,
             isActive: true,
@@ -184,12 +197,13 @@ void main() {
         <Product>[
           Product(
             id: '1',
-            company: 'Acme',
+            companyName: 'Acme',
             category: 'Pens',
             itemName: 'Blue Pen Updated',
-            itemCode: 'PEN-1',
-            defaultSellingPriceExclTax: 10,
-            defaultGstRate: 18,
+            itemNumber: 'PEN-1',
+            buyingPrice: 10,
+            sellingPrice: 10,
+            gstRate: 18,
             quantityOnHand: 2,
             lowStockThreshold: 5,
             isActive: true,
@@ -202,7 +216,7 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => true,
+          onProductSelected: (product) async => product,
         ),
       ),
     );
@@ -210,22 +224,25 @@ void main() {
 
     expect(find.text('Blue Pen'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('editProductButton-1')));
+    await tester.tap(find.byKey(const Key('productRow-1')));
     await tester.pumpAndSettle();
 
     expect(service.fetchCount, 2);
     expect(find.text('Blue Pen Updated'), findsOneWidget);
   });
 
-  testWidgets('shows archived products as blocked and disables archived edit action', (tester) async {
+  testWidgets(
+      'shows archived products as blocked and disables archived edit action',
+      (tester) async {
     final archivedProduct = Product(
       id: '9',
-      company: 'Acme',
+      companyName: 'Acme',
       category: 'Pens',
       itemName: 'Old Pen',
-      itemCode: 'OLD-1',
-      defaultSellingPriceExclTax: 8,
-      defaultGstRate: 18,
+      itemNumber: 'OLD-1',
+      buyingPrice: 8,
+      sellingPrice: 8,
+      gstRate: 18,
       quantityOnHand: 0,
       lowStockThreshold: 1,
       isActive: false,
@@ -237,34 +254,32 @@ void main() {
         home: InventoryListScreen(
           productsService: service,
           onAddProduct: () async => false,
-          onEditProduct: (_) async => false,
+          onProductSelected: (_) async => null,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Archived'), findsOneWidget);
+    expect(find.text('Archived'), findsWidgets);
     expect(find.text('Editing disabled for archived products'), findsOneWidget);
-    expect(
-      tester.widget<IconButton>(find.byKey(const Key('editProductButton-9'))).onPressed,
-      isNull,
-    );
   });
 
-  testWidgets('opens add and edit product flows through callbacks', (tester) async {
+  testWidgets('opens add and detail product flows through callbacks',
+      (tester) async {
     final product = Product(
       id: '1',
-      company: 'Acme',
+      companyName: 'Acme',
       category: 'Pens',
       itemName: 'Blue Pen',
-      itemCode: 'PEN-1',
-      defaultSellingPriceExclTax: 10,
-      defaultGstRate: 18,
+      itemNumber: 'PEN-1',
+      buyingPrice: 10,
+      sellingPrice: 10,
+      gstRate: 18,
       quantityOnHand: 2,
       lowStockThreshold: 5,
       isActive: true,
     );
-    Product? editedProduct;
+    Product? selectedProduct;
     var addTapped = false;
 
     await tester.pumpWidget(
@@ -275,9 +290,9 @@ void main() {
             addTapped = true;
             return false;
           },
-          onEditProduct: (value) async {
-            editedProduct = value;
-            return false;
+          onProductSelected: (value) async {
+            selectedProduct = value;
+            return null;
           },
         ),
       ),
@@ -288,9 +303,93 @@ void main() {
     await tester.pump();
     expect(addTapped, isTrue);
 
-    await tester.tap(find.byKey(const Key('editProductButton-1')));
+    await tester.tap(find.byKey(const Key('productRow-1')));
     await tester.pump();
-    expect(editedProduct?.id, '1');
+    expect(selectedProduct?.id, '1');
+  });
+
+  testWidgets('list row shows all inventory summary fields', (tester) async {
+    final product = Product(
+      id: '1',
+      companyName: 'Acme Traders',
+      category: 'Pens',
+      itemName: 'Blue Pen',
+      itemNumber: 'PEN-1',
+      buyingPrice: 8,
+      sellingPrice: 10.5,
+      unit: 'box',
+      gstRate: 18,
+      quantityOnHand: 2,
+      lowStockThreshold: 5,
+      isActive: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InventoryListScreen(
+          productsService: FakeProductsService(products: <Product>[product]),
+          onAddProduct: () async => false,
+          onProductSelected: (_) async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PEN-1'), findsOneWidget);
+    expect(find.text('Blue Pen'), findsOneWidget);
+    expect(find.text('Acme Traders'), findsOneWidget);
+    expect(find.text('Pens'), findsOneWidget);
+    expect(find.text('Stock: 2 box'), findsOneWidget);
+    expect(find.text('Selling: 10.50'), findsOneWidget);
+    expect(find.text('GST: 18%'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+  });
+
+  testWidgets('default list navigation opens product detail screen',
+      (tester) async {
+    final product = Product(
+      id: '1',
+      companyName: 'Acme',
+      category: 'Pens',
+      itemName: 'Blue Pen',
+      itemNumber: 'PEN-1',
+      buyingPrice: 8,
+      sellingPrice: 10,
+      gstRate: 18,
+      quantityOnHand: 2,
+      lowStockThreshold: 5,
+      isActive: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InventoryListScreen(
+          productsService: FakeProductsService(products: <Product>[product]),
+          onAddProduct: () async => false,
+          onProductSelected: (selected) async {
+            await tester.state<NavigatorState>(find.byType(Navigator)).push(
+                  MaterialPageRoute<Product>(
+                    builder: (_) => ProductDetailScreen(
+                      product: selected,
+                      productsService: FakeProductsService(
+                        products: <Product>[selected],
+                      ),
+                      onEditProduct: (_) async => null,
+                    ),
+                  ),
+                );
+            return null;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('productRow-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product details'), findsOneWidget);
+    expect(find.text('Blue Pen'), findsWidgets);
   });
 }
 
@@ -307,6 +406,24 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
+  Future<Product> archiveProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Product>> fetchProducts({ProductFilter? filter}) async {
     lastFilter = filter;
     if (error != null) {
@@ -314,16 +431,16 @@ class FakeProductsService implements ProductsService {
     }
     return products.where((product) {
       final search = filter?.search?.toLowerCase();
-      final company = filter?.company?.toLowerCase();
+      final company = filter?.companyName?.toLowerCase();
       final category = filter?.category?.toLowerCase();
 
       final matchesSearch = search == null || search.isEmpty
           ? true
           : product.itemName.toLowerCase().contains(search) ||
-              product.itemCode.toLowerCase().contains(search);
+              product.itemNumber.toLowerCase().contains(search);
       final matchesCompany = company == null || company.isEmpty
           ? true
-          : product.company.toLowerCase() == company;
+          : product.companyName.toLowerCase() == company;
       final matchesCategory = category == null || category.isEmpty
           ? true
           : product.category.toLowerCase() == category;
@@ -332,7 +449,8 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> updateProduct({required String id, required UpdateProductInput input}) {
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input}) {
     throw UnimplementedError();
   }
 }
@@ -349,14 +467,34 @@ class SequencedProductsService implements ProductsService {
   }
 
   @override
+  Future<Product> archiveProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> reactivateProduct({required String id}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Product> adjustStock({
+    required String id,
+    required AdjustStockInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Product>> fetchProducts({ProductFilter? filter}) async {
-    final index = fetchCount < responses.length ? fetchCount : responses.length - 1;
+    final index =
+        fetchCount < responses.length ? fetchCount : responses.length - 1;
     fetchCount += 1;
     return responses[index];
   }
 
   @override
-  Future<Product> updateProduct({required String id, required UpdateProductInput input}) {
+  Future<Product> updateProduct(
+      {required String id, required UpdateProductInput input}) {
     throw UnimplementedError();
   }
 }

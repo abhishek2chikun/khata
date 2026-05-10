@@ -7,7 +7,7 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
-import 'package:internal_billing_khata_mobile/models/seller.dart';
+import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/state/invoice_draft_controller.dart';
 
@@ -26,7 +26,7 @@ void main() {
     );
     final controller = InvoiceDraftController(invoicesService: invoicesService);
 
-    controller.updateSeller(_seller);
+    controller.updateCustomer(_customer);
     controller.updateInvoiceDate('2026-04-20');
     controller.updatePlaceOfSupplyStateCode('27');
     controller.updateItemProduct(0, _product);
@@ -46,6 +46,33 @@ void main() {
         <String>[firstRequestId!, firstRequestId]);
   });
 
+  test('updatePaymentState syncs paymentMode so toJson reflects current selection',
+      () {
+    final controller = InvoiceDraftController(
+      invoicesService: FakeInvoicesService(),
+    );
+
+    controller.updatePaymentState('TOTAL_PAID');
+    expect(controller.draft.paymentState, 'TOTAL_PAID');
+    expect(controller.draft.toJson()['payment_state'], 'TOTAL_PAID');
+
+    controller.updatePaymentState('CREDIT');
+    expect(controller.draft.paymentState, 'CREDIT');
+    expect(controller.draft.toJson()['payment_state'], 'CREDIT');
+  });
+
+  test('updatePaymentState to PARTIAL_PAID serializes correctly', () {
+    final controller = InvoiceDraftController(
+      invoicesService: FakeInvoicesService(),
+    );
+
+    controller.updatePaymentState('PARTIAL_PAID');
+    controller.updatePaidAmount(50);
+    expect(controller.draft.paymentState, 'PARTIAL_PAID');
+    expect(controller.draft.toJson()['payment_state'], 'PARTIAL_PAID');
+    expect(controller.draft.toJson()['paid_amount'], 50);
+  });
+
   test(
       'editing draft after failure clears request id so next submit uses a new one',
       () async {
@@ -60,7 +87,7 @@ void main() {
     );
     final controller = InvoiceDraftController(invoicesService: invoicesService);
 
-    controller.updateSeller(_seller);
+    controller.updateCustomer(_customer);
     controller.updateInvoiceDate('2026-04-20');
     controller.updatePlaceOfSupplyStateCode('27');
     controller.updateItemProduct(0, _product);
@@ -81,8 +108,8 @@ void main() {
   });
 }
 
-const _seller = Seller(
-  id: 'seller-1',
+const _customer = Customer(
+  id: 'customer-1',
   name: 'ABC Stores',
   address: 'Market Yard',
   phone: '9999999999',
@@ -95,12 +122,13 @@ const _seller = Seller(
 
 const _product = Product(
   id: 'product-1',
-  company: 'Acme',
+  companyName: 'Acme',
   category: 'Pens',
   itemName: 'Blue Pen',
-  itemCode: 'PEN-1',
-  defaultSellingPriceExclTax: 10,
-  defaultGstRate: 18,
+  itemNumber: 'PEN-1',
+  buyingPrice: 10,
+  sellingPrice: 10,
+  gstRate: 18,
   quantityOnHand: 4,
   lowStockThreshold: 2,
   isActive: true,
@@ -108,17 +136,18 @@ const _product = Product(
 
 final _invoiceDetail = InvoiceDetail(
   id: 'inv-1',
-  sellerId: 'seller-1',
+  customerId: 'customer-1',
   invoiceNumber: '1001',
   status: 'ACTIVE',
   paymentMode: 'CREDIT',
-  sellerName: 'ABC Stores',
+  customerName: 'ABC Stores',
   invoiceDate: '2026-04-20',
   grandTotal: 118,
   notes: null,
   cancelReason: null,
   items: const <InvoiceDetailItem>[
     InvoiceDetailItem(
+      productId: 'product-1',
       productName: 'Blue Pen',
       quantity: 1,
       lineTotal: 118,
