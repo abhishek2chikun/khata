@@ -208,9 +208,30 @@ adb reverse tcp:8010 tcp:8010
 Local mode adds a `Backup & Restore` drawer destination. The backup package is
 an encrypted JSON envelope using AES-256-GCM and PBKDF2-HMAC-SHA256. The
 decrypted payload contains `schema_version`, `backend_compatibility_version`,
-`exported_at`, and table payloads for local users, products, customers, company
-profiles, invoices, invoice items, stock movements, customer transactions, backup
-settings, and backup events.
+`exported_at`, and table payloads for local users, products, customers, buyers,
+company profiles, invoices, invoice items, stock movements, customer
+transactions, buyer transactions, backup settings, and backup events.
+
+### Local-to-server table mapping
+
+Every local Drift/SQLite table maps to a backend PostgreSQL table or is
+intentionally local-only:
+
+| Local Drift table | Server Postgres table | Notes |
+|---|---|---|
+| `local_users` | `app_users` | Local IDs are text strings; server uses UUID. Salt and password_hash_version columns are local-only. |
+| `products` | `products` | Aligned since product V2 schema (buyer_id, company_name, buying_price, selling_price). |
+| `customers` | `customers` | Full column alignment. |
+| `buyers` | `buyers` | Full column alignment. |
+| `company_profiles` | `company_profiles` | Full column alignment. |
+| `invoices` | `invoices` | Aligned including payment_state, paid_amount, invoice_datetime. Local payment_mode maps to server payment_state. |
+| `invoice_items` | `invoice_items` | Aligned with V2 snapshot fields (product_item_number, product_buyer_id, product_company_name, buying_price, selling_price). Server also has computed analytics columns (revenue_amount, buying_amount, profit_amount). |
+| `stock_movements` | `stock_movements` | Full column alignment. |
+| `customer_transactions` | `customer_transactions` | Full column alignment. |
+| `buyer_transactions` | `buyer_transactions` | Full column alignment. |
+| `local_sessions` | `user_sessions` | **Local-only.** Not exported in backup. Cleared on import. Server manages sessions independently. |
+| `backup_settings` | — | **Local-only.** No server equivalent. |
+| `backup_events` | — | **Local-only.** No server equivalent. |
 
 Backup/restore behavior:
 

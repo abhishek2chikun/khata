@@ -122,6 +122,23 @@ backend/
   .venv/bin/python -m pytest backend/tests -q)
 ```
 
+## Local-to-server migration readiness
+
+The mobile local mode (Drift/SQLite) schema is aligned with backend PostgreSQL
+tables for future server migration. Every local table has a server equivalent
+or is intentionally local-only:
+
+- Migratable tables: local_users → app_users, products, customers, buyers,
+  company_profiles, invoices, invoice_items, stock_movements,
+  customer_transactions, buyer_transactions.
+- Local-only tables (excluded from migration): local_sessions, backup_settings,
+  backup_events.
+- Key type differences: local uses text IDs, server uses UUID; local stores
+  decimals as text strings, server uses Numeric columns.
+- Server invoice_items has computed analytics columns (revenue_amount,
+  buying_amount, profit_amount) not present in local backup; these are derived
+  during migration.
+
 ## Progress
 
 - Auth, session rotation, and secure current-user lookup are live.

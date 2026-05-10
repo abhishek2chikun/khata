@@ -111,10 +111,39 @@ stay compatible with backend DTOs and Postgres migration scripts.
 
 Local mode exposes `Backup & Restore` in the drawer. The core backup service
 (`LocalBackupService`) can export/import encrypted packages containing local
-table payloads. The current UI is wired to the Drive backup interface; until a
-configured Drive/file implementation is supplied, export/import actions show a
+table payloads. The current backup schema version is 6 with backend
+compatibility version `local-v2`, reflecting the wholesaler workflow schema
+including buyers, buyer transactions, customer transactions, product V2 fields,
+invoice item snapshot fields, and invoice payment states.
+
+Backup payload includes these tables: local_users, products, customers, buyers,
+company_profiles, invoices, invoice_items, stock_movements,
+customer_transactions, buyer_transactions, backup_settings, backup_events.
+Sessions (local_sessions) are intentionally excluded from backup and cleared on
+import.
+
+The current UI is wired to the Drive backup interface; until a configured
+Drive/file implementation is supplied, export/import actions show a
 configuration-required message. Import rejects unsupported schema or backend
 compatibility versions and missing required tables.
+
+### Local-to-server table mapping
+
+| Local Drift table | Server Postgres table | Migration status |
+|---|---|---|
+| `local_users` | `app_users` | Migratable (text ID → UUID, salt/hash_version local-only) |
+| `products` | `products` | Aligned (V2: buyer_id, company_name, buying_price, selling_price) |
+| `customers` | `customers` | Aligned |
+| `buyers` | `buyers` | Aligned |
+| `company_profiles` | `company_profiles` | Aligned |
+| `invoices` | `invoices` | Aligned (payment_state, paid_amount, invoice_datetime) |
+| `invoice_items` | `invoice_items` | Aligned (V2 snapshot fields; server has extra analytics columns) |
+| `stock_movements` | `stock_movements` | Aligned |
+| `customer_transactions` | `customer_transactions` | Aligned |
+| `buyer_transactions` | `buyer_transactions` | Aligned |
+| `local_sessions` | `user_sessions` | Local-only, excluded from backup and migration |
+| `backup_settings` | — | Local-only, no server equivalent |
+| `backup_events` | — | Local-only, no server equivalent |
 
 Automatic backup settings are stored locally. `BackupScheduler` handles daily
 due/missed-backup decisions and catch-up checks on app launch. In current repo
