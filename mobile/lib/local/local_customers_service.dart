@@ -66,10 +66,17 @@ class LocalCustomersService implements CustomersService {
             .where((transaction) => transaction.occurredOn == onDate)
             .toList();
     final pendingBalance = _pendingBalance(allTransactions);
+    final invoiceQuery = _database.select(_database.invoices)
+      ..where((invoice) => invoice.customerId.equals(customerId))
+      ..orderBy([
+        (invoice) => OrderingTerm.desc(invoice.invoiceDate),
+        (invoice) => OrderingTerm.desc(invoice.invoiceNumber),
+      ]);
+    final invoiceRows = await invoiceQuery.get();
     return CustomerLedger(
       customer: _toCustomer(customer, pendingBalance: pendingBalance),
       transactions: transactions.map(_toLedgerTransaction).toList(),
-      invoices: const <CustomerInvoiceHistoryEntry>[],
+      invoices: invoiceRows.map(_toInvoiceHistoryEntry).toList(),
     );
   }
 
@@ -194,6 +201,17 @@ class LocalCustomersService implements CustomersService {
       occurredOn: transaction.occurredOn,
       createdAt: transaction.createdAt,
       notes: transaction.notes,
+    );
+  }
+
+  CustomerInvoiceHistoryEntry _toInvoiceHistoryEntry(Invoice invoice) {
+    return CustomerInvoiceHistoryEntry(
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber.toString(),
+      invoiceDate: invoice.invoiceDate,
+      grandTotal: double.parse(invoice.grandTotal),
+      paymentMode: invoice.paymentMode,
+      status: invoice.status,
     );
   }
 
