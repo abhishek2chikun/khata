@@ -466,6 +466,14 @@ class _FakeBuyersService implements BuyersService {
   }
 
   @override
+  Future<Buyer> updateBuyer({
+    required String id,
+    required UpdateBuyerInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<BuyerLedger> fetchBuyerLedger(String buyerId) {
     throw UnimplementedError();
   }
