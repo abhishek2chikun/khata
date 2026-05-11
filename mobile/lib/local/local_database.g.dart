@@ -1265,6 +1265,12 @@ class $CustomersTable extends Customers
   late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
       'gstin', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _whatsappNumberMeta =
+      const VerificationMeta('whatsappNumber');
+  @override
+  late final GeneratedColumn<String> whatsappNumber = GeneratedColumn<String>(
+      'whatsapp_number', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isActiveMeta =
       const VerificationMeta('isActive');
   @override
@@ -1296,6 +1302,7 @@ class $CustomersTable extends Customers
         stateCode,
         phone,
         gstin,
+        whatsappNumber,
         isActive,
         createdAt,
         updatedAt
@@ -1343,6 +1350,12 @@ class $CustomersTable extends Customers
       context.handle(
           _gstinMeta, gstin.isAcceptableOrUnknown(data['gstin']!, _gstinMeta));
     }
+    if (data.containsKey('whatsapp_number')) {
+      context.handle(
+          _whatsappNumberMeta,
+          whatsappNumber.isAcceptableOrUnknown(
+              data['whatsapp_number']!, _whatsappNumberMeta));
+    }
     if (data.containsKey('is_active')) {
       context.handle(_isActiveMeta,
           isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
@@ -1386,6 +1399,8 @@ class $CustomersTable extends Customers
           .read(DriftSqlType.string, data['${effectivePrefix}phone']),
       gstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}gstin']),
+      whatsappNumber: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}whatsapp_number']),
       isActive: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
       createdAt: attachedDatabase.typeMapping
@@ -1409,6 +1424,7 @@ class Customer extends DataClass implements Insertable<Customer> {
   final String? stateCode;
   final String? phone;
   final String? gstin;
+  final String? whatsappNumber;
   final bool isActive;
   final String createdAt;
   final String updatedAt;
@@ -1420,6 +1436,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       this.stateCode,
       this.phone,
       this.gstin,
+      this.whatsappNumber,
       required this.isActive,
       required this.createdAt,
       required this.updatedAt});
@@ -1441,6 +1458,9 @@ class Customer extends DataClass implements Insertable<Customer> {
     if (!nullToAbsent || gstin != null) {
       map['gstin'] = Variable<String>(gstin);
     }
+    if (!nullToAbsent || whatsappNumber != null) {
+      map['whatsapp_number'] = Variable<String>(whatsappNumber);
+    }
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
@@ -1461,6 +1481,9 @@ class Customer extends DataClass implements Insertable<Customer> {
           phone == null && nullToAbsent ? const Value.absent() : Value(phone),
       gstin:
           gstin == null && nullToAbsent ? const Value.absent() : Value(gstin),
+      whatsappNumber: whatsappNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whatsappNumber),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -1478,6 +1501,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       stateCode: serializer.fromJson<String?>(json['stateCode']),
       phone: serializer.fromJson<String?>(json['phone']),
       gstin: serializer.fromJson<String?>(json['gstin']),
+      whatsappNumber: serializer.fromJson<String?>(json['whatsappNumber']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
@@ -1494,6 +1518,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       'stateCode': serializer.toJson<String?>(stateCode),
       'phone': serializer.toJson<String?>(phone),
       'gstin': serializer.toJson<String?>(gstin),
+      'whatsappNumber': serializer.toJson<String?>(whatsappNumber),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
@@ -1508,6 +1533,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           Value<String?> stateCode = const Value.absent(),
           Value<String?> phone = const Value.absent(),
           Value<String?> gstin = const Value.absent(),
+          Value<String?> whatsappNumber = const Value.absent(),
           bool? isActive,
           String? createdAt,
           String? updatedAt}) =>
@@ -1519,6 +1545,8 @@ class Customer extends DataClass implements Insertable<Customer> {
         stateCode: stateCode.present ? stateCode.value : this.stateCode,
         phone: phone.present ? phone.value : this.phone,
         gstin: gstin.present ? gstin.value : this.gstin,
+        whatsappNumber:
+            whatsappNumber.present ? whatsappNumber.value : this.whatsappNumber,
         isActive: isActive ?? this.isActive,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -1532,6 +1560,9 @@ class Customer extends DataClass implements Insertable<Customer> {
       stateCode: data.stateCode.present ? data.stateCode.value : this.stateCode,
       phone: data.phone.present ? data.phone.value : this.phone,
       gstin: data.gstin.present ? data.gstin.value : this.gstin,
+      whatsappNumber: data.whatsappNumber.present
+          ? data.whatsappNumber.value
+          : this.whatsappNumber,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -1548,6 +1579,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('stateCode: $stateCode, ')
           ..write('phone: $phone, ')
           ..write('gstin: $gstin, ')
+          ..write('whatsappNumber: $whatsappNumber, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -1557,7 +1589,7 @@ class Customer extends DataClass implements Insertable<Customer> {
 
   @override
   int get hashCode => Object.hash(id, name, address, state, stateCode, phone,
-      gstin, isActive, createdAt, updatedAt);
+      gstin, whatsappNumber, isActive, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1569,6 +1601,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.stateCode == this.stateCode &&
           other.phone == this.phone &&
           other.gstin == this.gstin &&
+          other.whatsappNumber == this.whatsappNumber &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1582,6 +1615,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<String?> stateCode;
   final Value<String?> phone;
   final Value<String?> gstin;
+  final Value<String?> whatsappNumber;
   final Value<bool> isActive;
   final Value<String> createdAt;
   final Value<String> updatedAt;
@@ -1594,6 +1628,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.stateCode = const Value.absent(),
     this.phone = const Value.absent(),
     this.gstin = const Value.absent(),
+    this.whatsappNumber = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1607,6 +1642,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.stateCode = const Value.absent(),
     this.phone = const Value.absent(),
     this.gstin = const Value.absent(),
+    this.whatsappNumber = const Value.absent(),
     this.isActive = const Value.absent(),
     required String createdAt,
     required String updatedAt,
@@ -1624,6 +1660,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<String>? stateCode,
     Expression<String>? phone,
     Expression<String>? gstin,
+    Expression<String>? whatsappNumber,
     Expression<bool>? isActive,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
@@ -1637,6 +1674,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (stateCode != null) 'state_code': stateCode,
       if (phone != null) 'phone': phone,
       if (gstin != null) 'gstin': gstin,
+      if (whatsappNumber != null) 'whatsapp_number': whatsappNumber,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -1652,6 +1690,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       Value<String?>? stateCode,
       Value<String?>? phone,
       Value<String?>? gstin,
+      Value<String?>? whatsappNumber,
       Value<bool>? isActive,
       Value<String>? createdAt,
       Value<String>? updatedAt,
@@ -1664,6 +1703,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       stateCode: stateCode ?? this.stateCode,
       phone: phone ?? this.phone,
       gstin: gstin ?? this.gstin,
+      whatsappNumber: whatsappNumber ?? this.whatsappNumber,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1695,6 +1735,9 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     if (gstin.present) {
       map['gstin'] = Variable<String>(gstin.value);
     }
+    if (whatsappNumber.present) {
+      map['whatsapp_number'] = Variable<String>(whatsappNumber.value);
+    }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
@@ -1720,6 +1763,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('stateCode: $stateCode, ')
           ..write('phone: $phone, ')
           ..write('gstin: $gstin, ')
+          ..write('whatsappNumber: $whatsappNumber, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -1796,6 +1840,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   late final GeneratedColumn<String> customerPhone = GeneratedColumn<String>(
       'customer_phone', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _customerWhatsappNumberMeta =
+      const VerificationMeta('customerWhatsappNumber');
+  @override
+  late final GeneratedColumn<String> customerWhatsappNumber =
+      GeneratedColumn<String>('customer_whatsapp_number', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _customerGstinMeta =
       const VerificationMeta('customerGstin');
   @override
@@ -2039,6 +2089,7 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         customerState,
         customerStateCode,
         customerPhone,
+        customerWhatsappNumber,
         customerGstin,
         placeOfSupplyState,
         placeOfSupplyStateCode,
@@ -2154,6 +2205,12 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           _customerPhoneMeta,
           customerPhone.isAcceptableOrUnknown(
               data['customer_phone']!, _customerPhoneMeta));
+    }
+    if (data.containsKey('customer_whatsapp_number')) {
+      context.handle(
+          _customerWhatsappNumberMeta,
+          customerWhatsappNumber.isAcceptableOrUnknown(
+              data['customer_whatsapp_number']!, _customerWhatsappNumberMeta));
     }
     if (data.containsKey('customer_gstin')) {
       context.handle(
@@ -2431,6 +2488,9 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           DriftSqlType.string, data['${effectivePrefix}customer_state_code']),
       customerPhone: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}customer_phone']),
+      customerWhatsappNumber: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}customer_whatsapp_number']),
       customerGstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}customer_gstin']),
       placeOfSupplyState: attachedDatabase.typeMapping.read(DriftSqlType.string,
@@ -2524,6 +2584,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String? customerState;
   final String? customerStateCode;
   final String? customerPhone;
+  final String? customerWhatsappNumber;
   final String? customerGstin;
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;
@@ -2571,6 +2632,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       this.customerState,
       this.customerStateCode,
       this.customerPhone,
+      this.customerWhatsappNumber,
       this.customerGstin,
       required this.placeOfSupplyState,
       required this.placeOfSupplyStateCode,
@@ -2625,6 +2687,10 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     }
     if (!nullToAbsent || customerPhone != null) {
       map['customer_phone'] = Variable<String>(customerPhone);
+    }
+    if (!nullToAbsent || customerWhatsappNumber != null) {
+      map['customer_whatsapp_number'] =
+          Variable<String>(customerWhatsappNumber);
     }
     if (!nullToAbsent || customerGstin != null) {
       map['customer_gstin'] = Variable<String>(customerGstin);
@@ -2714,6 +2780,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerPhone: customerPhone == null && nullToAbsent
           ? const Value.absent()
           : Value(customerPhone),
+      customerWhatsappNumber: customerWhatsappNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerWhatsappNumber),
       customerGstin: customerGstin == null && nullToAbsent
           ? const Value.absent()
           : Value(customerGstin),
@@ -2797,6 +2866,8 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerStateCode:
           serializer.fromJson<String?>(json['customerStateCode']),
       customerPhone: serializer.fromJson<String?>(json['customerPhone']),
+      customerWhatsappNumber:
+          serializer.fromJson<String?>(json['customerWhatsappNumber']),
       customerGstin: serializer.fromJson<String?>(json['customerGstin']),
       placeOfSupplyState:
           serializer.fromJson<String>(json['placeOfSupplyState']),
@@ -2855,6 +2926,8 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'customerState': serializer.toJson<String?>(customerState),
       'customerStateCode': serializer.toJson<String?>(customerStateCode),
       'customerPhone': serializer.toJson<String?>(customerPhone),
+      'customerWhatsappNumber':
+          serializer.toJson<String?>(customerWhatsappNumber),
       'customerGstin': serializer.toJson<String?>(customerGstin),
       'placeOfSupplyState': serializer.toJson<String>(placeOfSupplyState),
       'placeOfSupplyStateCode':
@@ -2906,6 +2979,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           Value<String?> customerState = const Value.absent(),
           Value<String?> customerStateCode = const Value.absent(),
           Value<String?> customerPhone = const Value.absent(),
+          Value<String?> customerWhatsappNumber = const Value.absent(),
           Value<String?> customerGstin = const Value.absent(),
           String? placeOfSupplyState,
           String? placeOfSupplyStateCode,
@@ -2957,6 +3031,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
             : this.customerStateCode,
         customerPhone:
             customerPhone.present ? customerPhone.value : this.customerPhone,
+        customerWhatsappNumber: customerWhatsappNumber.present
+            ? customerWhatsappNumber.value
+            : this.customerWhatsappNumber,
         customerGstin:
             customerGstin.present ? customerGstin.value : this.customerGstin,
         placeOfSupplyState: placeOfSupplyState ?? this.placeOfSupplyState,
@@ -3042,6 +3119,9 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       customerPhone: data.customerPhone.present
           ? data.customerPhone.value
           : this.customerPhone,
+      customerWhatsappNumber: data.customerWhatsappNumber.present
+          ? data.customerWhatsappNumber.value
+          : this.customerWhatsappNumber,
       customerGstin: data.customerGstin.present
           ? data.customerGstin.value
           : this.customerGstin,
@@ -3147,6 +3227,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ..write('customerState: $customerState, ')
           ..write('customerStateCode: $customerStateCode, ')
           ..write('customerPhone: $customerPhone, ')
+          ..write('customerWhatsappNumber: $customerWhatsappNumber, ')
           ..write('customerGstin: $customerGstin, ')
           ..write('placeOfSupplyState: $placeOfSupplyState, ')
           ..write('placeOfSupplyStateCode: $placeOfSupplyStateCode, ')
@@ -3199,6 +3280,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         customerState,
         customerStateCode,
         customerPhone,
+        customerWhatsappNumber,
         customerGstin,
         placeOfSupplyState,
         placeOfSupplyStateCode,
@@ -3250,6 +3332,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           other.customerState == this.customerState &&
           other.customerStateCode == this.customerStateCode &&
           other.customerPhone == this.customerPhone &&
+          other.customerWhatsappNumber == this.customerWhatsappNumber &&
           other.customerGstin == this.customerGstin &&
           other.placeOfSupplyState == this.placeOfSupplyState &&
           other.placeOfSupplyStateCode == this.placeOfSupplyStateCode &&
@@ -3299,6 +3382,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String?> customerState;
   final Value<String?> customerStateCode;
   final Value<String?> customerPhone;
+  final Value<String?> customerWhatsappNumber;
   final Value<String?> customerGstin;
   final Value<String> placeOfSupplyState;
   final Value<String> placeOfSupplyStateCode;
@@ -3347,6 +3431,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.customerState = const Value.absent(),
     this.customerStateCode = const Value.absent(),
     this.customerPhone = const Value.absent(),
+    this.customerWhatsappNumber = const Value.absent(),
     this.customerGstin = const Value.absent(),
     this.placeOfSupplyState = const Value.absent(),
     this.placeOfSupplyStateCode = const Value.absent(),
@@ -3396,6 +3481,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.customerState = const Value.absent(),
     this.customerStateCode = const Value.absent(),
     this.customerPhone = const Value.absent(),
+    this.customerWhatsappNumber = const Value.absent(),
     this.customerGstin = const Value.absent(),
     required String placeOfSupplyState,
     required String placeOfSupplyStateCode,
@@ -3469,6 +3555,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? customerState,
     Expression<String>? customerStateCode,
     Expression<String>? customerPhone,
+    Expression<String>? customerWhatsappNumber,
     Expression<String>? customerGstin,
     Expression<String>? placeOfSupplyState,
     Expression<String>? placeOfSupplyStateCode,
@@ -3518,6 +3605,8 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       if (customerState != null) 'customer_state': customerState,
       if (customerStateCode != null) 'customer_state_code': customerStateCode,
       if (customerPhone != null) 'customer_phone': customerPhone,
+      if (customerWhatsappNumber != null)
+        'customer_whatsapp_number': customerWhatsappNumber,
       if (customerGstin != null) 'customer_gstin': customerGstin,
       if (placeOfSupplyState != null)
         'place_of_supply_state': placeOfSupplyState,
@@ -3573,6 +3662,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       Value<String?>? customerState,
       Value<String?>? customerStateCode,
       Value<String?>? customerPhone,
+      Value<String?>? customerWhatsappNumber,
       Value<String?>? customerGstin,
       Value<String>? placeOfSupplyState,
       Value<String>? placeOfSupplyStateCode,
@@ -3621,6 +3711,8 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       customerState: customerState ?? this.customerState,
       customerStateCode: customerStateCode ?? this.customerStateCode,
       customerPhone: customerPhone ?? this.customerPhone,
+      customerWhatsappNumber:
+          customerWhatsappNumber ?? this.customerWhatsappNumber,
       customerGstin: customerGstin ?? this.customerGstin,
       placeOfSupplyState: placeOfSupplyState ?? this.placeOfSupplyState,
       placeOfSupplyStateCode:
@@ -3694,6 +3786,10 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     }
     if (customerPhone.present) {
       map['customer_phone'] = Variable<String>(customerPhone.value);
+    }
+    if (customerWhatsappNumber.present) {
+      map['customer_whatsapp_number'] =
+          Variable<String>(customerWhatsappNumber.value);
     }
     if (customerGstin.present) {
       map['customer_gstin'] = Variable<String>(customerGstin.value);
@@ -3823,6 +3919,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           ..write('customerState: $customerState, ')
           ..write('customerStateCode: $customerStateCode, ')
           ..write('customerPhone: $customerPhone, ')
+          ..write('customerWhatsappNumber: $customerWhatsappNumber, ')
           ..write('customerGstin: $customerGstin, ')
           ..write('placeOfSupplyState: $placeOfSupplyState, ')
           ..write('placeOfSupplyStateCode: $placeOfSupplyStateCode, ')
@@ -5085,6 +5182,12 @@ class $BuyersTable extends Buyers with TableInfo<$BuyersTable, Buyer> {
   late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
       'gstin', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _whatsappNumberMeta =
+      const VerificationMeta('whatsappNumber');
+  @override
+  late final GeneratedColumn<String> whatsappNumber = GeneratedColumn<String>(
+      'whatsapp_number', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _isActiveMeta =
       const VerificationMeta('isActive');
   @override
@@ -5116,6 +5219,7 @@ class $BuyersTable extends Buyers with TableInfo<$BuyersTable, Buyer> {
         stateCode,
         phone,
         gstin,
+        whatsappNumber,
         isActive,
         createdAt,
         updatedAt
@@ -5163,6 +5267,12 @@ class $BuyersTable extends Buyers with TableInfo<$BuyersTable, Buyer> {
       context.handle(
           _gstinMeta, gstin.isAcceptableOrUnknown(data['gstin']!, _gstinMeta));
     }
+    if (data.containsKey('whatsapp_number')) {
+      context.handle(
+          _whatsappNumberMeta,
+          whatsappNumber.isAcceptableOrUnknown(
+              data['whatsapp_number']!, _whatsappNumberMeta));
+    }
     if (data.containsKey('is_active')) {
       context.handle(_isActiveMeta,
           isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
@@ -5206,6 +5316,8 @@ class $BuyersTable extends Buyers with TableInfo<$BuyersTable, Buyer> {
           .read(DriftSqlType.string, data['${effectivePrefix}phone']),
       gstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}gstin']),
+      whatsappNumber: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}whatsapp_number']),
       isActive: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
       createdAt: attachedDatabase.typeMapping
@@ -5229,6 +5341,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
   final String? stateCode;
   final String? phone;
   final String? gstin;
+  final String? whatsappNumber;
   final bool isActive;
   final String createdAt;
   final String updatedAt;
@@ -5240,6 +5353,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
       this.stateCode,
       this.phone,
       this.gstin,
+      this.whatsappNumber,
       required this.isActive,
       required this.createdAt,
       required this.updatedAt});
@@ -5261,6 +5375,9 @@ class Buyer extends DataClass implements Insertable<Buyer> {
     if (!nullToAbsent || gstin != null) {
       map['gstin'] = Variable<String>(gstin);
     }
+    if (!nullToAbsent || whatsappNumber != null) {
+      map['whatsapp_number'] = Variable<String>(whatsappNumber);
+    }
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
@@ -5281,6 +5398,9 @@ class Buyer extends DataClass implements Insertable<Buyer> {
           phone == null && nullToAbsent ? const Value.absent() : Value(phone),
       gstin:
           gstin == null && nullToAbsent ? const Value.absent() : Value(gstin),
+      whatsappNumber: whatsappNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whatsappNumber),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -5298,6 +5418,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
       stateCode: serializer.fromJson<String?>(json['stateCode']),
       phone: serializer.fromJson<String?>(json['phone']),
       gstin: serializer.fromJson<String?>(json['gstin']),
+      whatsappNumber: serializer.fromJson<String?>(json['whatsappNumber']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
@@ -5314,6 +5435,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
       'stateCode': serializer.toJson<String?>(stateCode),
       'phone': serializer.toJson<String?>(phone),
       'gstin': serializer.toJson<String?>(gstin),
+      'whatsappNumber': serializer.toJson<String?>(whatsappNumber),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
@@ -5328,6 +5450,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
           Value<String?> stateCode = const Value.absent(),
           Value<String?> phone = const Value.absent(),
           Value<String?> gstin = const Value.absent(),
+          Value<String?> whatsappNumber = const Value.absent(),
           bool? isActive,
           String? createdAt,
           String? updatedAt}) =>
@@ -5339,6 +5462,8 @@ class Buyer extends DataClass implements Insertable<Buyer> {
         stateCode: stateCode.present ? stateCode.value : this.stateCode,
         phone: phone.present ? phone.value : this.phone,
         gstin: gstin.present ? gstin.value : this.gstin,
+        whatsappNumber:
+            whatsappNumber.present ? whatsappNumber.value : this.whatsappNumber,
         isActive: isActive ?? this.isActive,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -5352,6 +5477,9 @@ class Buyer extends DataClass implements Insertable<Buyer> {
       stateCode: data.stateCode.present ? data.stateCode.value : this.stateCode,
       phone: data.phone.present ? data.phone.value : this.phone,
       gstin: data.gstin.present ? data.gstin.value : this.gstin,
+      whatsappNumber: data.whatsappNumber.present
+          ? data.whatsappNumber.value
+          : this.whatsappNumber,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -5368,6 +5496,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
           ..write('stateCode: $stateCode, ')
           ..write('phone: $phone, ')
           ..write('gstin: $gstin, ')
+          ..write('whatsappNumber: $whatsappNumber, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -5377,7 +5506,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
 
   @override
   int get hashCode => Object.hash(id, name, address, state, stateCode, phone,
-      gstin, isActive, createdAt, updatedAt);
+      gstin, whatsappNumber, isActive, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5389,6 +5518,7 @@ class Buyer extends DataClass implements Insertable<Buyer> {
           other.stateCode == this.stateCode &&
           other.phone == this.phone &&
           other.gstin == this.gstin &&
+          other.whatsappNumber == this.whatsappNumber &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -5402,6 +5532,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
   final Value<String?> stateCode;
   final Value<String?> phone;
   final Value<String?> gstin;
+  final Value<String?> whatsappNumber;
   final Value<bool> isActive;
   final Value<String> createdAt;
   final Value<String> updatedAt;
@@ -5414,6 +5545,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
     this.stateCode = const Value.absent(),
     this.phone = const Value.absent(),
     this.gstin = const Value.absent(),
+    this.whatsappNumber = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -5427,6 +5559,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
     this.stateCode = const Value.absent(),
     this.phone = const Value.absent(),
     this.gstin = const Value.absent(),
+    this.whatsappNumber = const Value.absent(),
     this.isActive = const Value.absent(),
     required String createdAt,
     required String updatedAt,
@@ -5444,6 +5577,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
     Expression<String>? stateCode,
     Expression<String>? phone,
     Expression<String>? gstin,
+    Expression<String>? whatsappNumber,
     Expression<bool>? isActive,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
@@ -5457,6 +5591,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
       if (stateCode != null) 'state_code': stateCode,
       if (phone != null) 'phone': phone,
       if (gstin != null) 'gstin': gstin,
+      if (whatsappNumber != null) 'whatsapp_number': whatsappNumber,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -5472,6 +5607,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
       Value<String?>? stateCode,
       Value<String?>? phone,
       Value<String?>? gstin,
+      Value<String?>? whatsappNumber,
       Value<bool>? isActive,
       Value<String>? createdAt,
       Value<String>? updatedAt,
@@ -5484,6 +5620,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
       stateCode: stateCode ?? this.stateCode,
       phone: phone ?? this.phone,
       gstin: gstin ?? this.gstin,
+      whatsappNumber: whatsappNumber ?? this.whatsappNumber,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -5515,6 +5652,9 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
     if (gstin.present) {
       map['gstin'] = Variable<String>(gstin.value);
     }
+    if (whatsappNumber.present) {
+      map['whatsapp_number'] = Variable<String>(whatsappNumber.value);
+    }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
@@ -5540,6 +5680,7 @@ class BuyersCompanion extends UpdateCompanion<Buyer> {
           ..write('stateCode: $stateCode, ')
           ..write('phone: $phone, ')
           ..write('gstin: $gstin, ')
+          ..write('whatsappNumber: $whatsappNumber, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -10877,6 +11018,7 @@ typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
   Value<String?> stateCode,
   Value<String?> phone,
   Value<String?> gstin,
+  Value<String?> whatsappNumber,
   Value<bool> isActive,
   required String createdAt,
   required String updatedAt,
@@ -10890,6 +11032,7 @@ typedef $$CustomersTableUpdateCompanionBuilder = CustomersCompanion Function({
   Value<String?> stateCode,
   Value<String?> phone,
   Value<String?> gstin,
+  Value<String?> whatsappNumber,
   Value<bool> isActive,
   Value<String> createdAt,
   Value<String> updatedAt,
@@ -10964,6 +11107,10 @@ class $$CustomersTableFilterComposer
 
   ColumnFilters<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnFilters(column));
@@ -11048,6 +11195,10 @@ class $$CustomersTableOrderingComposer
   ColumnOrderings<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnOrderings(column));
 
@@ -11087,6 +11238,9 @@ class $$CustomersTableAnnotationComposer
 
   GeneratedColumn<String> get gstin =>
       $composableBuilder(column: $table.gstin, builder: (column) => column);
+
+  GeneratedColumn<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber, builder: (column) => column);
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -11173,6 +11327,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
+            Value<String?> whatsappNumber = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
@@ -11186,6 +11341,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             stateCode: stateCode,
             phone: phone,
             gstin: gstin,
+            whatsappNumber: whatsappNumber,
             isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -11199,6 +11355,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
+            Value<String?> whatsappNumber = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             required String createdAt,
             required String updatedAt,
@@ -11212,6 +11369,7 @@ class $$CustomersTableTableManager extends RootTableManager<
             stateCode: stateCode,
             phone: phone,
             gstin: gstin,
+            whatsappNumber: whatsappNumber,
             isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -11290,6 +11448,7 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> customerState,
   Value<String?> customerStateCode,
   Value<String?> customerPhone,
+  Value<String?> customerWhatsappNumber,
   Value<String?> customerGstin,
   required String placeOfSupplyState,
   required String placeOfSupplyStateCode,
@@ -11339,6 +11498,7 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> customerState,
   Value<String?> customerStateCode,
   Value<String?> customerPhone,
+  Value<String?> customerWhatsappNumber,
   Value<String?> customerGstin,
   Value<String> placeOfSupplyState,
   Value<String> placeOfSupplyStateCode,
@@ -11514,6 +11674,10 @@ class $$InvoicesTableFilterComposer
 
   ColumnFilters<String> get customerPhone => $composableBuilder(
       column: $table.customerPhone, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin, builder: (column) => ColumnFilters(column));
@@ -11796,6 +11960,10 @@ class $$InvoicesTableOrderingComposer
       column: $table.customerPhone,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin,
       builder: (column) => ColumnOrderings(column));
@@ -12015,6 +12183,9 @@ class $$InvoicesTableAnnotationComposer
 
   GeneratedColumn<String> get customerPhone => $composableBuilder(
       column: $table.customerPhone, builder: (column) => column);
+
+  GeneratedColumn<String> get customerWhatsappNumber => $composableBuilder(
+      column: $table.customerWhatsappNumber, builder: (column) => column);
 
   GeneratedColumn<String> get customerGstin => $composableBuilder(
       column: $table.customerGstin, builder: (column) => column);
@@ -12283,6 +12454,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> customerState = const Value.absent(),
             Value<String?> customerStateCode = const Value.absent(),
             Value<String?> customerPhone = const Value.absent(),
+            Value<String?> customerWhatsappNumber = const Value.absent(),
             Value<String?> customerGstin = const Value.absent(),
             Value<String> placeOfSupplyState = const Value.absent(),
             Value<String> placeOfSupplyStateCode = const Value.absent(),
@@ -12332,6 +12504,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             customerState: customerState,
             customerStateCode: customerStateCode,
             customerPhone: customerPhone,
+            customerWhatsappNumber: customerWhatsappNumber,
             customerGstin: customerGstin,
             placeOfSupplyState: placeOfSupplyState,
             placeOfSupplyStateCode: placeOfSupplyStateCode,
@@ -12381,6 +12554,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> customerState = const Value.absent(),
             Value<String?> customerStateCode = const Value.absent(),
             Value<String?> customerPhone = const Value.absent(),
+            Value<String?> customerWhatsappNumber = const Value.absent(),
             Value<String?> customerGstin = const Value.absent(),
             required String placeOfSupplyState,
             required String placeOfSupplyStateCode,
@@ -12430,6 +12604,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             customerState: customerState,
             customerStateCode: customerStateCode,
             customerPhone: customerPhone,
+            customerWhatsappNumber: customerWhatsappNumber,
             customerGstin: customerGstin,
             placeOfSupplyState: placeOfSupplyState,
             placeOfSupplyStateCode: placeOfSupplyStateCode,
@@ -13663,6 +13838,7 @@ typedef $$BuyersTableCreateCompanionBuilder = BuyersCompanion Function({
   Value<String?> stateCode,
   Value<String?> phone,
   Value<String?> gstin,
+  Value<String?> whatsappNumber,
   Value<bool> isActive,
   required String createdAt,
   required String updatedAt,
@@ -13676,6 +13852,7 @@ typedef $$BuyersTableUpdateCompanionBuilder = BuyersCompanion Function({
   Value<String?> stateCode,
   Value<String?> phone,
   Value<String?> gstin,
+  Value<String?> whatsappNumber,
   Value<bool> isActive,
   Value<String> createdAt,
   Value<String> updatedAt,
@@ -13733,6 +13910,10 @@ class $$BuyersTableFilterComposer
 
   ColumnFilters<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnFilters(column));
@@ -13795,6 +13976,10 @@ class $$BuyersTableOrderingComposer
   ColumnOrderings<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
       column: $table.isActive, builder: (column) => ColumnOrderings(column));
 
@@ -13834,6 +14019,9 @@ class $$BuyersTableAnnotationComposer
 
   GeneratedColumn<String> get gstin =>
       $composableBuilder(column: $table.gstin, builder: (column) => column);
+
+  GeneratedColumn<String> get whatsappNumber => $composableBuilder(
+      column: $table.whatsappNumber, builder: (column) => column);
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
@@ -13897,6 +14085,7 @@ class $$BuyersTableTableManager extends RootTableManager<
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
+            Value<String?> whatsappNumber = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
@@ -13910,6 +14099,7 @@ class $$BuyersTableTableManager extends RootTableManager<
             stateCode: stateCode,
             phone: phone,
             gstin: gstin,
+            whatsappNumber: whatsappNumber,
             isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -13923,6 +14113,7 @@ class $$BuyersTableTableManager extends RootTableManager<
             Value<String?> stateCode = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
+            Value<String?> whatsappNumber = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
             required String createdAt,
             required String updatedAt,
@@ -13936,6 +14127,7 @@ class $$BuyersTableTableManager extends RootTableManager<
             stateCode: stateCode,
             phone: phone,
             gstin: gstin,
+            whatsappNumber: whatsappNumber,
             isActive: isActive,
             createdAt: createdAt,
             updatedAt: updatedAt,

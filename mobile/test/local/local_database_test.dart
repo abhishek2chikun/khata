@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 6);
+    expect(database.schemaVersion, 8);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -57,6 +57,7 @@ void main() {
           'state',
           'state_code',
           'is_active',
+          'whatsapp_number',
         ]));
     expect(
         _columnNames(database, 'buyers'),
@@ -64,6 +65,7 @@ void main() {
           'state',
           'state_code',
           'is_active',
+          'whatsapp_number',
         ]));
     expect(
         _columnNames(database, 'buyer_transactions'),

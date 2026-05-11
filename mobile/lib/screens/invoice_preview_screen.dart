@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../models/invoice_detail.dart';
 import '../models/invoice_quote.dart';
 import '../models/product.dart';
+import '../services/invoice_pdf_service.dart';
+import '../services/invoice_share_service.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
 
 class InvoicePreviewScreen extends StatelessWidget {
-  const InvoicePreviewScreen({super.key, required this.controller});
+  const InvoicePreviewScreen({
+    super.key,
+    required this.controller,
+    this.shareService,
+  });
 
   final InvoiceDraftController controller;
+  final InvoiceShareService? shareService;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +69,15 @@ class InvoicePreviewScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  if (shareService != null)
+                    _PostCreationShareButtons(
+                      invoice: createdInvoice,
+                      customerPhone: controller.draft.customer?.phone,
+                      customerWhatsapp:
+                          controller.draft.customer?.whatsappNumber,
+                      shareService: shareService!,
+                    ),
+                  const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(true),
                     child: const Text('Done'),
@@ -198,5 +215,92 @@ class InvoicePreviewScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _PostCreationShareButtons extends StatelessWidget {
+  const _PostCreationShareButtons({
+    required this.invoice,
+    required this.customerPhone,
+    required this.customerWhatsapp,
+    required this.shareService,
+  });
+
+  final InvoiceDetail invoice;
+  final String? customerPhone;
+  final String? customerWhatsapp;
+  final InvoiceShareService shareService;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhone = (customerPhone ?? '').isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (hasPhone) ...<Widget>[
+          OutlinedButton(
+            key: const Key('shareWhatsAppButton'),
+            onPressed: () => _shareWhatsApp(context),
+            child: const Text('Share via WhatsApp'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            key: const Key('shareSmsButton'),
+            onPressed: () => _shareSms(context),
+            child: const Text('Share via SMS'),
+          ),
+          const SizedBox(height: 8),
+        ],
+        OutlinedButton(
+          key: const Key('shareSystemButton'),
+          onPressed: () => _shareSystem(context),
+          child: const Text('Share...'),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Future<void> _shareWhatsApp(BuildContext context) async {
+    try {
+      final pdfService = InvoicePdfService.production();
+      final path = await pdfService.generateInvoicePdf(invoice);
+      await shareService.shareViaWhatsApp(
+        path,
+        customerPhone ?? '',
+        whatsappNumber: customerWhatsapp,
+      );
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    }
+  }
+
+  Future<void> _shareSms(BuildContext context) async {
+    try {
+      final pdfService = InvoicePdfService.production();
+      final path = await pdfService.generateInvoicePdf(invoice);
+      await shareService.shareViaSms(path, customerPhone ?? '');
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    }
+  }
+
+  Future<void> _shareSystem(BuildContext context) async {
+    try {
+      final pdfService = InvoicePdfService.production();
+      final path = await pdfService.generateInvoicePdf(invoice);
+      await shareService.shareInvoicePdf(path);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    }
   }
 }

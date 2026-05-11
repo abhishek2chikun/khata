@@ -1054,6 +1054,14 @@ class FakeCustomersService implements CustomersService {
   }
 
   @override
+  Future<Customer> updateCustomer({
+    required String id,
+    required UpdateCustomerInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<Customer>> fetchCustomers({String search = ''}) async {
     if (error != null) {
       throw error!;

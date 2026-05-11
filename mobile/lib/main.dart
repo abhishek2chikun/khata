@@ -23,6 +23,7 @@ import 'services/analytics_service.dart';
 import 'services/company_profile_service.dart';
 import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
+import 'services/invoice_share_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
 import 'services/customers_service.dart';
@@ -162,7 +163,8 @@ class _BillingAppState extends State<BillingApp> {
               final result = await Navigator.of(context).push<Product>(
                 MaterialPageRoute<Product>(
                   builder: (_) => ProductFormScreen(
-                      productsService: widget.productsService),
+                      productsService: widget.productsService,
+                      buyersService: widget.buyersService),
                 ),
               );
               return result != null;
@@ -172,8 +174,8 @@ class _BillingAppState extends State<BillingApp> {
                 MaterialPageRoute<Product>(
                   builder: (_) => ProductDetailScreen(
                     productsService: widget.productsService,
+                    buyersService: widget.buyersService,
                     product: product,
-                    onEditProduct: _openProductForm,
                     supportsProductReactivation:
                         widget.dependencies?.mode == DataMode.local,
                   ),
@@ -193,6 +195,7 @@ class _BillingAppState extends State<BillingApp> {
           return BuyerListScreen(
             drawer: drawer,
             buyersService: widget.buyersService,
+            productsService: widget.productsService,
           );
         case AppDestination.invoices:
           return InvoiceListScreen(
@@ -200,6 +203,7 @@ class _BillingAppState extends State<BillingApp> {
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
             customersService: widget.customersService,
+            shareService: InvoiceShareService.production(),
           );
         case AppDestination.analytics:
           return AnalyticsScreen(
@@ -233,23 +237,12 @@ class _BillingAppState extends State<BillingApp> {
               productsService: widget.productsService,
               customersService: widget.customersService,
               initialCustomer: customer,
+              shareService: InvoiceShareService.production(),
             ),
           ),
         ) ??
         false;
     return created;
-  }
-
-  Future<Product?> _openProductForm(Product product) async {
-    final result = await Navigator.of(context).push<Product>(
-      MaterialPageRoute<Product>(
-        builder: (_) => ProductFormScreen(
-          productsService: widget.productsService,
-          product: product,
-        ),
-      ),
-    );
-    return result;
   }
 
   Future<void> _checkLocalUsers() async {

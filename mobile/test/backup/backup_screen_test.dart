@@ -244,6 +244,14 @@ class _FakeCustomersService implements CustomersService {
   }
 
   @override
+  Future<Customer> updateCustomer({
+    required String id,
+    required UpdateCustomerInput input,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate}) {
     throw UnimplementedError();
@@ -300,6 +308,14 @@ class _FakeBuyersService implements BuyersService {
 
   @override
   Future<Buyer> createBuyer(CreateBuyerInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Buyer> updateBuyer({
+    required String id,
+    required UpdateBuyerInput input,
+  }) {
     throw UnimplementedError();
   }
 

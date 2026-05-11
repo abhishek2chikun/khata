@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/buyer.dart';
 import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/screens/buyer_detail_screen.dart';
+import 'package:internal_billing_khata_mobile/screens/buyer_form_screen.dart';
 import 'package:internal_billing_khata_mobile/screens/buyer_list_screen.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/widgets/app_navigation_drawer.dart';
@@ -72,6 +74,11 @@ void main() {
         find.byKey(const Key('buyerAddressField')), 'Mill Road');
     await tester.enterText(
         find.byKey(const Key('buyerPhoneField')), '7777777777');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submitBuyerButton')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('submitBuyerButton')));
     await tester.pumpAndSettle();
 
@@ -251,6 +258,90 @@ void main() {
         findsOneWidget);
     expect(service.purchaseAmounts, isEmpty);
   });
+
+  testWidgets('edit button on buyer detail navigates to form', (tester) async {
+    final service = FakeBuyersService(
+      ledgers: <BuyerLedger>[
+        BuyerLedger(
+            buyer: _buyer, transactions: const <BuyerLedgerTransaction>[]),
+        BuyerLedger(
+          buyer: _buyer.copyWith(
+            name: 'Global Suppliers Edited',
+            pendingPayable: 500,
+          ),
+          transactions: const <BuyerLedgerTransaction>[],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerDetailScreen(buyerId: 'buyer-1', buyersService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('editBuyerButton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('editBuyerButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit buyer'), findsOneWidget);
+    expect(find.byType(BuyerFormScreen), findsOneWidget);
+  });
+
+  testWidgets('buyer form in edit mode pre-fills fields and saves',
+      (tester) async {
+    final service = FakeBuyersService(
+      ledgers: <BuyerLedger>[
+        BuyerLedger(
+            buyer: _buyer, transactions: const <BuyerLedgerTransaction>[]),
+        BuyerLedger(
+          buyer: _buyer.copyWith(
+            name: 'Updated Suppliers',
+            address: 'New Address',
+            pendingPayable: 500,
+          ),
+          transactions: const <BuyerLedgerTransaction>[],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerDetailScreen(buyerId: 'buyer-1', buyersService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('editBuyerButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit buyer'), findsOneWidget);
+    expect(
+        (tester.widget<TextField>(find.byKey(const Key('buyerNameField')))
+                .controller
+                ?.text ??
+            ''),
+        'Global Suppliers');
+
+    await tester.enterText(
+        find.byKey(const Key('buyerNameField')), 'Updated Suppliers');
+    await tester.enterText(
+        find.byKey(const Key('buyerAddressField')), 'New Address');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('submitBuyerButton')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('submitBuyerButton')));
+    await tester.pumpAndSettle();
+
+    expect(service.updateInputs, hasLength(1));
+    expect(service.updateInputs.single.input.name, 'Updated Suppliers');
+    expect(service.updateInputs.single.input.address, 'New Address');
+    expect(find.textContaining('Updated Suppliers'), findsWidgets);
+  });
 }
 
 const _buyer = Buyer(
@@ -276,6 +367,8 @@ class FakeBuyersService implements BuyersService {
   final List<BuyerLedgerEntryInput> paymentsMade = <BuyerLedgerEntryInput>[];
   final List<BuyerPayableAdjustmentInput> adjustments =
       <BuyerPayableAdjustmentInput>[];
+  final List<({String id, UpdateBuyerInput input})> updateInputs =
+      <({String id, UpdateBuyerInput input})>[];
   final List<BuyerLedger> ledgers;
   List<Buyer> buyers;
   var fetchBuyerLedgerCount = 0;
@@ -293,9 +386,33 @@ class FakeBuyersService implements BuyersService {
       stateCode: input.stateCode,
       isActive: true,
       pendingPayable: 0,
+      whatsappNumber: input.whatsappNumber,
     );
     buyers = <Buyer>[...buyers, buyer];
     return buyer;
+  }
+
+  @override
+  Future<Buyer> updateBuyer({
+    required String id,
+    required UpdateBuyerInput input,
+  }) async {
+    updateInputs.add((id: id, input: input));
+    final index = buyers.indexWhere((b) => b.id == id);
+    if (index == -1) {
+      throw const ApiError(code: 'NOT_FOUND', message: 'Buyer not found', statusCode: 404);
+    }
+    final updated = buyers[index].copyWith(
+      name: input.name,
+      address: input.address,
+      phone: input.phone,
+      gstin: input.gstin,
+      state: input.state,
+      stateCode: input.stateCode,
+      whatsappNumber: input.whatsappNumber,
+    );
+    buyers = <Buyer>[...buyers]..[index] = updated;
+    return updated;
   }
 
   @override

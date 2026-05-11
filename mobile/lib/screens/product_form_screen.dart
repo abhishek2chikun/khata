@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
+import '../models/buyer.dart';
 import '../models/product.dart';
+import '../services/buyers_service.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
+import 'buyer_form_screen.dart';
 
 class ProductFormScreen extends StatefulWidget {
   const ProductFormScreen({
     super.key,
     required this.productsService,
+    this.buyersService,
     this.product,
   });
 
   final ProductsService productsService;
+  final BuyersService? buyersService;
   final Product? product;
 
   @override
@@ -31,9 +36,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _quantityController;
   late final TextEditingController _thresholdController;
 
+  final FocusNode _companyFocusNode = FocusNode();
+
   bool _isSaving = false;
   String? _errorMessage;
   final Map<String, String> _fieldErrors = <String, String>{};
+
+  List<Buyer> _buyers = const <Buyer>[];
+  bool _isLoadingBuyers = true;
+  Buyer? _selectedBuyer;
+  String? _selectedBuyerId;
 
   bool get _isEditing => widget.product != null;
 
@@ -63,6 +75,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _thresholdController = TextEditingController(
       text: product == null ? '' : product.lowStockThreshold.toString(),
     );
+    _selectedBuyerId = product?.buyerId;
+    _loadBuyers();
   }
 
   @override
@@ -77,7 +91,35 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _gstController.dispose();
     _quantityController.dispose();
     _thresholdController.dispose();
+    _companyFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBuyers() async {
+    final buyersService = widget.buyersService;
+    if (buyersService == null) {
+      setState(() {
+        _isLoadingBuyers = false;
+      });
+      return;
+    }
+    try {
+      final buyers = await buyersService.fetchBuyers();
+      if (!mounted) return;
+      final initialBuyerId = _selectedBuyerId;
+      setState(() {
+        _buyers = buyers;
+        _isLoadingBuyers = false;
+        if (initialBuyerId != null) {
+          _selectedBuyer = _buyers.where((b) => b.id == initialBuyerId).firstOrNull;
+        }
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingBuyers = false;
+      });
+    }
   }
 
   @override
@@ -93,8 +135,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            _buildField(_companyController, 'Company / buyer',
-                errorKey: 'Company'),
+            _buildCompanyField(),
             _buildField(_categoryController, 'Category'),
             _buildField(_itemNameController, 'Item name'),
             _buildField(_itemCodeController, 'Item number'),
@@ -133,6 +174,127 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildCompanyField() {
+    final buyersService = widget.buyersService;
+    if (buyersService == null || _isLoadingBuyers) {
+      return _buildField(_companyController, 'Company / buyer',
+          errorKey: 'Company');
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RawAutocomplete<Buyer>(
+            focusNode: _companyFocusNode,
+            textEditingController: _companyController,
+            optionsViewBuilder: (BuildContext context,
+                AutocompleteOnSelected<Buyer> onSelected,
+                Iterable<Buyer> options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final buyer = options.elementAt(index);
+                        return InkWell(
+                          onTap: () => onSelected(buyer),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(buyer.name),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+            fieldViewBuilder: (
+              BuildContext context,
+              TextEditingController textEditingController,
+              FocusNode focusNode,
+              VoidCallback onFieldSubmitted,
+            ) {
+              return TextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                enabled: !_isSaving,
+                decoration: InputDecoration(
+                  labelText: 'Company / buyer',
+                  errorText: _fieldErrors['Company'],
+                  border: const OutlineInputBorder(),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_selectedBuyer != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: _isSaving
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _selectedBuyer = null;
+                                    _selectedBuyerId = null;
+                                    _companyController.clear();
+                                  });
+                                },
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.add, size: 18),
+                        tooltip: 'Add new buyer',
+                        onPressed: _isSaving ? null : _addNewBuyer,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              final query = textEditingValue.text.toLowerCase();
+              if (query.isEmpty) return _buyers;
+              return _buyers.where(
+                (buyer) => buyer.name.toLowerCase().contains(query),
+              );
+            },
+            displayStringForOption: (Buyer buyer) => buyer.name,
+            onSelected: (Buyer buyer) {
+              setState(() {
+                _selectedBuyer = buyer;
+                _selectedBuyerId = buyer.id;
+                _companyController.text = buyer.name;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addNewBuyer() async {
+    final buyersService = widget.buyersService;
+    if (buyersService == null) return;
+    final result = await Navigator.of(context).push<Buyer>(
+      MaterialPageRoute<Buyer>(
+        builder: (_) => BuyerFormScreen(buyersService: buyersService),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _buyers = [..._buyers, result];
+        _selectedBuyer = result;
+        _selectedBuyerId = result.id;
+        _companyController.text = result.name;
+      });
+    }
   }
 
   Widget _buildField(
@@ -181,6 +343,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 unit: validation.unit,
                 gstRate: validation.gstRate,
                 lowStockThreshold: validation.lowStockThreshold,
+                buyerId: _selectedBuyerId,
               ),
             )
           : await widget.productsService.createProduct(
@@ -195,6 +358,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 gstRate: validation.gstRate,
                 quantityOnHand: validation.quantityOnHand,
                 lowStockThreshold: validation.lowStockThreshold,
+                buyerId: _selectedBuyerId,
               ),
             );
       if (!mounted) {

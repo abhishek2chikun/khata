@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
-import '../models/buyer.dart';
-import '../services/buyers_service.dart';
+import '../models/customer.dart';
+import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
 
-class BuyerFormScreen extends StatefulWidget {
-  const BuyerFormScreen({
+class CustomerFormScreen extends StatefulWidget {
+  const CustomerFormScreen({
     super.key,
-    required this.buyersService,
-    this.buyer,
+    required this.customersService,
+    this.customer,
   });
 
-  final BuyersService buyersService;
-  final Buyer? buyer;
+  final CustomersService customersService;
+  final Customer? customer;
 
   @override
-  State<BuyerFormScreen> createState() => _BuyerFormScreenState();
+  State<CustomerFormScreen> createState() => _CustomerFormScreenState();
 }
 
-class _BuyerFormScreenState extends State<BuyerFormScreen> {
+class _CustomerFormScreenState extends State<CustomerFormScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _addressController;
   late final TextEditingController _phoneController;
@@ -32,24 +32,25 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
   bool _whatsappSameAsPhone = false;
   String? _errorMessage;
 
-  bool get _isEditing => widget.buyer != null;
+  bool get _isEditing => widget.customer != null;
 
   @override
   void initState() {
     super.initState();
-    final buyer = widget.buyer;
-    _nameController = TextEditingController(text: buyer?.name ?? '');
-    _addressController = TextEditingController(text: buyer?.address ?? '');
-    _phoneController = TextEditingController(text: buyer?.phone ?? '');
+    final customer = widget.customer;
+    _nameController = TextEditingController(text: customer?.name ?? '');
+    _addressController = TextEditingController(text: customer?.address ?? '');
+    _phoneController = TextEditingController(text: customer?.phone ?? '');
     _whatsappController =
-        TextEditingController(text: buyer?.whatsappNumber ?? '');
-    _gstinController = TextEditingController(text: buyer?.gstin ?? '');
-    _stateController = TextEditingController(text: buyer?.state ?? '');
-    _stateCodeController = TextEditingController(text: buyer?.stateCode ?? '');
+        TextEditingController(text: customer?.whatsappNumber ?? '');
+    _gstinController = TextEditingController(text: customer?.gstin ?? '');
+    _stateController = TextEditingController(text: customer?.state ?? '');
+    _stateCodeController =
+        TextEditingController(text: customer?.stateCode ?? '');
 
-    if (buyer != null &&
-        buyer.whatsappNumber != null &&
-        buyer.whatsappNumber == buyer.phone) {
+    if (customer != null &&
+        customer.whatsappNumber != null &&
+        customer.whatsappNumber == customer.phone) {
       _whatsappSameAsPhone = true;
     }
 
@@ -78,7 +79,8 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit buyer' : 'Add buyer')),
+      appBar:
+          AppBar(title: Text(_isEditing ? 'Edit customer' : 'Add customer')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -89,17 +91,17 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
               const SizedBox(height: 16),
             ],
             _buildField(
-              key: const Key('buyerNameField'),
+              key: const Key('customerNameField'),
               controller: _nameController,
               label: 'Name',
             ),
             _buildField(
-              key: const Key('buyerAddressField'),
+              key: const Key('customerAddressField'),
               controller: _addressController,
               label: 'Address',
             ),
             _buildField(
-              key: const Key('buyerPhoneField'),
+              key: const Key('customerPhoneField'),
               controller: _phoneController,
               label: 'Phone',
             ),
@@ -119,29 +121,29 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
                     },
             ),
             _buildField(
-              key: const Key('buyerWhatsappField'),
+              key: const Key('customerWhatsappField'),
               controller: _whatsappController,
               label: 'WhatsApp number',
               enabled: !_whatsappSameAsPhone,
             ),
             _buildField(
-              key: const Key('buyerGstinField'),
+              key: const Key('customerGstinField'),
               controller: _gstinController,
               label: 'GSTIN',
             ),
             _buildField(
-              key: const Key('buyerStateField'),
+              key: const Key('customerStateField'),
               controller: _stateController,
               label: 'State',
             ),
             _buildField(
-              key: const Key('buyerStateCodeField'),
+              key: const Key('customerStateCodeField'),
               controller: _stateCodeController,
               label: 'State code',
             ),
             const SizedBox(height: 16),
             FilledButton(
-              key: const Key('submitBuyerButton'),
+              key: const Key('submitCustomerButton'),
               onPressed: _isSaving ? null : _submit,
               child: _isSaving
                   ? const SizedBox(
@@ -149,7 +151,7 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_isEditing ? 'Save changes' : 'Save buyer'),
+                  : Text(_isEditing ? 'Save changes' : 'Save customer'),
             ),
           ],
         ),
@@ -192,11 +194,11 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
     });
 
     try {
-      final Buyer buyer;
+      final Customer customer;
       if (_isEditing) {
-        buyer = await widget.buyersService.updateBuyer(
-          id: widget.buyer!.id,
-          input: UpdateBuyerInput(
+        customer = await widget.customersService.updateCustomer(
+          id: widget.customer!.id,
+          input: UpdateCustomerInput(
             name: name,
             address: _addressController.text.trim(),
             phone: _nullableText(_phoneController),
@@ -209,8 +211,8 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
           ),
         );
       } else {
-        buyer = await widget.buyersService.createBuyer(
-          CreateBuyerInput(
+        customer = await widget.customersService.createCustomer(
+          CreateCustomerInput(
             name: name,
             address: _addressController.text.trim(),
             phone: _nullableText(_phoneController),
@@ -226,7 +228,7 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop<Buyer>(buyer);
+      Navigator.of(context).pop<Customer>(customer);
     } on ApiError catch (error) {
       if (!mounted) {
         return;
