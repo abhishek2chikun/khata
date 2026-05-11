@@ -34,6 +34,7 @@ class LocalProductsService implements ProductsService {
               category: input.category,
               itemName: input.itemName,
               itemNumber: input.itemNumber,
+              buyerId: Value(input.buyerId),
               buyingPrice: _normalizeDecimal(input.buyingPrice),
               sellingPrice: _normalizeDecimal(input.sellingPrice),
               unit: Value(input.unit),
@@ -74,6 +75,9 @@ class LocalProductsService implements ProductsService {
     }
     if (filter?.category case final category? when category.isNotEmpty) {
       query.where((product) => product.category.equals(category));
+    }
+    if (filter?.buyerId case final buyerId?) {
+      query.where((product) => product.buyerId.equals(buyerId));
     }
     query.orderBy([
       (product) => OrderingTerm.asc(product.itemName),
@@ -129,6 +133,7 @@ class LocalProductsService implements ProductsService {
           category: Value(input.category),
           itemName: Value(input.itemName),
           itemNumber: Value(input.itemNumber),
+          buyerId: Value(input.buyerId),
           buyingPrice: Value(_normalizeDecimal(input.buyingPrice)),
           sellingPrice: Value(_normalizeDecimal(input.sellingPrice)),
           unit: Value(input.unit),
@@ -364,6 +369,7 @@ class LocalProductsService implements ProductsService {
       category: product.category,
       itemName: product.itemName,
       itemNumber: product.itemNumber,
+      buyerId: product.buyerId,
       buyingPrice: double.parse(product.buyingPrice),
       sellingPrice: double.parse(product.sellingPrice),
       unit: product.unit,

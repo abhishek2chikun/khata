@@ -9,6 +9,7 @@ class Buyer {
     required this.stateCode,
     required this.isActive,
     required this.pendingPayable,
+    this.whatsappNumber,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class Buyer {
   final String? stateCode;
   final bool isActive;
   final double pendingPayable;
+  final String? whatsappNumber;
 
   Buyer copyWith({
     String? id,
@@ -31,6 +33,7 @@ class Buyer {
     String? stateCode,
     bool? isActive,
     double? pendingPayable,
+    String? whatsappNumber,
   }) {
     return Buyer(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class Buyer {
       stateCode: stateCode ?? this.stateCode,
       isActive: isActive ?? this.isActive,
       pendingPayable: pendingPayable ?? this.pendingPayable,
+      whatsappNumber: whatsappNumber ?? this.whatsappNumber,
     );
   }
 
@@ -56,6 +60,7 @@ class Buyer {
       stateCode: json['state_code'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       pendingPayable: _toDouble(json['pending_payable']),
+      whatsappNumber: json['whatsapp_number'] as String?,
     );
   }
 

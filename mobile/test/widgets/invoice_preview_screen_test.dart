@@ -7,6 +7,7 @@ import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/screens/invoice_preview_screen.dart';
+import 'package:internal_billing_khata_mobile/services/invoice_share_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/state/invoice_draft_controller.dart';
 
@@ -110,6 +111,65 @@ void main() {
 
     expect(find.byKey(const Key('paymentStateLabel')), findsOneWidget);
     expect(find.byKey(const Key('paidAmountLabel')), findsOneWidget);
+  });
+
+  testWidgets('post-creation shows share buttons when invoice is created',
+      (tester) async {
+    final createdInvoice = InvoiceDetail(
+      id: 'inv-1',
+      customerId: 'customer-1',
+      invoiceNumber: '42',
+      status: 'ACTIVE',
+      paymentState: 'CREDIT',
+      paymentMode: 'CREDIT',
+      customerName: 'ABC Stores',
+      invoiceDate: '2026-01-10',
+      grandTotal: 236,
+      notes: null,
+      cancelReason: null,
+      items: const <InvoiceDetailItem>[
+        InvoiceDetailItem(
+          productId: 'product-1',
+          productName: 'Blue Pen',
+          quantity: 2,
+          lineTotal: 236,
+        ),
+      ],
+    );
+    final service = _CreateInvoicesService(createdInvoice: createdInvoice);
+    final customer = const Customer(
+      id: 'customer-1',
+      name: 'ABC Stores',
+      address: 'Market Yard',
+      phone: '9999999999',
+      gstin: '27BBBBB0000B1Z5',
+      state: 'Maharashtra',
+      stateCode: '27',
+      isActive: true,
+      pendingBalance: 0,
+    );
+    final controller = InvoiceDraftController(
+      invoicesService: service,
+      initialCustomer: customer,
+    );
+    controller.updateItemProduct(0, _product);
+    await controller.requestQuote();
+    await controller.submitInvoice();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoicePreviewScreen(
+          controller: controller,
+          shareService: _FakeShareService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shareWhatsAppButton')), findsOneWidget);
+    expect(find.byKey(const Key('shareSmsButton')), findsOneWidget);
+    expect(find.byKey(const Key('shareSystemButton')), findsOneWidget);
+    expect(find.text('Invoice created'), findsOneWidget);
   });
 }
 
@@ -221,4 +281,52 @@ class _StaticInvoicesService implements InvoicesService {
   Future<List<InvoiceSummary>> listInvoices({String? status}) {
     throw UnimplementedError();
   }
+}
+
+class _CreateInvoicesService implements InvoicesService {
+  _CreateInvoicesService({required this.createdInvoice});
+
+  final InvoiceDetail createdInvoice;
+
+  @override
+  Future<InvoiceQuote> quoteInvoice(InvoiceDraft draft) async => _quote;
+
+  @override
+  Future<CreateInvoiceResult> createInvoice({
+    required InvoiceDraft draft,
+    required String requestId,
+  }) async {
+    return CreateInvoiceResult(
+      invoice: createdInvoice,
+      warnings: const <InvoiceWarning>[],
+    );
+  }
+
+  @override
+  Future<InvoiceDetail> cancelInvoice(
+      {required String invoiceId, required String reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvoiceDetail> fetchInvoiceDetail(String invoiceId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<InvoiceSummary>> listInvoices({String? status}) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeShareService implements InvoiceShareService {
+  @override
+  Future<void> shareInvoicePdf(String filePath) async {}
+
+  @override
+  Future<void> shareViaWhatsApp(String filePath, String phoneNumber,
+      {String? whatsappNumber}) async {}
+
+  @override
+  Future<void> shareViaSms(String filePath, String phoneNumber) async {}
 }

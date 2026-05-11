@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/product.dart';
+import '../services/buyers_service.dart';
+import 'product_form_screen.dart';
 import '../services/payments_service.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
@@ -11,13 +13,13 @@ class ProductDetailScreen extends StatefulWidget {
     super.key,
     required this.product,
     required this.productsService,
-    required this.onEditProduct,
+    this.buyersService,
     this.supportsProductReactivation = false,
   });
 
   final Product product;
   final ProductsService productsService;
-  final Future<Product?> Function(Product product) onEditProduct;
+  final BuyersService? buyersService;
   final bool supportsProductReactivation;
 
   @override
@@ -27,6 +29,7 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late Product _product;
   bool _isSaving = false;
+  bool _wasEdited = false;
   String? _errorMessage;
 
   @override
@@ -37,7 +40,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_wasEdited,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          Navigator.of(context).pop(_product);
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(title: const Text('Product details')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -120,6 +130,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -180,9 +191,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _handleEdit() async {
-    final updatedProduct = await widget.onEditProduct(_product);
-    if (updatedProduct != null && mounted) {
-      Navigator.of(context).pop(updatedProduct);
+    final result = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (_) => ProductFormScreen(
+          productsService: widget.productsService,
+          buyersService: widget.buyersService,
+          product: _product,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _product = result;
+        _wasEdited = true;
+      });
     }
   }
 

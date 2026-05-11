@@ -14,11 +14,45 @@ class CreateBuyerInput {
     this.gstin,
     this.state,
     this.stateCode,
+    this.whatsappNumber,
   });
 
   final String name;
   final String address;
   final String? phone;
+  final String? gstin;
+  final String? state;
+  final String? stateCode;
+  final String? whatsappNumber;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'name': name,
+      'address': address,
+      'phone': phone,
+      'gstin': gstin,
+      'state': state,
+      'state_code': stateCode,
+      'whatsapp_number': whatsappNumber,
+    };
+  }
+}
+
+class UpdateBuyerInput {
+  const UpdateBuyerInput({
+    required this.name,
+    required this.address,
+    this.phone,
+    this.whatsappNumber,
+    this.gstin,
+    this.state,
+    this.stateCode,
+  });
+
+  final String name;
+  final String address;
+  final String? phone;
+  final String? whatsappNumber;
   final String? gstin;
   final String? state;
   final String? stateCode;
@@ -28,6 +62,7 @@ class CreateBuyerInput {
       'name': name,
       'address': address,
       'phone': phone,
+      'whatsapp_number': whatsappNumber,
       'gstin': gstin,
       'state': state,
       'state_code': stateCode,
@@ -83,6 +118,9 @@ abstract class BuyersService {
 
   Future<Buyer> createBuyer(CreateBuyerInput input);
 
+  Future<Buyer> updateBuyer(
+      {required String id, required UpdateBuyerInput input});
+
   Future<BuyerLedger> fetchBuyerLedger(String buyerId);
 
   Future<void> addOpeningPayable({
@@ -114,6 +152,14 @@ class ApiBuyersService implements BuyersService {
   @override
   Future<Buyer> createBuyer(CreateBuyerInput input) async {
     final response = await _apiClient.post('/buyers', body: input.toJson());
+    return Buyer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<Buyer> updateBuyer(
+      {required String id, required UpdateBuyerInput input}) async {
+    final response =
+        await _apiClient.put('/buyers/$id', body: input.toJson());
     return Buyer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 

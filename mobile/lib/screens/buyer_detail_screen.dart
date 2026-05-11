@@ -5,19 +5,25 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/buyer.dart';
 import '../models/buyer_ledger.dart';
+import '../models/product.dart';
 import '../services/buyers_service.dart';
 import '../services/money_validator.dart';
+import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
+import 'buyer_form_screen.dart';
+import 'product_detail_screen.dart';
 
 class BuyerDetailScreen extends StatefulWidget {
   const BuyerDetailScreen({
     super.key,
     required this.buyerId,
     required this.buyersService,
+    this.productsService,
   });
 
   final String buyerId;
   final BuyersService buyersService;
+  final ProductsService? productsService;
 
   @override
   State<BuyerDetailScreen> createState() => _BuyerDetailScreenState();
@@ -25,13 +31,16 @@ class BuyerDetailScreen extends StatefulWidget {
 
 class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
   BuyerLedger? _ledger;
+  List<Product> _products = const <Product>[];
   bool _isLoading = true;
+  bool _isLoadingProducts = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadBuyer();
+    _loadProducts();
   }
 
   @override
@@ -78,6 +87,13 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
                     Text(
                       'Pending Payable: ${buyer.pendingPayable.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      key: const Key('editBuyerButton'),
+                      onPressed: _isLoading ? null : _handleEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit buyer'),
                     ),
                     const SizedBox(height: 16),
                     Wrap(
@@ -132,6 +148,21 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
                       const Text('No ledger rows yet')
                     else
                       ...ledger.transactions.map(_buildTransactionTile),
+                    const SizedBox(height: 24),
+                    Text('Products',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    if (_isLoadingProducts)
+                      const Center(
+                          child: SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ))
+                    else if (_products.isEmpty)
+                      const Text('No products linked to this buyer')
+                    else
+                      ..._products.map(_buildProductTile),
                   ],
                 ],
               ),
@@ -147,6 +178,59 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
         trailing: Text(transaction.amount),
       ),
     );
+  }
+
+  Widget _buildProductTile(Product product) {
+    return Card(
+      child: ListTile(
+        title: Text(product.itemName),
+        subtitle: Text('${product.itemNumber} · Stock: ${product.quantityOnHand}'),
+        trailing: Text(product.sellingPrice.toStringAsFixed(2)),
+        onTap: () => _openProductDetail(product),
+      ),
+    );
+  }
+
+  Future<void> _loadProducts() async {
+    final productsService = widget.productsService;
+    if (productsService == null) {
+      setState(() {
+        _isLoadingProducts = false;
+      });
+      return;
+    }
+    try {
+      final products = await productsService.fetchProducts(
+        filter: ProductFilter(buyerId: widget.buyerId),
+      );
+      if (!mounted) return;
+      setState(() {
+        _products = products;
+        _isLoadingProducts = false;
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingProducts = false;
+      });
+    }
+  }
+
+  Future<void> _openProductDetail(Product product) async {
+    final productsService = widget.productsService;
+    if (productsService == null) return;
+    final result = await Navigator.of(context).push<Product>(
+      MaterialPageRoute<Product>(
+        builder: (_) => ProductDetailScreen(
+          productsService: productsService,
+          product: product,
+          supportsProductReactivation: false,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      await _loadProducts();
+    }
   }
 
   Future<void> _loadBuyer() async {
@@ -176,6 +260,22 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _handleEdit() async {
+    final buyer = _ledger?.buyer;
+    if (buyer == null) return;
+    final result = await Navigator.of(context).push<Buyer>(
+      MaterialPageRoute<Buyer>(
+        builder: (_) => BuyerFormScreen(
+          buyersService: widget.buyersService,
+          buyer: buyer,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      await _loadBuyer();
     }
   }
 

@@ -34,6 +34,7 @@ class LocalBuyersService implements BuyersService {
               gstin: Value(input.gstin),
               state: Value(input.state),
               stateCode: Value(input.stateCode),
+              whatsappNumber: Value(input.whatsappNumber),
               createdAt: now,
               updatedAt: now,
             ),
@@ -49,6 +50,58 @@ class LocalBuyersService implements BuyersService {
           ..where((buyer) => buyer.id.equals(id)))
         .getSingle();
     return _toBuyer(buyer, pendingPayable: 0);
+  }
+
+  @override
+  Future<buyer_model.Buyer> updateBuyer({
+    required String id,
+    required UpdateBuyerInput input,
+  }) async {
+    final existing = await (_database.select(_database.buyers)
+          ..where((buyer) => buyer.id.equals(id)))
+        .getSingleOrNull();
+    if (existing == null) {
+      throw const ApiError(
+        code: 'NOT_FOUND',
+        message: 'Buyer not found',
+        statusCode: 404,
+      );
+    }
+
+    await _throwIfDuplicateUpdate(
+      name: input.name,
+      phone: input.phone,
+      excludeId: id,
+    );
+
+    try {
+      await (_database.update(_database.buyers)
+            ..where((buyer) => buyer.id.equals(id)))
+          .write(
+        BuyersCompanion(
+          name: Value(input.name),
+          address: Value(input.address),
+          phone: Value(input.phone),
+          gstin: Value(input.gstin),
+          state: Value(input.state),
+          stateCode: Value(input.stateCode),
+          whatsappNumber: Value(input.whatsappNumber),
+          updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+        ),
+      );
+    } on Object catch (error) {
+      if (await _hasDuplicateExcluding(
+          name: input.name, phone: input.phone, excludeId: id)) {
+        throw _duplicateBuyerError();
+      }
+      throw error;
+    }
+
+    final balances = await _pendingPayablesByBuyerId();
+    final updated = await (_database.select(_database.buyers)
+          ..where((buyer) => buyer.id.equals(id)))
+        .getSingle();
+    return _toBuyer(updated, pendingPayable: balances[id] ?? 0);
   }
 
   @override
@@ -272,6 +325,17 @@ class LocalBuyersService implements BuyersService {
     }
   }
 
+  Future<void> _throwIfDuplicateUpdate({
+    required String name,
+    String? phone,
+    required String excludeId,
+  }) async {
+    if (await _hasDuplicateExcluding(
+        name: name, phone: phone, excludeId: excludeId)) {
+      throw _duplicateBuyerError();
+    }
+  }
+
   Future<bool> _hasDuplicate({required String name, String? phone}) async {
     if (phone == null) {
       return false;
@@ -279,6 +343,25 @@ class LocalBuyersService implements BuyersService {
     final duplicates = await (_database.select(_database.buyers)
           ..where(
             (buyer) => buyer.name.equals(name) & buyer.phone.equals(phone),
+          ))
+        .get();
+    return duplicates.isNotEmpty;
+  }
+
+  Future<bool> _hasDuplicateExcluding({
+    required String name,
+    String? phone,
+    required String excludeId,
+  }) async {
+    if (phone == null) {
+      return false;
+    }
+    final duplicates = await (_database.select(_database.buyers)
+          ..where(
+            (buyer) =>
+                buyer.name.equals(name) &
+                buyer.phone.equals(phone) &
+                buyer.id.equals(excludeId).not(),
           ))
         .get();
     return duplicates.isNotEmpty;
@@ -338,6 +421,7 @@ class LocalBuyersService implements BuyersService {
       stateCode: buyer.stateCode,
       isActive: buyer.isActive,
       pendingPayable: pendingPayable,
+      whatsappNumber: buyer.whatsappNumber,
     );
   }
 

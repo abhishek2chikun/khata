@@ -374,7 +374,6 @@ void main() {
                       productsService: FakeProductsService(
                         products: <Product>[selected],
                       ),
-                      onEditProduct: (_) async => null,
                     ),
                   ),
                 );
