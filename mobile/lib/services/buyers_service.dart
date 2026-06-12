@@ -203,7 +203,7 @@ class ApiBuyersService implements BuyersService {
     required String buyerId,
     required BuyerLedgerEntryInput input,
   }) async {
-    await _apiClient.post('/buyers/$buyerId/collections-made',
+    await _apiClient.post('/buyers/$buyerId/payments-made',
         body: input.toJson());
   }
 

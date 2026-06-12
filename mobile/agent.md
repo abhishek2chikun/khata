@@ -221,6 +221,7 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
+- **2026-06-12:** `ApiBuyersService.addPaymentMade` now posts to `/payments-made` (was `/collections-made`, 404 against live backend).
 - Login is working against the current local backend setup.
 - Inventory and customer flows now have realistic dev data available through the backend demo seed command.
 - The app can create and confirm invoices, and customer khata detail refreshes can reflect resulting ledger changes.
