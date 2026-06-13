@@ -101,3 +101,38 @@ def normalize_line(
         igst_amount=igst_amount,
         line_total=line_total,
     )
+
+
+def normalize_non_gst_line(
+    *,
+    quantity: Decimal,
+    unit_price: Decimal,
+    pricing_mode: str,
+    discount_percent: Decimal,
+) -> NormalizedLine:
+    normalized_quantity = Decimal(quantity)
+    final_unit_price = _round_money(unit_price)
+    normalized_discount_percent = _round_rate(discount_percent)
+    gross_line_total = _round_money(normalized_quantity * final_unit_price)
+    discount_amount = _round_money(gross_line_total * (normalized_discount_percent / Decimal("100")))
+    taxable_amount = _round_money(gross_line_total - discount_amount)
+    line_total = taxable_amount
+    return NormalizedLine(
+        quantity=normalized_quantity,
+        pricing_mode=pricing_mode,
+        entered_unit_price=final_unit_price,
+        unit_price_excl_tax=final_unit_price,
+        unit_price_incl_tax=final_unit_price,
+        gst_rate=Decimal("0.00"),
+        cgst_rate=Decimal("0.00"),
+        sgst_rate=Decimal("0.00"),
+        igst_rate=Decimal("0.00"),
+        discount_percent=normalized_discount_percent,
+        discount_amount=discount_amount,
+        taxable_amount=taxable_amount,
+        gst_amount=Decimal("0.00"),
+        cgst_amount=Decimal("0.00"),
+        sgst_amount=Decimal("0.00"),
+        igst_amount=Decimal("0.00"),
+        line_total=line_total,
+    )

@@ -76,6 +76,8 @@ void main() {
       city: 'Pune',
       state: 'Maharashtra',
       stateCode: '27',
+      gstin: '27ABCDE1234F1Z5',
+      gstFlag: true,
       phone: '9999999999',
     ));
 
@@ -231,6 +233,8 @@ void main() {
       city: 'Mumbai',
       state: 'Maharashtra',
       stateCode: '27',
+      gstin: '27ABCDE1234F1Z5',
+      gstFlag: true,
     ));
 
     final buyer = await buyersService.createBuyer(CreateBuyerInput(

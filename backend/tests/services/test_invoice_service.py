@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.models.buyer import Buyer
@@ -24,6 +26,8 @@ def _seed_invoice_v2_graph(db_session):
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name=f"ABC Stores {uuid4()}", address="Market Yard", state="Maharashtra", state_code="27")
     buyer = Buyer(name=f"Camlin Supplier {uuid4()}", address="Supplier Lane")
@@ -102,6 +106,8 @@ def test_build_quote_returns_expected_totals(db_session):
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
@@ -286,6 +292,8 @@ def test_create_invoice_persists_invoice_items_and_credit_ledger(db_session, see
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
@@ -342,6 +350,8 @@ def test_create_invoice_retry_succeeds_after_customer_is_archived(db_session, se
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
@@ -391,6 +401,8 @@ def test_create_invoice_hash_normalizes_equivalent_decimal_payloads(db_session, 
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name="ABC Stores", address="Market Yard", state="Maharashtra", state_code="27")
     product = Product(
@@ -520,6 +532,8 @@ def test_create_with_overlapping_products_is_idempotent_across_item_order(db_ses
         city="Pune",
         state="Maharashtra",
         state_code="27",
+        gstin="27AAAAA0000A1Z5",
+        gst_flag=True,
     )
     customer = Customer(name=f"ABC Stores {uuid4()}", address="Market Yard", state="Maharashtra", state_code="27")
     product_a = Product(
@@ -608,3 +622,67 @@ def test_create_with_overlapping_products_is_idempotent_across_item_order(db_ses
     )
 
     assert first.invoice.id == second.invoice.id
+
+
+def test_non_gst_seller_forces_zero_tax_without_reducing_final_price(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    company = db_session.scalar(select(CompanyProfile).where(CompanyProfile.is_active.is_(True)))
+    company.gst_flag = False
+    company.gstin = None
+    db_session.commit()
+
+    response = invoice_service.create_invoice(
+        db_session,
+        _v2_create_payload(
+            customer,
+            product,
+            gst_flag=False,
+            items=[_v2_line(product, quantity=Decimal("2.000"), unit_price=Decimal("118.00"), pricing_mode="TAX_INCLUSIVE")],
+        ),
+        seeded_user,
+    )
+    assert response.invoice.gst_total == Decimal("0.00")
+    assert response.invoice.grand_total == Decimal("236.00")
+    assert response.invoice.gst_flag is False
+
+
+def test_gst_seller_rejects_non_gst_taxable_lines_at_quote(db_session):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    with pytest.raises(HTTPException) as exc:
+        invoice_service.build_quote(
+            db_session,
+            InvoiceQuoteRequest(
+                customer_id=customer.id,
+                invoice_date="2026-04-19",
+                payment_state="CREDIT",
+                place_of_supply_state_code="27",
+                gst_flag=False,
+                items=[_v2_line(product)],
+            ),
+        )
+    assert exc.value.detail["error"]["code"] == "NON_GST_TAXABLE_LINES"
+
+
+def test_idempotency_hash_includes_gst_flag(db_session, seeded_user):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    request_id = uuid4()
+    first = invoice_service.create_invoice(
+        db_session,
+        _v2_create_payload(customer, product, request_id=request_id, gst_flag=True),
+        seeded_user,
+    )
+    second = invoice_service.create_invoice(
+        db_session,
+        _v2_create_payload(customer, product, request_id=request_id, gst_flag=True),
+        seeded_user,
+    )
+    assert first.invoice.id == second.invoice.id
+
+    with pytest.raises(HTTPException) as exc:
+        invoice_service.create_invoice(
+            db_session,
+            _v2_create_payload(customer, product, request_id=request_id, gst_flag=False),
+            seeded_user,
+        )
+    assert exc.value.status_code == 409
+    assert exc.value.detail["error"]["code"] == "IDEMPOTENCY_CONFLICT"

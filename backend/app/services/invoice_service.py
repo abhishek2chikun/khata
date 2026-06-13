@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.idempotency import canonical_request_hash
-from app.core.pricing import NormalizedLine, _round_money, normalize_line
+from app.core.pricing import NormalizedLine, _round_money, normalize_line, normalize_non_gst_line
 from app.core.state_codes import get_state_name, normalize_state_code
 from app.core.tax import derive_tax_regime
 from app.models.company_profile import CompanyProfile
@@ -36,6 +36,7 @@ class PreparedInvoiceLine:
 class PreparedInvoice:
     customer: Customer
     company: CompanyProfile
+    gst_flag: bool
     place_of_supply_state_code: str
     place_of_supply_state: str
     tax_regime: str
@@ -46,6 +47,62 @@ class PreparedInvoice:
 
 def _validation_error(message: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "VALIDATION_ERROR", "message": message}})
+
+
+def _policy_error(code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": code, "message": message}})
+
+
+def _validate_company_gst_profile(company: CompanyProfile) -> None:
+    has_gstin = company.gstin is not None and company.gstin.strip() != ""
+    if company.gst_flag and not has_gstin:
+        raise _policy_error("INVALID_GST_PROFILE", "GST registered seller requires a GSTIN")
+    if not company.gst_flag and has_gstin:
+        raise _policy_error("INVALID_GST_PROFILE", "Non-GST seller cannot have a GSTIN")
+
+
+def _resolve_gst_flag(payload: InvoiceQuoteRequest, company: CompanyProfile) -> bool:
+    if payload.gst_flag is not None:
+        return payload.gst_flag
+    return company.gst_flag
+
+
+def _resolve_line_gst_rate(item: object, product: Product) -> Decimal:
+    request_rate = getattr(item, "gst_rate", None)
+    if request_rate is not None:
+        return Decimal(request_rate)
+    return Decimal(product.gst_rate)
+
+
+def _validate_invoice_gst_mode(company: CompanyProfile, resolved_gst_flag: bool, payload: InvoiceQuoteRequest, products_by_id: dict[UUID, Product]) -> None:
+    _validate_company_gst_profile(company)
+    if resolved_gst_flag and not company.gst_flag:
+        raise _policy_error("GST_INVOICE_NOT_ALLOWED", "Non-GST seller cannot issue GST invoices")
+    if not resolved_gst_flag and company.gst_flag:
+        for item in payload.items:
+            product = products_by_id[item.product_id]
+            if _resolve_line_gst_rate(item, product) != Decimal("0.00"):
+                raise _policy_error("NON_GST_TAXABLE_LINES", "Non-GST invoice cannot include taxable lines")
+
+
+def _normalize_prepared_line(*, item: object, product: Product, tax_regime: str, resolved_gst_flag: bool, company: CompanyProfile) -> NormalizedLine:
+    unit_price = item.unit_price if item.unit_price is not None else product.selling_price
+    if resolved_gst_flag:
+        gst_rate = _resolve_line_gst_rate(item, product)
+        return normalize_line(
+            quantity=item.quantity,
+            unit_price=unit_price,
+            pricing_mode=item.pricing_mode,
+            gst_rate=gst_rate,
+            discount_percent=item.discount_percent,
+            tax_regime=tax_regime,
+        )
+    return normalize_non_gst_line(
+        quantity=item.quantity,
+        unit_price=unit_price,
+        pricing_mode=item.pricing_mode,
+        discount_percent=item.discount_percent,
+    )
 
 
 def _create_failed(message: str) -> HTTPException:
@@ -92,7 +149,7 @@ def _lock_or_load_products(session: Session, product_ids: list[UUID], lock: bool
     return {product.id: product for product in products}
 
 
-def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str, invoice_datetime: datetime, paid_amount: Decimal | None = None) -> str:
+def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_code: str, invoice_datetime: datetime, gst_flag: bool, paid_amount: Decimal | None = None) -> str:
     def money(value: Decimal) -> str:
         return f"{Decimal(value):.2f}"
 
@@ -105,6 +162,7 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
         "payment_state": payload.resolved_payment_state(),
         "paid_amount": money(payload.paid_amount if paid_amount is None else paid_amount),
         "place_of_supply_state_code": resolved_state_code,
+        "gst_flag": gst_flag,
         "notes": payload.notes,
         "items": [
             {
@@ -129,6 +187,7 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "CUSTOMER_ARCHIVED", "message": "Archived customer cannot be invoiced"}})
 
     company = _get_active_company_for_invoicing(session)
+    resolved_gst_flag = _resolve_gst_flag(payload, company)
     resolved_state_code = _resolve_place_of_supply_state_code(customer, payload.place_of_supply_state_code)
     resolved_state = get_state_name(resolved_state_code)
     tax_regime = derive_tax_regime(company.state_code, resolved_state_code)
@@ -137,6 +196,8 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
     products_by_id = _lock_or_load_products(session, product_ids, lock_products)
     if len(products_by_id) != len(set(product_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"code": "NOT_FOUND", "message": "One or more products were not found"}})
+
+    _validate_invoice_gst_mode(company, resolved_gst_flag, payload, products_by_id)
 
     warnings: list[InvoiceWarning] = []
     consumed_quantities: dict[UUID, Decimal] = defaultdict(lambda: Decimal("0.000"))
@@ -152,13 +213,12 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
         if not product.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "PRODUCT_ARCHIVED", "message": "Archived product cannot be invoiced"}})
 
-        normalized_line = normalize_line(
-            quantity=item.quantity,
-            unit_price=item.unit_price if item.unit_price is not None else product.selling_price,
-            pricing_mode=item.pricing_mode,
-            gst_rate=item.gst_rate if item.gst_rate is not None else product.gst_rate,
-            discount_percent=item.discount_percent,
+        normalized_line = _normalize_prepared_line(
+            item=item,
+            product=product,
             tax_regime=tax_regime,
+            resolved_gst_flag=resolved_gst_flag,
+            company=company,
         )
         prepared_lines.append(PreparedInvoiceLine(product=product, request_item=item, normalized_line=normalized_line, line_number=line_number))
 
@@ -182,6 +242,7 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
     return PreparedInvoice(
         customer=customer,
         company=company,
+        gst_flag=resolved_gst_flag,
         place_of_supply_state_code=resolved_state_code,
         place_of_supply_state=resolved_state,
         tax_regime=tax_regime,
@@ -197,20 +258,13 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
     )
 
 
-def _resolve_gst_flag(payload: InvoiceQuoteRequest, company: CompanyProfile) -> bool:
-    if payload.gst_flag is not None:
-        return payload.gst_flag
-    return company.gst_flag
-
-
 def build_quote(session: Session, payload: InvoiceQuoteRequest) -> InvoiceQuoteResponse:
     prepared = _prepare_invoice(session, payload, lock_products=False)
-    resolved_gst_flag = _resolve_gst_flag(payload, prepared.company)
     return InvoiceQuoteResponse(
         place_of_supply_state=prepared.place_of_supply_state,
         place_of_supply_state_code=prepared.place_of_supply_state_code,
         tax_regime=prepared.tax_regime,
-        gst_flag=resolved_gst_flag,
+        gst_flag=prepared.gst_flag,
         items=[
             InvoiceLineQuoteResponse(
                 product_id=line.product.id,
@@ -413,17 +467,20 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
             paid_amount = _resolve_paid_amount(payload.resolved_payment_state(), payload.paid_amount, existing.grand_total)
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime, paid_amount)
+            request_hash = _build_invoice_request_hash(
+                payload, existing.place_of_supply_state_code, existing.invoice_datetime, existing.gst_flag, paid_amount
+            )
             if existing.request_hash != request_hash:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}})
             return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
 
         prepared = _prepare_invoice(session, payload, lock_products=True)
-        resolved_gst_flag = _resolve_gst_flag(payload, prepared.company)
         invoice_datetime = payload.resolved_invoice_datetime()
         payment_state = payload.resolved_payment_state()
         paid_amount = _resolve_paid_amount(payment_state, payload.paid_amount, prepared.totals.grand_total)
-        request_hash = _build_invoice_request_hash(payload, prepared.place_of_supply_state_code, invoice_datetime, paid_amount)
+        request_hash = _build_invoice_request_hash(
+            payload, prepared.place_of_supply_state_code, invoice_datetime, prepared.gst_flag, paid_amount
+        )
 
         invoice = Invoice(
             request_id=payload.request_id,
@@ -441,7 +498,7 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
             company_city=prepared.company.city,
             company_state=prepared.company.state,
             company_state_code=prepared.company.state_code,
-            company_gstin=prepared.company.gstin,
+            company_gstin=prepared.company.gstin if prepared.gst_flag else None,
             company_phone=prepared.company.phone,
             company_email=prepared.company.email,
             company_bank_name=prepared.company.bank_name,
@@ -449,7 +506,7 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
             company_bank_ifsc=prepared.company.bank_ifsc,
             company_bank_branch=prepared.company.bank_branch,
             company_jurisdiction=prepared.company.jurisdiction,
-            gst_flag=resolved_gst_flag,
+            gst_flag=prepared.gst_flag,
             invoice_date=invoice_datetime.date(),
             invoice_datetime=invoice_datetime,
             tax_regime=prepared.tax_regime,
@@ -479,7 +536,9 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
         existing = session.scalar(select(Invoice).where(Invoice.request_id == payload.request_id))
         if existing is not None:
             paid_amount = _resolve_paid_amount(payload.resolved_payment_state(), payload.paid_amount, existing.grand_total)
-            request_hash = _build_invoice_request_hash(payload, existing.place_of_supply_state_code, existing.invoice_datetime, paid_amount)
+            request_hash = _build_invoice_request_hash(
+                payload, existing.place_of_supply_state_code, existing.invoice_datetime, existing.gst_flag, paid_amount
+            )
             if existing.request_hash == request_hash:
                 return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"error": {"code": "IDEMPOTENCY_CONFLICT", "message": "An invoice already exists for this request_id with different content"}}) from exc

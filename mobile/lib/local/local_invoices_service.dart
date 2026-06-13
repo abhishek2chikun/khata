@@ -70,7 +70,8 @@ class LocalInvoicesService implements InvoicesService {
                 companyCity: prepared.company.city,
                 companyState: prepared.company.state,
                 companyStateCode: prepared.company.stateCode,
-                companyGstin: Value(prepared.company.gstin),
+                companyGstin: Value(
+                    prepared.gstFlag ? prepared.company.gstin : null),
                 companyPhone: Value(prepared.company.phone),
                 companyEmail: Value(prepared.company.email),
                 companyBankName: Value(prepared.company.bankName),
@@ -411,6 +412,8 @@ class LocalInvoicesService implements InvoicesService {
         statusCode: 400,
       );
     }
+    _validateCompanyGstProfile(company);
+    final resolvedGstFlag = draft.gstFlag ?? company.gstFlag;
     _validateStateMetadata(
       state: company.state,
       stateCode: company.stateCode,
@@ -446,6 +449,13 @@ class LocalInvoicesService implements InvoicesService {
     var gstTotal = 0.0;
     var grandTotal = 0.0;
 
+    if (!company.gstFlag && resolvedGstFlag) {
+      throw _policyError(
+        'GST_INVOICE_NOT_ALLOWED',
+        'Non-GST seller cannot issue GST invoices',
+      );
+    }
+
     for (var index = 0; index < draft.items.length; index += 1) {
       final item = draft.items[index];
       final draftProduct = item.product;
@@ -473,12 +483,29 @@ class LocalInvoicesService implements InvoicesService {
           statusCode: 400,
         );
       }
-      final line = _normalizeLine(
-        product: product,
-        item: item,
-        taxRegime: taxRegime,
-        lineNumber: index + 1,
-      );
+      if (!resolvedGstFlag && company.gstFlag) {
+        final lineRate = _roundRate(
+          item.gstRate ?? double.parse(product.gstRate),
+        );
+        if (lineRate != 0) {
+          throw _policyError(
+            'NON_GST_TAXABLE_LINES',
+            'Non-GST invoice cannot include taxable lines',
+          );
+        }
+      }
+      final line = resolvedGstFlag
+          ? _normalizeLine(
+              product: product,
+              item: item,
+              taxRegime: taxRegime,
+              lineNumber: index + 1,
+            )
+          : _normalizeNonGstLine(
+              product: product,
+              item: item,
+              lineNumber: index + 1,
+            );
       lines.add(line);
       subtotal += line.taxableAmount + line.discountAmount;
       discountTotal += line.discountAmount;
@@ -502,10 +529,11 @@ class LocalInvoicesService implements InvoicesService {
       draft.paidAmount,
       _roundMoney(grandTotal),
     );
+
     return _PreparedInvoice(
       customer: customer,
       company: company,
-      gstFlag: draft.gstFlag ?? company.gstFlag,
+      gstFlag: resolvedGstFlag,
       invoiceDatetime: invoiceDatetime,
       invoiceDate: invoiceDate,
       paymentState: paymentState,
@@ -577,6 +605,10 @@ class LocalInvoicesService implements InvoicesService {
     if (_emptyToNull(draft.notes) != _emptyToNull(invoice.notes)) {
       return false;
     }
+    final resolvedGstFlag = draft.gstFlag;
+    if (resolvedGstFlag != null && resolvedGstFlag != invoice.gstFlag) {
+      return false;
+    }
     if (draft.items.length != items.length) {
       return false;
     }
@@ -623,6 +655,63 @@ class LocalInvoicesService implements InvoicesService {
         return draft.paidAmount;
     }
     return draft.paidAmount;
+  }
+
+  _PreparedLine _normalizeNonGstLine({
+    required Product product,
+    required InvoiceDraftItem item,
+    required int lineNumber,
+  }) {
+    _validateLine(item);
+    final finalUnitPrice = _roundMoney(
+      item.unitPrice ?? double.parse(product.sellingPrice),
+    );
+    final discountPercent = _roundRate(item.discountPercent);
+    final grossLineTotal = _roundMoney(item.quantity * finalUnitPrice);
+    final discountAmount = _roundMoney(grossLineTotal * (discountPercent / 100));
+    final taxableAmount = _roundMoney(grossLineTotal - discountAmount);
+    final lineTotal = taxableAmount;
+    return _PreparedLine(
+      product: product,
+      item: item,
+      lineNumber: lineNumber,
+      enteredUnitPrice: finalUnitPrice,
+      unitPriceExclTax: finalUnitPrice,
+      unitPriceInclTax: finalUnitPrice,
+      gstRate: 0,
+      cgstRate: 0,
+      sgstRate: 0,
+      igstRate: 0,
+      discountPercent: discountPercent,
+      discountAmount: discountAmount,
+      taxableAmount: taxableAmount,
+      gstAmount: 0,
+      cgstAmount: 0,
+      sgstAmount: 0,
+      igstAmount: 0,
+      lineTotal: lineTotal,
+    );
+  }
+
+  void _validateCompanyGstProfile(CompanyProfile company) {
+    final hasGstin =
+        company.gstin != null && company.gstin!.trim().isNotEmpty;
+    if (company.gstFlag && !hasGstin) {
+      throw _policyError(
+        'INVALID_GST_PROFILE',
+        'GST registered seller requires a GSTIN',
+      );
+    }
+    if (!company.gstFlag && hasGstin) {
+      throw _policyError(
+        'INVALID_GST_PROFILE',
+        'Non-GST seller cannot have a GSTIN',
+      );
+    }
+  }
+
+  ApiError _policyError(String code, String message) {
+    return ApiError(code: code, message: message, statusCode: 400);
   }
 
   _PreparedLine _normalizeLine({
@@ -1050,6 +1139,7 @@ class LocalInvoicesService implements InvoicesService {
       'payment_state': prepared.paymentState,
       'paid_amount': _normalizeMoneyDecimal(prepared.paidAmount),
       'place_of_supply_state_code': prepared.placeOfSupplyStateCode,
+      'gst_flag': prepared.gstFlag,
       'notes': _emptyToNull(draft.notes),
       'items': prepared.lines
           .map((line) => <String, dynamic>{

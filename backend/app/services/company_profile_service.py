@@ -14,6 +14,18 @@ def get_active_company_profile(session: Session) -> CompanyProfile:
 
 
 def upsert_company_profile(session: Session, payload: CompanyProfileUpsertRequest) -> CompanyProfile:
+    has_gstin = payload.gstin is not None and payload.gstin.strip() != ""
+    if payload.gst_flag and not has_gstin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"code": "INVALID_GST_PROFILE", "message": "GST registered seller requires a GSTIN"}},
+        )
+    if not payload.gst_flag and has_gstin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"code": "INVALID_GST_PROFILE", "message": "Non-GST seller cannot have a GSTIN"}},
+        )
+
     profile = session.scalar(select(CompanyProfile).where(CompanyProfile.is_active.is_(True)))
     if profile is None:
         profile = CompanyProfile(**payload.model_dump())

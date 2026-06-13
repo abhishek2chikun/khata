@@ -1066,11 +1066,79 @@ void main() {
     expect(storedInvoice.requestHash, isNotNull);
     expect(storedInvoice.requestHash, isNotEmpty);
   });
+
+  test('non_gst_seller_forces_zero_tax_without_reducing_final_price', () async {
+    await companyService.upsertCompanyProfile(
+      _companyInput(gstFlag: false, gstin: null),
+    );
+    final result = await invoicesService.createInvoice(
+      draft: _draft(
+        customer: customer,
+        product: product,
+        quantity: 2,
+        gstFlag: false,
+      ),
+      requestId: _uuid(50),
+    );
+    expect(result.invoice.gstTotal, 0);
+    expect(result.invoice.grandTotal, 236);
+    expect(result.invoice.gstFlag, isFalse);
+  });
+
+  test('gst_seller_rejects_non_gst_taxable_lines_at_quote', () async {
+    await expectLater(
+      invoicesService.quoteInvoice(
+        _draft(
+          customer: customer,
+          product: product,
+          quantity: 1,
+          gstFlag: false,
+        ),
+      ),
+      throwsA(_apiError(code: 'NON_GST_TAXABLE_LINES', statusCode: 400)),
+    );
+  });
+
+  test('non_gst_seller_rejects_gst_invoice', () async {
+    await companyService.upsertCompanyProfile(
+      _companyInput(gstFlag: false, gstin: null),
+    );
+    await expectLater(
+      invoicesService.createInvoice(
+        draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+        requestId: _uuid(51),
+      ),
+      throwsA(_apiError(code: 'GST_INVOICE_NOT_ALLOWED', statusCode: 400)),
+    );
+    expect(await database.select(database.invoices).get(), isEmpty);
+  });
+
+  test('idempotency_hash_includes_gst_flag', () async {
+    final first = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+      requestId: _uuid(52),
+    );
+    final replay = await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+      requestId: _uuid(52),
+    );
+    expect(replay.invoice.id, first.invoice.id);
+
+    await expectLater(
+      invoicesService.createInvoice(
+        draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: false),
+        requestId: _uuid(52),
+      ),
+      throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),
+    );
+  });
 }
 
 UpsertCompanyProfileInput _companyInput({
   String state = 'Maharashtra',
   String stateCode = '27',
+  bool gstFlag = true,
+  String? gstin = '27ABCDE1234F1Z5',
 }) {
   return UpsertCompanyProfileInput(
     name: 'Khata Traders',
@@ -1078,6 +1146,8 @@ UpsertCompanyProfileInput _companyInput({
     city: 'Mumbai',
     state: state,
     stateCode: stateCode,
+    gstin: gstin,
+    gstFlag: gstFlag,
   );
 }
 
@@ -1129,6 +1199,7 @@ InvoiceDraft _draft({
   String? paymentMode,
   double discountPercent = 0,
   String? placeOfSupplyStateCode,
+  bool? gstFlag,
 }) {
   return _draftWithItems(
     customer: customer,
@@ -1138,6 +1209,7 @@ InvoiceDraft _draft({
     paidAmount: paidAmount,
     paymentMode: paymentMode,
     placeOfSupplyStateCode: placeOfSupplyStateCode,
+    gstFlag: gstFlag,
     items: <InvoiceDraftItem>[
       InvoiceDraftItem(
         product: product,
@@ -1158,6 +1230,7 @@ InvoiceDraft _draftWithItems({
   double paidAmount = 0,
   String? paymentMode,
   String? placeOfSupplyStateCode,
+  bool? gstFlag,
 }) {
   return InvoiceDraft(
     customer: customer,
@@ -1167,6 +1240,7 @@ InvoiceDraft _draftWithItems({
     paidAmount: paidAmount,
     paymentMode: paymentMode,
     placeOfSupplyStateCode: placeOfSupplyStateCode,
+    gstFlag: gstFlag,
     items: items,
   );
 }

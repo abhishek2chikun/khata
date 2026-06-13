@@ -31,6 +31,22 @@ class LocalCompanyProfileService implements CompanyProfileService {
   @override
   Future<profile_model.CompanyProfile> upsertCompanyProfile(
       UpsertCompanyProfileInput input) async {
+    final hasGstin = input.gstin != null && input.gstin!.trim().isNotEmpty;
+    if (input.gstFlag && !hasGstin) {
+      throw const ApiError(
+        code: 'INVALID_GST_PROFILE',
+        message: 'GST registered seller requires a GSTIN',
+        statusCode: 400,
+      );
+    }
+    if (!input.gstFlag && hasGstin) {
+      throw const ApiError(
+        code: 'INVALID_GST_PROFILE',
+        message: 'Non-GST seller cannot have a GSTIN',
+        statusCode: 400,
+      );
+    }
+
     final now = DateTime.now().toUtc().toIso8601String();
     final existing = await (_database.select(_database.companyProfiles)
           ..where((profile) => profile.isActive.equals(true))
