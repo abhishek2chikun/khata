@@ -14,7 +14,7 @@ Branch: `main`
 
 Stage 2 repository baseline SHA: `7699ae634988fcf577d7ee3e26480a37c475be02`
 
-Stage 3 implementation range: `7699ae6..<final-head>` (Tasks 01–06)
+Stage 3 implementation range: `7699ae6..3f71e22` (Tasks 01–06)
 
 ## Context Topology
 - Persistent LLM lane: `paused-after-stage-3`
@@ -46,7 +46,7 @@ Stage 3 implementation range: `7699ae6..<final-head>` (Tasks 01–06)
 | 0 | fresh SLM discovery | `53886a6` | `7699ae6` | partial | `00-discovery.md` |
 | 1 | persistent strong LLM | `7699ae6` | docs | complete | `01-design.md` |
 | 2 | same persistent strong LLM | `7699ae6` | docs | complete | `02-plan/*` |
-| 3 | implementation agent | `7699ae6` | pending final commits | complete* | Tasks 01–06 code + `03-implementation-log.md` |
+| 3 | implementation agent | `7699ae6` | `3f71e22` | complete* | Tasks 01–06 code + `03-implementation-log.md` |
 
 \*Stage 3 implementation complete; Stage 4 validation not yet passed.
 

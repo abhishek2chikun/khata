@@ -2,7 +2,7 @@
 
 ## Workflow Summary
 Baseline SHA: `7699ae634988fcf577d7ee3e26480a37c475be02`
-Final HEAD: pending commit for Tasks 04–06 (after `ad7fb43`)
+Final HEAD: `3f71e22` (Tasks 01–06 complete)
 Assigned tasks: 01–06 (full plan)
 
 ## Preflight Record
@@ -22,9 +22,9 @@ Assigned tasks: 01–06 (full plan)
 | 01 | cb91b0e | 7a961b2 | migration contract, company profile API, local profile/backup/DB tests | mobile targeted suites | Full backend blocked; used `@pytest.mark.no_db` migration contract |
 | 02 | 7a961b2 | 61f097e | invoice service, create/cancel API, local invoices | wholesaler flow fix | Postgres suite unverified |
 | 03 | 61f097e | ad7fb43 | profile/controller/create/preview tests | mobile invoice suites | Backend date API tests blocked on Postgres |
-| 04 | ad7fb43 | TBD | `invoice_pdf_service_test.dart` (12) | full mobile **372** | PDF text asserted via layout helpers + MediaBox (Flate-compressed streams) |
-| 05 | TBD | TBD | `invoice_share_service_test.dart`, `invoice_detail_screen_test.dart` | invoice preview/list share paths | Android runtime E2E not executed this session |
-| 06 | TBD | TBD | `balance_share_service_test.dart`, customer detail/list widget tests | full mobile **372**, `flutter analyze` (19 baseline infos/warnings) | Postgres pytest still blocked; APK build attempted below |
+| 04 | ad7fb43 | cc03688 | `invoice_pdf_service_test.dart` (12) | full mobile **372** | PDF text asserted via layout helpers + MediaBox (Flate-compressed streams) |
+| 05 | cc03688 | 65e6e41 | `invoice_share_service_test.dart`, `invoice_detail_screen_test.dart` | invoice preview/list share paths | Android runtime E2E not executed this session |
+| 06 | 65e6e41 | 3f71e22 | `balance_share_service_test.dart`, customer detail/list widget tests | full mobile **372**, analyze, release APK | Postgres pytest still blocked |
 
 ## Migration Evidence
 - Alembic `0009_invoice_gst_flags.py`: adds/backfills `gst_flag` on `company_profiles` and `invoices` only.
