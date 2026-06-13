@@ -6,6 +6,19 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../models/invoice_detail.dart';
 
+PdfPageFormat invoicePdfPageFormatForItemCount(int itemCount) {
+  return itemCount <= 10 ? PdfPageFormat.a5 : PdfPageFormat.a4;
+}
+
+String invoicePdfDocumentTitle({required bool gstFlag}) {
+  return gstFlag ? 'TAX INVOICE' : 'INVOICE';
+}
+
+bool invoicePdfIncludesGstSupplySection({required bool gstFlag}) => gstFlag;
+
+bool invoicePdfShowsCanceledBanner({required String status}) =>
+    status == 'CANCELED';
+
 class InvoicePdfService {
   InvoicePdfService._(this._outputDirectory);
 
@@ -30,23 +43,29 @@ class InvoicePdfService {
         bold: pw.Font.helveticaBold(),
       ),
     );
+    final isGst = invoice.gstFlag;
+    final pageFormat = invoicePdfPageFormatForItemCount(invoice.items.length);
+    final margin = invoice.items.length <= 10 ? 28.0 : 36.0;
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
+        pageFormat: pageFormat,
+        margin: pw.EdgeInsets.all(margin),
+        header: (context) => _buildPageHeader(invoice),
         build: (context) => <pw.Widget>[
-          _buildHeader(invoice),
+          _buildDocumentHeader(invoice, isGst),
           pw.SizedBox(height: 16),
           _buildInvoiceInfo(invoice),
           pw.SizedBox(height: 12),
-          _buildCustomerAndCompanyInfo(invoice),
-          pw.SizedBox(height: 12),
-          _buildPlaceOfSupplyInfo(invoice),
+          _buildPartyInfo(invoice, isGst),
+          if (isGst) ...<pw.Widget>[
+            pw.SizedBox(height: 12),
+            _buildGstSupplyInfo(invoice),
+          ],
           pw.SizedBox(height: 16),
-          _buildItemTable(invoice),
+          _buildItemTable(invoice, isGst),
           pw.SizedBox(height: 8),
-          _buildTotalsTable(invoice),
+          _buildTotals(invoice, isGst),
           pw.SizedBox(height: 12),
           _buildAmountInWords(invoice),
           pw.SizedBox(height: 12),
@@ -71,12 +90,36 @@ class InvoicePdfService {
     return file.path;
   }
 
-  pw.Widget _buildHeader(InvoiceDetail invoice) {
+  pw.Widget _buildPageHeader(InvoiceDetail invoice) {
+    if (!invoicePdfShowsCanceledBanner(status: invoice.status)) {
+      return pw.SizedBox();
+    }
+    return pw.Container(
+      width: double.infinity,
+      margin: const pw.EdgeInsets.only(bottom: 8),
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.red, width: 2),
+      ),
+      child: pw.Center(
+        child: pw.Text(
+          'CANCELED',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.red,
+          ),
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _buildDocumentHeader(InvoiceDetail invoice, bool isGst) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: <pw.Widget>[
         pw.Text(
-          'TAX INVOICE',
+          invoicePdfDocumentTitle(gstFlag: isGst),
           style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 8),
@@ -91,12 +134,32 @@ class InvoicePdfService {
             _joinNonEmpty([invoice.companyCity, invoice.companyState]),
             style: pw.TextStyle(fontSize: 10),
           ),
-        if (invoice.companyGstin != null && invoice.companyGstin!.isNotEmpty)
-          pw.Text('GSTIN: ${invoice.companyGstin}', style: pw.TextStyle(fontSize: 10)),
+        if (isGst &&
+            invoice.companyGstin != null &&
+            invoice.companyGstin!.isNotEmpty)
+          pw.Text('GSTIN: ${invoice.companyGstin}',
+              style: pw.TextStyle(fontSize: 10)),
         if (invoice.companyPhone != null && invoice.companyPhone!.isNotEmpty)
-          pw.Text('Phone: ${invoice.companyPhone}', style: pw.TextStyle(fontSize: 10)),
+          pw.Text('Phone: ${invoice.companyPhone}',
+              style: pw.TextStyle(fontSize: 10)),
       ],
     );
+  }
+
+  pw.Widget _buildHeader(InvoiceDetail invoice) {
+    return _buildDocumentHeader(invoice, invoice.gstFlag);
+  }
+
+  pw.Widget _buildPartyInfo(InvoiceDetail invoice, bool isGst) {
+    return _buildCustomerAndCompanyInfo(invoice, isGst);
+  }
+
+  pw.Widget _buildGstSupplyInfo(InvoiceDetail invoice) {
+    return _buildPlaceOfSupplyInfo(invoice);
+  }
+
+  pw.Widget _buildTotals(InvoiceDetail invoice, bool isGst) {
+    return _buildTotalsTable(invoice, isGst);
   }
 
   pw.Widget _buildInvoiceInfo(InvoiceDetail invoice) {
@@ -114,10 +177,6 @@ class InvoicePdfService {
               children: <pw.Widget>[
                 _infoRow('Invoice No:', '#${invoice.invoiceNumber}'),
                 _infoRow('Date:', invoice.invoiceDate),
-                if (invoice.invoiceDatetime.isNotEmpty &&
-                    invoice.invoiceDatetime !=
-                        '${invoice.invoiceDate}T00:00:00.000Z')
-                  _infoRow('DateTime:', invoice.invoiceDatetime),
               ],
             ),
           ),
@@ -137,7 +196,7 @@ class InvoicePdfService {
     );
   }
 
-  pw.Widget _buildCustomerAndCompanyInfo(InvoiceDetail invoice) {
+  pw.Widget _buildCustomerAndCompanyInfo(InvoiceDetail invoice, bool isGst) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: <pw.Widget>[
@@ -164,7 +223,8 @@ class InvoicePdfService {
                     '${invoice.customerState}${invoice.customerStateCode != null ? ' (${invoice.customerStateCode})' : ''}',
                     style: pw.TextStyle(fontSize: 9),
                   ),
-                if (invoice.customerGstin != null &&
+                if (isGst &&
+                    invoice.customerGstin != null &&
                     invoice.customerGstin!.isNotEmpty)
                   pw.Text('GSTIN: ${invoice.customerGstin}',
                       style: pw.TextStyle(fontSize: 9)),
@@ -200,7 +260,8 @@ class InvoicePdfService {
                     _joinNonEmpty([invoice.companyCity, invoice.companyState]),
                     style: pw.TextStyle(fontSize: 9),
                   ),
-                if (invoice.companyGstin != null &&
+                if (isGst &&
+                    invoice.companyGstin != null &&
                     invoice.companyGstin!.isNotEmpty)
                   pw.Text('GSTIN: ${invoice.companyGstin}',
                       style: pw.TextStyle(fontSize: 9)),
@@ -237,7 +298,54 @@ class InvoicePdfService {
     );
   }
 
-  pw.Widget _buildItemTable(InvoiceDetail invoice) {
+  pw.Widget _buildItemTable(InvoiceDetail invoice, bool isGst) {
+    if (!isGst) {
+      final headers = <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Disc%', 'Total'];
+      final headerWidgets = headers
+          .map((h) => pw.Padding(
+                padding: const pw.EdgeInsets.all(4),
+                child: pw.Text(
+                  h,
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 7),
+                ),
+              ))
+          .toList();
+      final rows = <List<pw.Widget>>[];
+      for (var i = 0; i < invoice.items.length; i++) {
+        final item = invoice.items[i];
+        rows.add(<pw.Widget>[
+          _cell('${i + 1}', align: pw.Alignment.centerRight),
+          _cell(item.productItemName.isNotEmpty
+              ? item.productItemName
+              : item.productName),
+          _cell(item.productItemNumber),
+          _cell(item.quantity.toStringAsFixed(2),
+              align: pw.Alignment.centerRight),
+          _cell(item.unitPriceInclTax.toStringAsFixed(2),
+              align: pw.Alignment.centerRight),
+          _cell(item.discountPercent.toStringAsFixed(1),
+              align: pw.Alignment.centerRight),
+          _cell(item.lineTotal.toStringAsFixed(2),
+              align: pw.Alignment.centerRight),
+        ]);
+      }
+      return pw.Table(
+        border: pw.TableBorder.all(color: PdfColors.grey400),
+        columnWidths: <int, pw.FlexColumnWidth>{
+          for (var i = 0; i < headers.length; i++)
+            i: const pw.FlexColumnWidth(2),
+        },
+        children: <pw.TableRow>[
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            children: headerWidgets,
+          ),
+          ...rows.map((row) => pw.TableRow(children: row)),
+        ],
+      );
+    }
+
     final isInterState = invoice.taxRegime == 'INTER_STATE';
     final headers = <String>[
       '#',
@@ -334,7 +442,7 @@ class InvoicePdfService {
     return widths;
   }
 
-  pw.Widget _buildTotalsTable(InvoiceDetail invoice) {
+  pw.Widget _buildTotalsTable(InvoiceDetail invoice, bool isGst) {
     return pw.Align(
       alignment: pw.Alignment.centerRight,
       child: pw.SizedBox(
@@ -346,7 +454,8 @@ class InvoicePdfService {
               _totalRow(
                   'Discount:', '-${invoice.discountTotal.toStringAsFixed(2)}'),
             _totalRow('Taxable:', invoice.taxableTotal.toStringAsFixed(2)),
-            _totalRow('GST:', invoice.gstTotal.toStringAsFixed(2)),
+            if (isGst)
+              _totalRow('GST:', invoice.gstTotal.toStringAsFixed(2)),
             pw.Divider(),
             _totalRow(
                 'Grand Total:', invoice.grandTotal.toStringAsFixed(2),

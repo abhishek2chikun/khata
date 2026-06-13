@@ -1,8 +1,51 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/services/invoice_pdf_service.dart';
+import 'package:pdf/pdf.dart';
+
+(String, double, double) _readPdfMeta(File file) {
+  final bytes = file.readAsBytesSync();
+  final text = latin1.decode(bytes, allowInvalid: true);
+  final mediaMatch = RegExp(
+    r'/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]',
+  ).firstMatch(text);
+  final width = mediaMatch == null ? 0.0 : double.parse(mediaMatch.group(1)!);
+  final height = mediaMatch == null ? 0.0 : double.parse(mediaMatch.group(2)!);
+  return (text, width, height);
+}
+
+InvoiceDetailItem _lineItem({int index = 1}) {
+  return InvoiceDetailItem(
+    productId: 'prod-$index',
+    productName: 'Item $index',
+    productItemNumber: 'SKU-$index',
+    productItemName: 'Item $index',
+    productCategory: 'General',
+    productCompanyName: 'Acme',
+    buyingPrice: 80,
+    sellingPrice: 118,
+    unit: 'pcs',
+    quantity: 1,
+    lineTotal: 118,
+    pricingMode: 'TAX_INCLUSIVE',
+    unitPriceExclTax: 100,
+    unitPriceInclTax: 118,
+    gstRate: 18,
+    cgstRate: 9,
+    sgstRate: 9,
+    igstRate: 0,
+    gstAmount: 18,
+    cgstAmount: 9,
+    sgstAmount: 9,
+    igstAmount: 0,
+    discountPercent: 0,
+    discountAmount: 0,
+    taxableAmount: 100,
+  );
+}
 
 void main() {
   late InvoicePdfService service;
@@ -27,16 +70,19 @@ void main() {
     String customerName = 'Acme Stores',
     double grandTotal = 236.0,
     String taxRegime = 'INTRA_STATE',
+    bool gstFlag = true,
+    String status = 'ACTIVE',
     List<InvoiceDetailItem>? items,
   }) {
     return InvoiceDetail(
       id: 'inv-1',
       customerId: 'cust-1',
       invoiceNumber: invoiceNumber,
-      status: 'ACTIVE',
+      status: status,
       paymentState: 'CREDIT',
       paymentMode: 'CREDIT',
       paidAmount: 0,
+      gstFlag: gstFlag,
       customerName: customerName,
       customerAddress: '1 Market Road',
       customerState: 'Maharashtra',
@@ -227,5 +273,53 @@ void main() {
     final path = await service.generateInvoicePdf(invoice);
     final file = File(path);
     expect(await file.exists(), isTrue);
+  });
+
+  test('uses A5 page format for up to 10 line items', () async {
+    final invoice = _sampleInvoice(
+      items: List<InvoiceDetailItem>.generate(10, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(420, 5));
+    expect(height, closeTo(595, 5));
+  });
+
+  test('uses A4 page format for more than 10 line items', () async {
+    final invoice = _sampleInvoice(
+      items: List<InvoiceDetailItem>.generate(11, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(595, 5));
+    expect(height, closeTo(842, 5));
+  });
+
+  test('gst invoice includes tax invoice title and gst columns', () {
+    expect(invoicePdfDocumentTitle(gstFlag: true), 'TAX INVOICE');
+    expect(invoicePdfIncludesGstSupplySection(gstFlag: true), isTrue);
+  });
+
+  test('non-gst invoice omits gst-specific content', () {
+    expect(invoicePdfDocumentTitle(gstFlag: false), 'INVOICE');
+    expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);
+  });
+
+  test('canceled invoice shows canceled marker', () {
+    expect(invoicePdfShowsCanceledBanner(status: 'CANCELED'), isTrue);
+    expect(invoicePdfShowsCanceledBanner(status: 'ACTIVE'), isFalse);
+  });
+
+  test('page format helper selects a5 and a4 at threshold', () {
+    expect(
+      invoicePdfPageFormatForItemCount(10),
+      PdfPageFormat.a5,
+    );
+    expect(
+      invoicePdfPageFormatForItemCount(11),
+      PdfPageFormat.a4,
+    );
   });
 }
