@@ -71,6 +71,7 @@ class InvoiceQuoteRequest(BaseModel):
     paid_amount: Decimal = Decimal("0.00")
     place_of_supply_state_code: str | None = None
     notes: str | None = None
+    gst_flag: bool | None = None
     items: list[InvoiceLineRequest]
 
     @field_validator("payment_state")
@@ -178,6 +179,7 @@ class InvoiceQuoteResponse(BaseModel):
     place_of_supply_state: str
     place_of_supply_state_code: str
     tax_regime: str
+    gst_flag: bool
     items: list[InvoiceLineQuoteResponse]
     totals: InvoiceTotalsResponse
     warnings: list[InvoiceWarning]
@@ -257,6 +259,7 @@ class InvoiceDetailResponse(BaseModel):
     invoice_date: date
     invoice_datetime: datetime
     tax_regime: str
+    gst_flag: bool
     status: str
     payment_state: str
     payment_mode: str
@@ -290,6 +293,7 @@ class InvoiceListItemResponse(BaseModel):
     customer_name: str
     invoice_date: date
     status: str
+    gst_flag: bool
     payment_state: str
     payment_mode: str
     grand_total: Decimal

@@ -35,6 +35,8 @@ void main() {
     expect(created.jurisdiction, 'Mumbai');
     expect(created.isActive, isTrue);
 
+    expect(created.gstFlag, isTrue);
+
     final fetched = await service.fetchCompanyProfile();
     expect(fetched.id, created.id);
     expect(fetched.name, 'Khata Traders');
@@ -52,11 +54,24 @@ void main() {
     expect(storedProfiles.single.name, 'Khata Traders Updated');
     expect(storedProfiles.single.phone, isNull);
   });
+  test('round-trips gst_flag false and true', () async {
+    final nonGst = await service.upsertCompanyProfile(
+      _profileInput(gstFlag: false, gstin: null),
+    );
+    expect(nonGst.gstFlag, isFalse);
+
+    final gst = await service.upsertCompanyProfile(
+      _profileInput(gstFlag: true),
+    );
+    expect(gst.gstFlag, isTrue);
+  });
 }
 
 UpsertCompanyProfileInput _profileInput({
   String name = 'Khata Traders',
   String? phone = '9999999999',
+  bool gstFlag = true,
+  String? gstin = '27ABCDE1234F1Z5',
 }) {
   return UpsertCompanyProfileInput(
     name: name,
@@ -64,7 +79,8 @@ UpsertCompanyProfileInput _profileInput({
     city: 'Mumbai',
     state: 'Maharashtra',
     stateCode: '27',
-    gstin: '27ABCDE1234F1Z5',
+    gstin: gstin,
+    gstFlag: gstFlag,
     phone: phone,
     email: 'billing@example.com',
     bankName: 'State Bank',

@@ -197,12 +197,20 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
     )
 
 
+def _resolve_gst_flag(payload: InvoiceQuoteRequest, company: CompanyProfile) -> bool:
+    if payload.gst_flag is not None:
+        return payload.gst_flag
+    return company.gst_flag
+
+
 def build_quote(session: Session, payload: InvoiceQuoteRequest) -> InvoiceQuoteResponse:
     prepared = _prepare_invoice(session, payload, lock_products=False)
+    resolved_gst_flag = _resolve_gst_flag(payload, prepared.company)
     return InvoiceQuoteResponse(
         place_of_supply_state=prepared.place_of_supply_state,
         place_of_supply_state_code=prepared.place_of_supply_state_code,
         tax_regime=prepared.tax_regime,
+        gst_flag=resolved_gst_flag,
         items=[
             InvoiceLineQuoteResponse(
                 product_id=line.product.id,
@@ -351,6 +359,7 @@ def _build_invoice_detail(session: Session, invoice: Invoice) -> InvoiceDetailRe
         invoice_date=invoice.invoice_date,
         invoice_datetime=invoice.invoice_datetime,
         tax_regime=invoice.tax_regime,
+        gst_flag=invoice.gst_flag,
         status=invoice.status,
         payment_state=invoice.payment_state,
         payment_mode=invoice.payment_state,
@@ -410,6 +419,7 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
             return InvoiceCreateResponse(invoice=_build_invoice_detail(session, existing), warnings=[])
 
         prepared = _prepare_invoice(session, payload, lock_products=True)
+        resolved_gst_flag = _resolve_gst_flag(payload, prepared.company)
         invoice_datetime = payload.resolved_invoice_datetime()
         payment_state = payload.resolved_payment_state()
         paid_amount = _resolve_paid_amount(payment_state, payload.paid_amount, prepared.totals.grand_total)
@@ -439,6 +449,7 @@ def create_invoice(session: Session, payload: InvoiceCreateRequest, current_user
             company_bank_ifsc=prepared.company.bank_ifsc,
             company_bank_branch=prepared.company.bank_branch,
             company_jurisdiction=prepared.company.jurisdiction,
+            gst_flag=resolved_gst_flag,
             invoice_date=invoice_datetime.date(),
             invoice_datetime=invoice_datetime,
             tax_regime=prepared.tax_regime,
@@ -511,6 +522,7 @@ def list_invoices(
                 customer_name=invoice.customer_name,
                 invoice_date=invoice.invoice_date,
                 status=invoice.status,
+                gst_flag=invoice.gst_flag,
                 payment_state=invoice.payment_state,
                 payment_mode=invoice.payment_state,
                 grand_total=invoice.grand_total,

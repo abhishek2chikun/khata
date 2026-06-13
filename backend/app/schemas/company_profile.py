@@ -10,6 +10,7 @@ class CompanyProfileUpsertRequest(BaseModel):
     state: str
     state_code: str
     gstin: str | None = None
+    gst_flag: bool = False
     phone: str | None = None
     email: str | None = None
     bank_name: str | None = None
@@ -29,6 +30,7 @@ class CompanyProfileResponse(BaseModel):
     state: str
     state_code: str
     gstin: str | None
+    gst_flag: bool
     phone: str | None
     email: str | None
     bank_name: str | None

@@ -4,9 +4,9 @@ Workflow ID: khata-app-baseline
 
 Objective: Deliver mobile-first GST/non-GST invoicing, date-only invoice creation, adaptive invoice PDFs, attached invoice sharing, and customer pending-balance sharing while keeping local and API contracts aligned.
 
-Current stage: 2-planning
+Current stage: 3-implementation
 
-Stage status: complete
+Stage status: in-progress
 
 Repository: `/Users/abhishek/python_venv/khata_app`
 
@@ -18,8 +18,8 @@ Worktree at Stage 2 start: clean. Stage 2 changed workflow documentation only; n
 
 ## Context Topology
 - Persistent LLM lane: `paused-after-stage-2`
-- Current context owner: paused Stage 1/2 persistent LLM conversation
-- Next context owner: Stage 3 fresh SLM
+- Current context owner: Stage 3 implementation agent
+- Next context owner: Stage 4 fresh SLM (after Stage 3 complete)
 - Minimum Stage 3 read set: this `STATE.md`, `01-design.md`, `02-plan/00-plan-index.md`, and the assigned task packet
 - First task packet: `02-plan/01-contracts-and-migrations.md`
 - Later Stage 5 rehydration: this file, `02-llm-review-anchor.md`, Stage 4 return packet, actual diff/commit range
@@ -111,10 +111,10 @@ Task order: 01 -> 02 -> 03 -> 04 -> 05 -> 06. Do not parallelize Tasks 01-03 bec
 | 1 | persistent strong LLM | `7699ae6` | documentation-only worktree | complete | `01-design.md` |
 | 2 | same persistent strong LLM | `7699ae6` | documentation-only worktree | complete | `02-plan/*`, `02-llm-review-anchor.md`, this state |
 
-Last completed stage: 2-planning
+Last completed stage: 2-planning (preflight complete)
 
-Next required stage: 3-implementation
+Next required stage: 3-implementation (Task 01 in progress)
 
-Exact next action: Pause the persistent LLM conversation. In a fresh SLM context, read this file, `01-design.md`, `02-plan/00-plan-index.md`, and `02-plan/01-contracts-and-migrations.md`; execute Task 01 only, stop on listed escalation conditions, and update `03-implementation-log.md` plus this file before ending.
+Exact next action: Implement Task 01 contracts and migrations; record evidence in `03-implementation-log.md`.
 
 Last updated: 2026-06-13

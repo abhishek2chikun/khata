@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, ForeignKey, Numeric, Sequence, String, Text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Numeric, Sequence, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
@@ -64,6 +64,7 @@ class Invoice(Base):
     company_bank_ifsc: Mapped[str | None] = mapped_column(String(100), nullable=True)
     company_bank_branch: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_jurisdiction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    gst_flag: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
     invoice_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     tax_regime: Mapped[str] = mapped_column(String(32), nullable=False)

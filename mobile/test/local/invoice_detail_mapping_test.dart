@@ -49,6 +49,7 @@ void main() {
     expect(invoice.companyState, 'Maharashtra');
     expect(invoice.companyStateCode, '27');
     expect(invoice.companyGstin, '27ABCDE1234F1Z5');
+    expect(invoice.gstFlag, isTrue);
     expect(invoice.companyPhone, '9876543210');
     expect(invoice.companyEmail, 'info@khata.com');
     expect(invoice.companyBankName, 'State Bank');
@@ -305,6 +306,7 @@ UpsertCompanyProfileInput _companyInput({
     state: state,
     stateCode: stateCode,
     gstin: '27ABCDE1234F1Z5',
+    gstFlag: true,
     phone: '9876543210',
     email: 'info@khata.com',
     bankName: 'State Bank',

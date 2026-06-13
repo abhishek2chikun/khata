@@ -1942,6 +1942,16 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
   late final GeneratedColumn<String> companyJurisdiction =
       GeneratedColumn<String>('company_jurisdiction', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _gstFlagMeta =
+      const VerificationMeta('gstFlag');
+  @override
+  late final GeneratedColumn<bool> gstFlag = GeneratedColumn<bool>(
+      'gst_flag', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("gst_flag" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _invoiceDateMeta =
       const VerificationMeta('invoiceDate');
   @override
@@ -2106,6 +2116,7 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
         companyBankIfsc,
         companyBankBranch,
         companyJurisdiction,
+        gstFlag,
         invoiceDate,
         invoiceDatetime,
         taxRegime,
@@ -2323,6 +2334,10 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           companyJurisdiction.isAcceptableOrUnknown(
               data['company_jurisdiction']!, _companyJurisdictionMeta));
     }
+    if (data.containsKey('gst_flag')) {
+      context.handle(_gstFlagMeta,
+          gstFlag.isAcceptableOrUnknown(data['gst_flag']!, _gstFlagMeta));
+    }
     if (data.containsKey('invoice_date')) {
       context.handle(
           _invoiceDateMeta,
@@ -2524,6 +2539,8 @@ class $InvoicesTable extends Invoices with TableInfo<$InvoicesTable, Invoice> {
           DriftSqlType.string, data['${effectivePrefix}company_bank_branch']),
       companyJurisdiction: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}company_jurisdiction']),
+      gstFlag: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}gst_flag'])!,
       invoiceDate: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}invoice_date'])!,
       invoiceDatetime: attachedDatabase.typeMapping.read(
@@ -2601,6 +2618,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
   final String? companyBankIfsc;
   final String? companyBankBranch;
   final String? companyJurisdiction;
+  final bool gstFlag;
   final String invoiceDate;
   final String invoiceDatetime;
   final String taxRegime;
@@ -2649,6 +2667,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       this.companyBankIfsc,
       this.companyBankBranch,
       this.companyJurisdiction,
+      required this.gstFlag,
       required this.invoiceDate,
       required this.invoiceDatetime,
       required this.taxRegime,
@@ -2727,6 +2746,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
     if (!nullToAbsent || companyJurisdiction != null) {
       map['company_jurisdiction'] = Variable<String>(companyJurisdiction);
     }
+    map['gst_flag'] = Variable<bool>(gstFlag);
     map['invoice_date'] = Variable<String>(invoiceDate);
     map['invoice_datetime'] = Variable<String>(invoiceDatetime);
     map['tax_regime'] = Variable<String>(taxRegime);
@@ -2817,6 +2837,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyJurisdiction: companyJurisdiction == null && nullToAbsent
           ? const Value.absent()
           : Value(companyJurisdiction),
+      gstFlag: Value(gstFlag),
       invoiceDate: Value(invoiceDate),
       invoiceDatetime: Value(invoiceDatetime),
       taxRegime: Value(taxRegime),
@@ -2889,6 +2910,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           serializer.fromJson<String?>(json['companyBankBranch']),
       companyJurisdiction:
           serializer.fromJson<String?>(json['companyJurisdiction']),
+      gstFlag: serializer.fromJson<bool>(json['gstFlag']),
       invoiceDate: serializer.fromJson<String>(json['invoiceDate']),
       invoiceDatetime: serializer.fromJson<String>(json['invoiceDatetime']),
       taxRegime: serializer.fromJson<String>(json['taxRegime']),
@@ -2945,6 +2967,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       'companyBankIfsc': serializer.toJson<String?>(companyBankIfsc),
       'companyBankBranch': serializer.toJson<String?>(companyBankBranch),
       'companyJurisdiction': serializer.toJson<String?>(companyJurisdiction),
+      'gstFlag': serializer.toJson<bool>(gstFlag),
       'invoiceDate': serializer.toJson<String>(invoiceDate),
       'invoiceDatetime': serializer.toJson<String>(invoiceDatetime),
       'taxRegime': serializer.toJson<String>(taxRegime),
@@ -2996,6 +3019,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           Value<String?> companyBankIfsc = const Value.absent(),
           Value<String?> companyBankBranch = const Value.absent(),
           Value<String?> companyJurisdiction = const Value.absent(),
+          bool? gstFlag,
           String? invoiceDate,
           String? invoiceDatetime,
           String? taxRegime,
@@ -3065,6 +3089,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         companyJurisdiction: companyJurisdiction.present
             ? companyJurisdiction.value
             : this.companyJurisdiction,
+        gstFlag: gstFlag ?? this.gstFlag,
         invoiceDate: invoiceDate ?? this.invoiceDate,
         invoiceDatetime: invoiceDatetime ?? this.invoiceDatetime,
         taxRegime: taxRegime ?? this.taxRegime,
@@ -3168,6 +3193,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
       companyJurisdiction: data.companyJurisdiction.present
           ? data.companyJurisdiction.value
           : this.companyJurisdiction,
+      gstFlag: data.gstFlag.present ? data.gstFlag.value : this.gstFlag,
       invoiceDate:
           data.invoiceDate.present ? data.invoiceDate.value : this.invoiceDate,
       invoiceDatetime: data.invoiceDatetime.present
@@ -3244,6 +3270,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           ..write('companyBankIfsc: $companyBankIfsc, ')
           ..write('companyBankBranch: $companyBankBranch, ')
           ..write('companyJurisdiction: $companyJurisdiction, ')
+          ..write('gstFlag: $gstFlag, ')
           ..write('invoiceDate: $invoiceDate, ')
           ..write('invoiceDatetime: $invoiceDatetime, ')
           ..write('taxRegime: $taxRegime, ')
@@ -3297,6 +3324,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
         companyBankIfsc,
         companyBankBranch,
         companyJurisdiction,
+        gstFlag,
         invoiceDate,
         invoiceDatetime,
         taxRegime,
@@ -3349,6 +3377,7 @@ class Invoice extends DataClass implements Insertable<Invoice> {
           other.companyBankIfsc == this.companyBankIfsc &&
           other.companyBankBranch == this.companyBankBranch &&
           other.companyJurisdiction == this.companyJurisdiction &&
+          other.gstFlag == this.gstFlag &&
           other.invoiceDate == this.invoiceDate &&
           other.invoiceDatetime == this.invoiceDatetime &&
           other.taxRegime == this.taxRegime &&
@@ -3399,6 +3428,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
   final Value<String?> companyBankIfsc;
   final Value<String?> companyBankBranch;
   final Value<String?> companyJurisdiction;
+  final Value<bool> gstFlag;
   final Value<String> invoiceDate;
   final Value<String> invoiceDatetime;
   final Value<String> taxRegime;
@@ -3448,6 +3478,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyBankIfsc = const Value.absent(),
     this.companyBankBranch = const Value.absent(),
     this.companyJurisdiction = const Value.absent(),
+    this.gstFlag = const Value.absent(),
     this.invoiceDate = const Value.absent(),
     this.invoiceDatetime = const Value.absent(),
     this.taxRegime = const Value.absent(),
@@ -3498,6 +3529,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     this.companyBankIfsc = const Value.absent(),
     this.companyBankBranch = const Value.absent(),
     this.companyJurisdiction = const Value.absent(),
+    this.gstFlag = const Value.absent(),
     required String invoiceDate,
     this.invoiceDatetime = const Value.absent(),
     required String taxRegime,
@@ -3572,6 +3604,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     Expression<String>? companyBankIfsc,
     Expression<String>? companyBankBranch,
     Expression<String>? companyJurisdiction,
+    Expression<bool>? gstFlag,
     Expression<String>? invoiceDate,
     Expression<String>? invoiceDatetime,
     Expression<String>? taxRegime,
@@ -3627,6 +3660,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       if (companyBankBranch != null) 'company_bank_branch': companyBankBranch,
       if (companyJurisdiction != null)
         'company_jurisdiction': companyJurisdiction,
+      if (gstFlag != null) 'gst_flag': gstFlag,
       if (invoiceDate != null) 'invoice_date': invoiceDate,
       if (invoiceDatetime != null) 'invoice_datetime': invoiceDatetime,
       if (taxRegime != null) 'tax_regime': taxRegime,
@@ -3679,6 +3713,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       Value<String?>? companyBankIfsc,
       Value<String?>? companyBankBranch,
       Value<String?>? companyJurisdiction,
+      Value<bool>? gstFlag,
       Value<String>? invoiceDate,
       Value<String>? invoiceDatetime,
       Value<String>? taxRegime,
@@ -3730,6 +3765,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
       companyBankIfsc: companyBankIfsc ?? this.companyBankIfsc,
       companyBankBranch: companyBankBranch ?? this.companyBankBranch,
       companyJurisdiction: companyJurisdiction ?? this.companyJurisdiction,
+      gstFlag: gstFlag ?? this.gstFlag,
       invoiceDate: invoiceDate ?? this.invoiceDate,
       invoiceDatetime: invoiceDatetime ?? this.invoiceDatetime,
       taxRegime: taxRegime ?? this.taxRegime,
@@ -3840,6 +3876,9 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
     if (companyJurisdiction.present) {
       map['company_jurisdiction'] = Variable<String>(companyJurisdiction.value);
     }
+    if (gstFlag.present) {
+      map['gst_flag'] = Variable<bool>(gstFlag.value);
+    }
     if (invoiceDate.present) {
       map['invoice_date'] = Variable<String>(invoiceDate.value);
     }
@@ -3936,6 +3975,7 @@ class InvoicesCompanion extends UpdateCompanion<Invoice> {
           ..write('companyBankIfsc: $companyBankIfsc, ')
           ..write('companyBankBranch: $companyBankBranch, ')
           ..write('companyJurisdiction: $companyJurisdiction, ')
+          ..write('gstFlag: $gstFlag, ')
           ..write('invoiceDate: $invoiceDate, ')
           ..write('invoiceDatetime: $invoiceDatetime, ')
           ..write('taxRegime: $taxRegime, ')
@@ -6321,6 +6361,16 @@ class $CompanyProfilesTable extends CompanyProfiles
   late final GeneratedColumn<String> gstin = GeneratedColumn<String>(
       'gstin', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _gstFlagMeta =
+      const VerificationMeta('gstFlag');
+  @override
+  late final GeneratedColumn<bool> gstFlag = GeneratedColumn<bool>(
+      'gst_flag', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("gst_flag" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
   @override
   late final GeneratedColumn<String> phone = GeneratedColumn<String>(
@@ -6392,6 +6442,7 @@ class $CompanyProfilesTable extends CompanyProfiles
         state,
         stateCode,
         gstin,
+        gstFlag,
         phone,
         email,
         bankName,
@@ -6451,6 +6502,10 @@ class $CompanyProfilesTable extends CompanyProfiles
     if (data.containsKey('gstin')) {
       context.handle(
           _gstinMeta, gstin.isAcceptableOrUnknown(data['gstin']!, _gstinMeta));
+    }
+    if (data.containsKey('gst_flag')) {
+      context.handle(_gstFlagMeta,
+          gstFlag.isAcceptableOrUnknown(data['gst_flag']!, _gstFlagMeta));
     }
     if (data.containsKey('phone')) {
       context.handle(
@@ -6525,6 +6580,8 @@ class $CompanyProfilesTable extends CompanyProfiles
           .read(DriftSqlType.string, data['${effectivePrefix}state_code'])!,
       gstin: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}gstin']),
+      gstFlag: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}gst_flag'])!,
       phone: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}phone']),
       email: attachedDatabase.typeMapping
@@ -6562,6 +6619,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
   final String state;
   final String stateCode;
   final String? gstin;
+  final bool gstFlag;
   final String? phone;
   final String? email;
   final String? bankName;
@@ -6580,6 +6638,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       required this.state,
       required this.stateCode,
       this.gstin,
+      required this.gstFlag,
       this.phone,
       this.email,
       this.bankName,
@@ -6602,6 +6661,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
     if (!nullToAbsent || gstin != null) {
       map['gstin'] = Variable<String>(gstin);
     }
+    map['gst_flag'] = Variable<bool>(gstFlag);
     if (!nullToAbsent || phone != null) {
       map['phone'] = Variable<String>(phone);
     }
@@ -6639,6 +6699,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       stateCode: Value(stateCode),
       gstin:
           gstin == null && nullToAbsent ? const Value.absent() : Value(gstin),
+      gstFlag: Value(gstFlag),
       phone:
           phone == null && nullToAbsent ? const Value.absent() : Value(phone),
       email:
@@ -6675,6 +6736,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       state: serializer.fromJson<String>(json['state']),
       stateCode: serializer.fromJson<String>(json['stateCode']),
       gstin: serializer.fromJson<String?>(json['gstin']),
+      gstFlag: serializer.fromJson<bool>(json['gstFlag']),
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
       bankName: serializer.fromJson<String?>(json['bankName']),
@@ -6698,6 +6760,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       'state': serializer.toJson<String>(state),
       'stateCode': serializer.toJson<String>(stateCode),
       'gstin': serializer.toJson<String?>(gstin),
+      'gstFlag': serializer.toJson<bool>(gstFlag),
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
       'bankName': serializer.toJson<String?>(bankName),
@@ -6719,6 +6782,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
           String? state,
           String? stateCode,
           Value<String?> gstin = const Value.absent(),
+          bool? gstFlag,
           Value<String?> phone = const Value.absent(),
           Value<String?> email = const Value.absent(),
           Value<String?> bankName = const Value.absent(),
@@ -6737,6 +6801,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
         state: state ?? this.state,
         stateCode: stateCode ?? this.stateCode,
         gstin: gstin.present ? gstin.value : this.gstin,
+        gstFlag: gstFlag ?? this.gstFlag,
         phone: phone.present ? phone.value : this.phone,
         email: email.present ? email.value : this.email,
         bankName: bankName.present ? bankName.value : this.bankName,
@@ -6758,6 +6823,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       state: data.state.present ? data.state.value : this.state,
       stateCode: data.stateCode.present ? data.stateCode.value : this.stateCode,
       gstin: data.gstin.present ? data.gstin.value : this.gstin,
+      gstFlag: data.gstFlag.present ? data.gstFlag.value : this.gstFlag,
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
       bankName: data.bankName.present ? data.bankName.value : this.bankName,
@@ -6785,6 +6851,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
           ..write('state: $state, ')
           ..write('stateCode: $stateCode, ')
           ..write('gstin: $gstin, ')
+          ..write('gstFlag: $gstFlag, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('bankName: $bankName, ')
@@ -6808,6 +6875,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
       state,
       stateCode,
       gstin,
+      gstFlag,
       phone,
       email,
       bankName,
@@ -6829,6 +6897,7 @@ class CompanyProfile extends DataClass implements Insertable<CompanyProfile> {
           other.state == this.state &&
           other.stateCode == this.stateCode &&
           other.gstin == this.gstin &&
+          other.gstFlag == this.gstFlag &&
           other.phone == this.phone &&
           other.email == this.email &&
           other.bankName == this.bankName &&
@@ -6849,6 +6918,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
   final Value<String> state;
   final Value<String> stateCode;
   final Value<String?> gstin;
+  final Value<bool> gstFlag;
   final Value<String?> phone;
   final Value<String?> email;
   final Value<String?> bankName;
@@ -6868,6 +6938,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
     this.state = const Value.absent(),
     this.stateCode = const Value.absent(),
     this.gstin = const Value.absent(),
+    this.gstFlag = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.bankName = const Value.absent(),
@@ -6888,6 +6959,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
     required String state,
     required String stateCode,
     this.gstin = const Value.absent(),
+    this.gstFlag = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.bankName = const Value.absent(),
@@ -6915,6 +6987,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
     Expression<String>? state,
     Expression<String>? stateCode,
     Expression<String>? gstin,
+    Expression<bool>? gstFlag,
     Expression<String>? phone,
     Expression<String>? email,
     Expression<String>? bankName,
@@ -6935,6 +7008,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
       if (state != null) 'state': state,
       if (stateCode != null) 'state_code': stateCode,
       if (gstin != null) 'gstin': gstin,
+      if (gstFlag != null) 'gst_flag': gstFlag,
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
       if (bankName != null) 'bank_name': bankName,
@@ -6957,6 +7031,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
       Value<String>? state,
       Value<String>? stateCode,
       Value<String?>? gstin,
+      Value<bool>? gstFlag,
       Value<String?>? phone,
       Value<String?>? email,
       Value<String?>? bankName,
@@ -6976,6 +7051,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
       state: state ?? this.state,
       stateCode: stateCode ?? this.stateCode,
       gstin: gstin ?? this.gstin,
+      gstFlag: gstFlag ?? this.gstFlag,
       phone: phone ?? this.phone,
       email: email ?? this.email,
       bankName: bankName ?? this.bankName,
@@ -7013,6 +7089,9 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
     }
     if (gstin.present) {
       map['gstin'] = Variable<String>(gstin.value);
+    }
+    if (gstFlag.present) {
+      map['gst_flag'] = Variable<bool>(gstFlag.value);
     }
     if (phone.present) {
       map['phone'] = Variable<String>(phone.value);
@@ -7060,6 +7139,7 @@ class CompanyProfilesCompanion extends UpdateCompanion<CompanyProfile> {
           ..write('state: $state, ')
           ..write('stateCode: $stateCode, ')
           ..write('gstin: $gstin, ')
+          ..write('gstFlag: $gstFlag, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('bankName: $bankName, ')
@@ -11465,6 +11545,7 @@ typedef $$InvoicesTableCreateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> companyBankIfsc,
   Value<String?> companyBankBranch,
   Value<String?> companyJurisdiction,
+  Value<bool> gstFlag,
   required String invoiceDate,
   Value<String> invoiceDatetime,
   required String taxRegime,
@@ -11515,6 +11596,7 @@ typedef $$InvoicesTableUpdateCompanionBuilder = InvoicesCompanion Function({
   Value<String?> companyBankIfsc,
   Value<String?> companyBankBranch,
   Value<String?> companyJurisdiction,
+  Value<bool> gstFlag,
   Value<String> invoiceDate,
   Value<String> invoiceDatetime,
   Value<String> taxRegime,
@@ -11735,6 +11817,9 @@ class $$InvoicesTableFilterComposer
   ColumnFilters<String> get companyJurisdiction => $composableBuilder(
       column: $table.companyJurisdiction,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get gstFlag => $composableBuilder(
+      column: $table.gstFlag, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => ColumnFilters(column));
@@ -12026,6 +12111,9 @@ class $$InvoicesTableOrderingComposer
       column: $table.companyJurisdiction,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get gstFlag => $composableBuilder(
+      column: $table.gstFlag, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => ColumnOrderings(column));
 
@@ -12234,6 +12322,9 @@ class $$InvoicesTableAnnotationComposer
 
   GeneratedColumn<String> get companyJurisdiction => $composableBuilder(
       column: $table.companyJurisdiction, builder: (column) => column);
+
+  GeneratedColumn<bool> get gstFlag =>
+      $composableBuilder(column: $table.gstFlag, builder: (column) => column);
 
   GeneratedColumn<String> get invoiceDate => $composableBuilder(
       column: $table.invoiceDate, builder: (column) => column);
@@ -12471,6 +12562,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> companyBankIfsc = const Value.absent(),
             Value<String?> companyBankBranch = const Value.absent(),
             Value<String?> companyJurisdiction = const Value.absent(),
+            Value<bool> gstFlag = const Value.absent(),
             Value<String> invoiceDate = const Value.absent(),
             Value<String> invoiceDatetime = const Value.absent(),
             Value<String> taxRegime = const Value.absent(),
@@ -12521,6 +12613,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             companyBankIfsc: companyBankIfsc,
             companyBankBranch: companyBankBranch,
             companyJurisdiction: companyJurisdiction,
+            gstFlag: gstFlag,
             invoiceDate: invoiceDate,
             invoiceDatetime: invoiceDatetime,
             taxRegime: taxRegime,
@@ -12571,6 +12664,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             Value<String?> companyBankIfsc = const Value.absent(),
             Value<String?> companyBankBranch = const Value.absent(),
             Value<String?> companyJurisdiction = const Value.absent(),
+            Value<bool> gstFlag = const Value.absent(),
             required String invoiceDate,
             Value<String> invoiceDatetime = const Value.absent(),
             required String taxRegime,
@@ -12621,6 +12715,7 @@ class $$InvoicesTableTableManager extends RootTableManager<
             companyBankIfsc: companyBankIfsc,
             companyBankBranch: companyBankBranch,
             companyJurisdiction: companyJurisdiction,
+            gstFlag: gstFlag,
             invoiceDate: invoiceDate,
             invoiceDatetime: invoiceDatetime,
             taxRegime: taxRegime,
@@ -14634,6 +14729,7 @@ typedef $$CompanyProfilesTableCreateCompanionBuilder = CompanyProfilesCompanion
   required String state,
   required String stateCode,
   Value<String?> gstin,
+  Value<bool> gstFlag,
   Value<String?> phone,
   Value<String?> email,
   Value<String?> bankName,
@@ -14655,6 +14751,7 @@ typedef $$CompanyProfilesTableUpdateCompanionBuilder = CompanyProfilesCompanion
   Value<String> state,
   Value<String> stateCode,
   Value<String?> gstin,
+  Value<bool> gstFlag,
   Value<String?> phone,
   Value<String?> email,
   Value<String?> bankName,
@@ -14697,6 +14794,9 @@ class $$CompanyProfilesTableFilterComposer
 
   ColumnFilters<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get gstFlag => $composableBuilder(
+      column: $table.gstFlag, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get phone => $composableBuilder(
       column: $table.phone, builder: (column) => ColumnFilters(column));
@@ -14759,6 +14859,9 @@ class $$CompanyProfilesTableOrderingComposer
   ColumnOrderings<String> get gstin => $composableBuilder(
       column: $table.gstin, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get gstFlag => $composableBuilder(
+      column: $table.gstFlag, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get phone => $composableBuilder(
       column: $table.phone, builder: (column) => ColumnOrderings(column));
 
@@ -14820,6 +14923,9 @@ class $$CompanyProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get gstin =>
       $composableBuilder(column: $table.gstin, builder: (column) => column);
+
+  GeneratedColumn<bool> get gstFlag =>
+      $composableBuilder(column: $table.gstFlag, builder: (column) => column);
 
   GeneratedColumn<String> get phone =>
       $composableBuilder(column: $table.phone, builder: (column) => column);
@@ -14886,6 +14992,7 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
             Value<String> state = const Value.absent(),
             Value<String> stateCode = const Value.absent(),
             Value<String?> gstin = const Value.absent(),
+            Value<bool> gstFlag = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> email = const Value.absent(),
             Value<String?> bankName = const Value.absent(),
@@ -14906,6 +15013,7 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
             state: state,
             stateCode: stateCode,
             gstin: gstin,
+            gstFlag: gstFlag,
             phone: phone,
             email: email,
             bankName: bankName,
@@ -14926,6 +15034,7 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
             required String state,
             required String stateCode,
             Value<String?> gstin = const Value.absent(),
+            Value<bool> gstFlag = const Value.absent(),
             Value<String?> phone = const Value.absent(),
             Value<String?> email = const Value.absent(),
             Value<String?> bankName = const Value.absent(),
@@ -14946,6 +15055,7 @@ class $$CompanyProfilesTableTableManager extends RootTableManager<
             state: state,
             stateCode: stateCode,
             gstin: gstin,
+            gstFlag: gstFlag,
             phone: phone,
             email: email,
             bankName: bankName,

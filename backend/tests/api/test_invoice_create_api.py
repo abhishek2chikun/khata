@@ -85,6 +85,7 @@ def test_quote_requires_company_profile_state_and_returns_totals(client, auth_he
     assert response.status_code == 200
     body = response.json()
     assert body["totals"]["grand_total"] == "236.00"
+    assert body["gst_flag"] is True
     assert body["warnings"] == []
 
 
@@ -129,6 +130,7 @@ def test_create_credit_invoice_is_atomic_and_idempotent(client, auth_headers):
     assert first.status_code == 201
     assert second.status_code == 201
     assert second.json()["invoice"]["id"] == first.json()["invoice"]["id"]
+    assert first.json()["invoice"]["gst_flag"] is True
 
 
 def test_paid_invoice_creates_no_credit_ledger_row(client, auth_headers):

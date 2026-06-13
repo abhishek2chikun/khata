@@ -30,6 +30,7 @@ class InvoiceDetail {
     this.companyState = '',
     this.companyStateCode = '',
     this.companyGstin,
+    this.gstFlag = true,
     this.companyPhone,
     this.companyEmail,
     this.companyBankName,
@@ -71,6 +72,7 @@ class InvoiceDetail {
   final String companyState;
   final String companyStateCode;
   final String? companyGstin;
+  final bool gstFlag;
   final String? companyPhone;
   final String? companyEmail;
   final String? companyBankName;
@@ -129,6 +131,7 @@ class InvoiceDetail {
       gstTotal: _toDouble(json['gst_total']),
       grandTotal: _toDouble(json['grand_total']),
       taxRegime: json['tax_regime'] as String? ?? '',
+      gstFlag: json['gst_flag'] as bool? ?? true,
       placeOfSupplyState: json['place_of_supply_state'] as String? ?? '',
       placeOfSupplyStateCode:
           json['place_of_supply_state_code'] as String? ?? '',

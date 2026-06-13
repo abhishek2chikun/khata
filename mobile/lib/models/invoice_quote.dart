@@ -3,6 +3,7 @@ class InvoiceQuote {
     required this.placeOfSupplyState,
     required this.placeOfSupplyStateCode,
     required this.taxRegime,
+    this.gstFlag = true,
     required this.items,
     required this.totals,
     required this.warnings,
@@ -11,6 +12,7 @@ class InvoiceQuote {
   final String placeOfSupplyState;
   final String placeOfSupplyStateCode;
   final String taxRegime;
+  final bool gstFlag;
   final List<InvoiceQuoteItem> items;
   final InvoiceTotals totals;
   final List<InvoiceWarning> warnings;
@@ -21,6 +23,7 @@ class InvoiceQuote {
       placeOfSupplyStateCode:
           json['place_of_supply_state_code'] as String? ?? '',
       taxRegime: json['tax_regime'] as String? ?? '',
+      gstFlag: json['gst_flag'] as bool? ?? true,
       items: (json['items'] as List<dynamic>? ?? const <dynamic>[])
           .cast<Map<String, dynamic>>()
           .map(InvoiceQuoteItem.fromJson)

@@ -78,6 +78,7 @@ class LocalInvoicesService implements InvoicesService {
                 companyBankIfsc: Value(prepared.company.bankIfsc),
                 companyBankBranch: Value(prepared.company.bankBranch),
                 companyJurisdiction: Value(prepared.company.jurisdiction),
+                gstFlag: Value(prepared.gstFlag),
                 invoiceDate: prepared.invoiceDate,
                 invoiceDatetime: Value(prepared.invoiceDatetime),
                 taxRegime: prepared.taxRegime,
@@ -504,6 +505,7 @@ class LocalInvoicesService implements InvoicesService {
     return _PreparedInvoice(
       customer: customer,
       company: company,
+      gstFlag: draft.gstFlag ?? company.gstFlag,
       invoiceDatetime: invoiceDatetime,
       invoiceDate: invoiceDate,
       paymentState: paymentState,
@@ -747,6 +749,7 @@ class LocalInvoicesService implements InvoicesService {
       companyState: invoice.companyState,
       companyStateCode: invoice.companyStateCode,
       companyGstin: invoice.companyGstin,
+      gstFlag: invoice.gstFlag,
       companyPhone: invoice.companyPhone,
       companyEmail: invoice.companyEmail,
       companyBankName: invoice.companyBankName,
@@ -798,6 +801,7 @@ class LocalInvoicesService implements InvoicesService {
       customerName: invoice.customerName,
       invoiceDate: invoice.invoiceDate,
       status: invoice.status,
+      gstFlag: invoice.gstFlag,
       paymentState: invoice.paymentState,
       paymentMode: invoice.paymentMode,
       grandTotal: double.parse(invoice.grandTotal),
@@ -809,6 +813,7 @@ class LocalInvoicesService implements InvoicesService {
       placeOfSupplyState: prepared.placeOfSupplyState,
       placeOfSupplyStateCode: prepared.placeOfSupplyStateCode,
       taxRegime: prepared.taxRegime,
+      gstFlag: prepared.gstFlag,
       items: prepared.lines
           .map(
             (line) => InvoiceQuoteItem(
@@ -1238,6 +1243,7 @@ class _PreparedInvoice {
   const _PreparedInvoice({
     required this.customer,
     required this.company,
+    required this.gstFlag,
     required this.invoiceDatetime,
     required this.invoiceDate,
     required this.paymentState,
@@ -1252,6 +1258,7 @@ class _PreparedInvoice {
 
   final Customer customer;
   final CompanyProfile company;
+  final bool gstFlag;
   final String invoiceDatetime;
   final String invoiceDate;
   final String paymentState;

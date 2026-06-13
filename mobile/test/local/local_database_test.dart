@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 8);
+    expect(database.schemaVersion, 9);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -91,6 +91,7 @@ void main() {
           'bank_branch',
           'jurisdiction',
           'is_active',
+          'gst_flag',
         ]));
     expect(
         _columnNames(database, 'invoices'),
@@ -100,6 +101,7 @@ void main() {
           'customer_name',
           'customer_state_code',
           'company_bank_ifsc',
+          'gst_flag',
           'invoice_datetime',
           'tax_regime',
           'payment_state',

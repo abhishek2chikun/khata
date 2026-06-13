@@ -104,6 +104,8 @@ class CompanyProfiles extends Table {
   TextColumn get state => text()();
   TextColumn get stateCode => text()();
   TextColumn get gstin => text().nullable()();
+  BoolColumn get gstFlag =>
+      boolean().named('gst_flag').withDefault(const Constant(false))();
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
   TextColumn get bankName => text().nullable()();
@@ -147,6 +149,8 @@ class Invoices extends Table {
   TextColumn get companyBankIfsc => text().nullable()();
   TextColumn get companyBankBranch => text().nullable()();
   TextColumn get companyJurisdiction => text().nullable()();
+  BoolColumn get gstFlag =>
+      boolean().named('gst_flag').withDefault(const Constant(false))();
   TextColumn get invoiceDate => text()();
   TextColumn get invoiceDatetime =>
       text().customConstraint("NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'")();
@@ -354,7 +358,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -549,6 +553,24 @@ class LocalDatabase extends _$LocalDatabase {
             if (await _tableExists('invoices') &&
                 !await _columnExists('invoices', 'customer_whatsapp_number')) {
               await m.addColumn(invoices, invoices.customerWhatsappNumber);
+            }
+          }
+          if (from < 9) {
+            if (await _tableExists('company_profiles') &&
+                !await _columnExists('company_profiles', 'gst_flag')) {
+              await m.addColumn(companyProfiles, companyProfiles.gstFlag);
+              await customStatement(
+                  "UPDATE company_profiles SET gst_flag = 1 WHERE gstin IS NOT NULL AND TRIM(gstin) <> ''");
+              await customStatement(
+                  "UPDATE company_profiles SET gst_flag = 0 WHERE gst_flag IS NULL");
+            }
+            if (await _tableExists('invoices') &&
+                !await _columnExists('invoices', 'gst_flag')) {
+              await m.addColumn(invoices, invoices.gstFlag);
+              await customStatement(
+                  "UPDATE invoices SET gst_flag = 1 WHERE (company_gstin IS NOT NULL AND TRIM(company_gstin) <> '') OR CAST(gst_total AS REAL) <> 0");
+              await customStatement(
+                  "UPDATE invoices SET gst_flag = 0 WHERE gst_flag IS NULL");
             }
           }
         },

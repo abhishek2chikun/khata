@@ -11,6 +11,7 @@ class InvoiceDraft {
     String? paymentMode,
     this.placeOfSupplyStateCode,
     this.notes,
+    this.gstFlag,
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
   })  : paymentState = paymentState,
         paymentMode = paymentMode ?? paymentState;
@@ -23,6 +24,7 @@ class InvoiceDraft {
   final String paymentMode;
   final String? placeOfSupplyStateCode;
   final String? notes;
+  final bool? gstFlag;
   final List<InvoiceDraftItem> items;
 
   InvoiceDraft copyWith({
@@ -38,6 +40,8 @@ class InvoiceDraft {
     bool clearPlaceOfSupplyStateCode = false,
     String? notes,
     bool clearNotes = false,
+    bool? gstFlag,
+    bool clearGstFlag = false,
     List<InvoiceDraftItem>? items,
   }) {
     return InvoiceDraft(
@@ -52,6 +56,7 @@ class InvoiceDraft {
           ? null
           : placeOfSupplyStateCode ?? this.placeOfSupplyStateCode,
       notes: clearNotes ? null : notes ?? this.notes,
+      gstFlag: clearGstFlag ? null : gstFlag ?? this.gstFlag,
       items: items ?? this.items,
     );
   }
@@ -66,6 +71,7 @@ class InvoiceDraft {
       'paid_amount': paidAmount,
       'place_of_supply_state_code': _emptyToNull(placeOfSupplyStateCode),
       'notes': _emptyToNull(notes),
+      if (gstFlag != null) 'gst_flag': gstFlag,
       'items': items.map((item) => item.toJson()).toList(),
     };
   }

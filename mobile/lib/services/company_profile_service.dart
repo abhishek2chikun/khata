@@ -18,6 +18,7 @@ class UpsertCompanyProfileInput {
     this.bankIfsc,
     this.bankBranch,
     this.jurisdiction,
+    this.gstFlag = false,
   });
 
   final String name;
@@ -33,6 +34,7 @@ class UpsertCompanyProfileInput {
   final String? bankIfsc;
   final String? bankBranch;
   final String? jurisdiction;
+  final bool gstFlag;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -42,6 +44,7 @@ class UpsertCompanyProfileInput {
       'state': state,
       'state_code': stateCode,
       'gstin': gstin,
+      'gst_flag': gstFlag,
       'phone': phone,
       'email': email,
       'bank_name': bankName,

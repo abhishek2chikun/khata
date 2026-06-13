@@ -389,9 +389,31 @@ void main() {
     expect(products.single.id, 'target-product');
   });
 
+  test('rejects v8 backup package', () async {
+    final source = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    await _seedRoundTripData(source);
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+      schemaVersion: 8,
+    );
+
+    final target = db.LocalDatabase.memory();
+    addTearDown(target.close);
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<UnsupportedBackupVersionException>()),
+    );
+  });
+
   test('backup schema version and compatibility version are updated for V2',
       () async {
-    expect(LocalBackupPayload.currentSchemaVersion, 8);
+    expect(LocalBackupPayload.currentSchemaVersion, 9);
     expect(
         LocalBackupPayload.currentBackendCompatibilityVersion, 'local-v2');
   });

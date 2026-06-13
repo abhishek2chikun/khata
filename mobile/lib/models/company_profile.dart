@@ -7,6 +7,7 @@ class CompanyProfile {
     required this.state,
     required this.stateCode,
     required this.gstin,
+    this.gstFlag = false,
     required this.phone,
     required this.email,
     required this.bankName,
@@ -24,6 +25,7 @@ class CompanyProfile {
   final String state;
   final String stateCode;
   final String? gstin;
+  final bool gstFlag;
   final String? phone;
   final String? email;
   final String? bankName;
@@ -42,6 +44,7 @@ class CompanyProfile {
       state: json['state'] as String? ?? '',
       stateCode: json['state_code'] as String? ?? '',
       gstin: json['gstin'] as String?,
+      gstFlag: json['gst_flag'] as bool? ?? false,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       bankName: json['bank_name'] as String?,

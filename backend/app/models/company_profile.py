@@ -21,6 +21,7 @@ class CompanyProfile(Base):
     state: Mapped[str] = mapped_column(String(255), nullable=False)
     state_code: Mapped[str] = mapped_column(String(50), nullable=False)
     gstin: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    gst_flag: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     bank_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
