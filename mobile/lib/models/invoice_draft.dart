@@ -4,7 +4,6 @@ import 'customer.dart';
 class InvoiceDraft {
   const InvoiceDraft({
     this.customer,
-    this.invoiceDatetime,
     this.invoiceDate = '',
     String paymentState = 'CREDIT',
     this.paidAmount = 0,
@@ -17,7 +16,6 @@ class InvoiceDraft {
         paymentMode = paymentMode ?? paymentState;
 
   final Customer? customer;
-  final String? invoiceDatetime;
   final String invoiceDate;
   final String paymentState;
   final double paidAmount;
@@ -30,8 +28,6 @@ class InvoiceDraft {
   InvoiceDraft copyWith({
     Customer? customer,
     bool clearCustomer = false,
-    String? invoiceDatetime,
-    bool clearInvoiceDatetime = false,
     String? invoiceDate,
     String? paymentState,
     double? paidAmount,
@@ -46,8 +42,6 @@ class InvoiceDraft {
   }) {
     return InvoiceDraft(
       customer: clearCustomer ? null : customer ?? this.customer,
-      invoiceDatetime:
-          clearInvoiceDatetime ? null : invoiceDatetime ?? this.invoiceDatetime,
       invoiceDate: invoiceDate ?? this.invoiceDate,
       paymentState: paymentState ?? this.paymentState,
       paidAmount: paidAmount ?? this.paidAmount,
@@ -65,7 +59,6 @@ class InvoiceDraft {
     final resolvedPaymentState = _resolvedPaymentState();
     return <String, dynamic>{
       'customer_id': customer?.id,
-      'invoice_datetime': _emptyToNull(invoiceDatetime),
       'invoice_date': invoiceDate,
       'payment_state': resolvedPaymentState,
       'paid_amount': paidAmount,

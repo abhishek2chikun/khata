@@ -40,9 +40,17 @@ class InvoicePreviewScreen extends StatelessWidget {
                   Text('Customer: ${controller.draft.customer?.name ?? ''}',
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
+                  Text(
+                    quote.gstFlag ? 'GST invoice' : 'Non-GST invoice',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
                   Text('Date: ${controller.draft.invoiceDate}'),
-                  Text('Tax regime: ${quote.taxRegime}'),
-                  Text('Place of supply: ${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})'),
+                  if (quote.gstFlag) ...<Widget>[
+                    Text('Tax regime: ${quote.taxRegime}'),
+                    Text(
+                        'Place of supply: ${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})'),
+                  ],
                   const SizedBox(height: 8),
                   _buildPaymentStateSection(context),
                   const SizedBox(height: 12),
@@ -204,10 +212,11 @@ class InvoicePreviewScreen extends StatelessWidget {
         Text('Subtotal: ${quote.totals.subtotal.toStringAsFixed(2)}'),
         Text('Discount: ${quote.totals.discountTotal.toStringAsFixed(2)}'),
         Text('Taxable total: ${quote.totals.taxableTotal.toStringAsFixed(2)}'),
-        Text(
-          key: const Key('gstTotal'),
-          'GST total: ${quote.totals.gstTotal.toStringAsFixed(2)}',
-        ),
+        if (quote.gstFlag)
+          Text(
+            key: const Key('gstTotal'),
+            'GST total: ${quote.totals.gstTotal.toStringAsFixed(2)}',
+          ),
         Text(
           key: const Key('grandTotal'),
           'Grand total: ${quote.totals.grandTotal.toStringAsFixed(2)}',

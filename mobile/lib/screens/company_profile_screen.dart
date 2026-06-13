@@ -38,6 +38,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
 
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _gstFlag = false;
   String? _errorMessage;
   String? _infoMessage;
 
@@ -97,7 +98,26 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                   _buildField(_cityController, 'City'),
                   _buildField(_stateController, 'State'),
                   _buildField(_stateCodeController, 'State code'),
-                  _buildField(_gstinController, 'GSTIN'),
+                  SwitchListTile(
+                    key: const Key('companyGstFlagSwitch'),
+                    title: const Text('GST registered seller'),
+                    value: _gstFlag,
+                    onChanged: _isSaving
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _gstFlag = value;
+                              if (!value) {
+                                _gstinController.clear();
+                              }
+                            });
+                          },
+                  ),
+                  _buildField(
+                    _gstinController,
+                    'GSTIN',
+                    enabled: _gstFlag && !_isSaving,
+                  ),
                   _buildField(_phoneController, 'Phone'),
                   _buildField(_emailController, 'Email'),
                   _buildField(_bankNameController, 'Bank name'),
@@ -123,12 +143,13 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String label) {
+  Widget _buildField(TextEditingController controller, String label,
+      {bool enabled = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
-        enabled: !_isSaving,
+        enabled: enabled,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
@@ -173,6 +194,13 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     });
 
     try {
+      if (_gstFlag && _gstinController.text.trim().isEmpty) {
+        setState(() {
+          _errorMessage = 'GSTIN is required for GST registered sellers';
+          _isSaving = false;
+        });
+        return;
+      }
       final saved = await widget.companyProfileService.upsertCompanyProfile(
         UpsertCompanyProfileInput(
           name: _nameController.text.trim(),
@@ -180,7 +208,8 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
           city: _cityController.text.trim(),
           state: _stateController.text.trim(),
           stateCode: _stateCodeController.text.trim(),
-          gstin: _emptyToNull(_gstinController.text),
+          gstin: _gstFlag ? _emptyToNull(_gstinController.text) : null,
+          gstFlag: _gstFlag,
           phone: _emptyToNull(_phoneController.text),
           email: _emptyToNull(_emailController.text),
           bankName: _emptyToNull(_bankNameController.text),
@@ -219,6 +248,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     _cityController.text = profile.city;
     _stateController.text = profile.state;
     _stateCodeController.text = profile.stateCode;
+    _gstFlag = profile.gstFlag;
     _gstinController.text = profile.gstin ?? '';
     _phoneController.text = profile.phone ?? '';
     _emailController.text = profile.email ?? '';

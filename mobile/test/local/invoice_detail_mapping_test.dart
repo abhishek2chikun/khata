@@ -360,7 +360,6 @@ InvoiceDraft _draft({
   required Product product,
   required double quantity,
   String invoiceDate = '2026-01-10',
-  String? invoiceDatetime = '2026-01-10T15:30:00.000Z',
   String paymentState = 'CREDIT',
   double paidAmount = 0,
   String? paymentMode,
@@ -368,7 +367,6 @@ InvoiceDraft _draft({
   return InvoiceDraft(
     customer: customer,
     invoiceDate: invoiceDate,
-    invoiceDatetime: invoiceDatetime,
     paymentState: paymentState,
     paidAmount: paidAmount,
     paymentMode: paymentMode,

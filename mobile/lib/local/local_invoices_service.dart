@@ -580,11 +580,6 @@ class LocalInvoicesService implements InvoicesService {
     if (draftCustomer == null || draftCustomer.id != invoice.customerId) {
       return false;
     }
-    final draftInvoiceDatetime = _emptyToNull(draft.invoiceDatetime);
-    if (draftInvoiceDatetime != null &&
-        _resolveInvoiceDatetime(draft) != invoice.invoiceDatetime) {
-      return false;
-    }
     final draftInvoiceDate = _emptyToNull(draft.invoiceDate);
     if (draftInvoiceDate != null && draftInvoiceDate != invoice.invoiceDate) {
       return false;
@@ -1074,20 +1069,12 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   String _resolveInvoiceDatetime(InvoiceDraft draft) {
-    final value = _emptyToNull(draft.invoiceDatetime);
-    if (value != null) {
-      _validateTimezoneAwareDatetime(value);
-      final date = _emptyToNull(draft.invoiceDate);
-      if (date != null && date != value.substring(0, 10)) {
-        throw _validationError('invoice_date must match invoice_datetime date');
-      }
-      return value;
-    }
     final date = _emptyToNull(draft.invoiceDate);
     if (date != null) {
       return '${date}T00:00:00.000Z';
     }
-    return DateTime.now().toUtc().toIso8601String();
+    final now = DateTime.now().toUtc();
+    return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T00:00:00.000Z';
   }
 
   void _validateTimezoneAwareDatetime(String value) {

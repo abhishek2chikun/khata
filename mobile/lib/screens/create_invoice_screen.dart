@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
+import '../models/company_profile.dart';
 import '../models/product.dart';
 import '../models/customer.dart';
+import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
 import '../services/invoice_share_service.dart';
 import '../services/products_service.dart';
@@ -23,6 +25,7 @@ class CreateInvoiceScreen extends StatefulWidget {
     required this.invoicesService,
     required this.productsService,
     required this.customersService,
+    this.companyProfileService,
     this.initialCustomer,
     this.shareService,
   });
@@ -30,6 +33,7 @@ class CreateInvoiceScreen extends StatefulWidget {
   final InvoicesService invoicesService;
   final ProductsService productsService;
   final CustomersService customersService;
+  final CompanyProfileService? companyProfileService;
   final Customer? initialCustomer;
   final InvoiceShareService? shareService;
 
@@ -51,6 +55,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   List<Customer> _customers = const <Customer>[];
   List<Product> _products = const <Product>[];
+  CompanyProfile? _sellerProfile;
   bool _isLoading = true;
   String? _loadErrorMessage;
 
@@ -62,20 +67,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       initialCustomer: widget.initialCustomer,
     );
     _invoiceDateController = TextEditingController(
-      text: _formatDateTime(DateTime.now()),
+      text: _formatDate(DateTime.now()),
     );
-    final initialDate = _invoiceDateController.text.split(' ').first;
-    _controller.updateInvoiceDate(initialDate);
-    _controller.updateInvoiceDatetime(_invoiceDateController.text);
+    _controller.updateInvoiceDate(_invoiceDateController.text);
     _controller.addListener(_syncControllers);
     _syncControllers();
     _loadOptions();
   }
 
-  static String _formatDateTime(DateTime dt) {
-    final date = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-    final time = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    return '$date $time';
+  static String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
   void _syncControllers() {
@@ -150,7 +151,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       ],
                       _buildCustomerSection(),
                       const SizedBox(height: 12),
-                      _buildDateTimeField(),
+                      _buildGstModeSection(),
+                      const SizedBox(height: 12),
+                      _buildDateField(),
                       const SizedBox(height: 12),
                       _buildPaymentStateSection(),
                       const SizedBox(height: 12),
@@ -235,18 +238,59 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  Widget _buildDateTimeField() {
+  Widget _buildGstModeSection() {
+    final profile = _sellerProfile;
+    if (profile == null) {
+      return const SizedBox.shrink();
+    }
+    if (!profile.gstFlag) {
+      return const Text(
+        'Non-GST invoice (seller is not GST registered)',
+        key: Key('nonGstSellerNotice'),
+      );
+    }
+    final draftGstFlag = _controller.draft.gstFlag ?? true;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SwitchListTile(
+          key: const Key('invoiceGstFlagSwitch'),
+          title: const Text('GST invoice'),
+          subtitle: const Text('Turn off for zero-rate non-GST bills'),
+          value: draftGstFlag,
+          onChanged: _controller.setGstFlag,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateField() {
     return TextField(
-      key: const Key('invoiceDatetimeField'),
+      key: const Key('invoiceDateField'),
       controller: _invoiceDateController,
       readOnly: true,
-      onTap: _pickDateTime,
+      onTap: _pickDate,
       decoration: const InputDecoration(
-        labelText: 'Invoice date & time',
+        labelText: 'Invoice date',
         border: OutlineInputBorder(),
         suffixIcon: Icon(Icons.calendar_today),
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (date == null || !mounted) return;
+
+    final formatted = _formatDate(date);
+    _invoiceDateController.text = formatted;
+    _controller.updateInvoiceDate(formatted);
   }
 
   Widget _buildPaymentStateSection() {
@@ -408,31 +452,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: now,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (date == null || !mounted) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(now),
-    );
-    if (time == null || !mounted) return;
-
-    final combined = DateTime(
-      date.year, date.month, date.day, time.hour, time.minute,
-    );
-    final formatted = _formatDateTime(combined);
-    _invoiceDateController.text = formatted;
-    _controller.updateInvoiceDate(formatted.split(' ').first);
-    _controller.updateInvoiceDatetime(formatted);
-  }
-
   Future<void> _openCustomerQuickAdd() async {
     final customer = await showDialog<Customer>(
       context: context,
@@ -467,6 +486,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     });
 
     try {
+      if (widget.companyProfileService != null) {
+        try {
+          _sellerProfile =
+              await widget.companyProfileService!.fetchCompanyProfile();
+          _controller.initializeGstFlag(_sellerProfile!.gstFlag);
+        } on ApiError catch (error) {
+          if (error.statusCode != 404) {
+            rethrow;
+          }
+        }
+      }
       final products = await widget.productsService
           .fetchProducts(filter: const ProductFilter(active: true));
       final customers = widget.initialCustomer != null

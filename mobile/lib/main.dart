@@ -236,6 +236,7 @@ class _BillingAppState extends State<BillingApp> {
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
               customersService: widget.customersService,
+              companyProfileService: widget.companyProfileService,
               initialCustomer: customer,
               shareService: InvoiceShareService.production(),
             ),

@@ -121,6 +121,16 @@ class InvoiceDraftController extends ChangeNotifier {
     _updateDraft(_draft.copyWith(items: items));
   }
 
+  void setGstFlag(bool value) {
+    _updateDraft(_draft.copyWith(gstFlag: value));
+  }
+
+  void initializeGstFlag(bool value) {
+    if (_draft.gstFlag == null) {
+      _updateDraft(_draft.copyWith(gstFlag: value));
+    }
+  }
+
   void updatePaymentState(String paymentState) {
     _updateDraft(
         _draft.copyWith(paymentState: paymentState, paymentMode: paymentState));
@@ -128,13 +138,6 @@ class InvoiceDraftController extends ChangeNotifier {
 
   void updatePaidAmount(double paidAmount) {
     _updateDraft(_draft.copyWith(paidAmount: paidAmount));
-  }
-
-  void updateInvoiceDatetime(String? invoiceDatetime) {
-    _updateDraft(_draft.copyWith(
-      invoiceDatetime: invoiceDatetime,
-      clearInvoiceDatetime: invoiceDatetime == null || invoiceDatetime.isEmpty,
-    ));
   }
 
   void applyGstToAllLines(double? gstRate) {

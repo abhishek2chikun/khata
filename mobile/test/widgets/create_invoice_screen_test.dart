@@ -626,14 +626,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final dateTimeField = find.byKey(const Key('invoiceDatetimeField'));
-    expect(dateTimeField, findsOneWidget);
+    final dateField = find.byKey(const Key('invoiceDateField'));
+    expect(dateField, findsOneWidget);
 
     final textController =
-        tester.widget<TextField>(dateTimeField).controller;
+        tester.widget<TextField>(dateField).controller;
     expect(textController?.text, isNotEmpty);
 
-    final datePart = textController!.text.split(' ').first;
+    final datePart = textController!.text;
     expect(datePart, matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
 
     await _fillDraft(tester);

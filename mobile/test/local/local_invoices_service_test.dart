@@ -170,7 +170,7 @@ void main() {
     expect(result.invoice.paidAmount, 0);
     expect(result.invoice.customerName, 'Acme Stores');
     expect(result.invoice.invoiceDate, '2026-01-10');
-    expect(result.invoice.invoiceDatetime, '2026-01-10T15:30:00.000Z');
+    expect(result.invoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
     expect(result.invoice.grandTotal, 236);
     expect(result.invoice.items.single.productName, 'Blue Pen');
     expect(result.invoice.items.single.productItemNumber, 'PEN-1');
@@ -208,7 +208,7 @@ void main() {
     expect(storedInvoice.companyStateCode, '27');
     expect(storedInvoice.paymentState, 'CREDIT');
     expect(storedInvoice.paidAmount, '0');
-    expect(storedInvoice.invoiceDatetime, '2026-01-10T15:30:00.000Z');
+    expect(storedInvoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
 
     final storedItem = await database.select(database.invoiceItems).getSingle();
     expect(storedItem.productItemNumber, 'PEN-1');
@@ -359,7 +359,6 @@ void main() {
       product: product,
       quantity: 2,
       paymentState: 'TOTAL_PAID',
-      invoiceDatetime: null,
     );
 
     final first = await invoicesService.createInvoice(
@@ -373,7 +372,6 @@ void main() {
         quantity: 2,
         paymentState: 'TOTAL_PAID',
         paidAmount: 236,
-        invoiceDatetime: '2026-01-10T00:00:00.000Z',
       ),
       requestId: _uuid(23),
     );
@@ -508,14 +506,12 @@ void main() {
     ]));
   });
 
-  test('idempotent replay matches omitted invoice datetime to stored value',
-      () async {
+  test('idempotent replay matches stored invoice date', () async {
     final draft = _draft(
       customer: customer,
       product: product,
       quantity: 1,
-      invoiceDate: '',
-      invoiceDatetime: null,
+      invoiceDate: '2026-02-01',
     );
     final first = await invoicesService.createInvoice(
       draft: draft,
@@ -807,27 +803,25 @@ void main() {
     expect(await database.select(database.customerTransactions).get(), isEmpty);
   });
 
-  test('invoice datetime requires timezone and must match invoice date',
-      () async {
-    await expectLater(
-      () => invoicesService.quoteInvoice(_draft(
+  test('date-only draft stores UTC midnight invoice datetime', () async {
+    final quote = await invoicesService.quoteInvoice(_draft(
+      customer: customer,
+      product: product,
+      quantity: 1,
+      invoiceDate: '2026-01-10',
+    ));
+    expect(quote.totals.grandTotal, 118);
+
+    final created = await invoicesService.createInvoice(
+      draft: _draft(
         customer: customer,
         product: product,
         quantity: 1,
-        invoiceDatetime: '2026-01-10T15:30:00.000',
-      )),
-      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
+        invoiceDate: '2026-01-10',
+      ),
+      requestId: _uuid(60),
     );
-    await expectLater(
-      () => invoicesService.quoteInvoice(_draft(
-        customer: customer,
-        product: product,
-        quantity: 1,
-        invoiceDate: '2026-01-11',
-        invoiceDatetime: '2026-01-10T15:30:00.000Z',
-      )),
-      throwsA(_apiError(code: 'VALIDATION_ERROR', statusCode: 400)),
-    );
+    expect(created.invoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
   });
 
   test('inclusive GST half-cent rounding is deterministic', () async {
@@ -1193,7 +1187,6 @@ InvoiceDraft _draft({
   required Product product,
   required double quantity,
   String invoiceDate = '2026-01-10',
-  String? invoiceDatetime = '2026-01-10T15:30:00.000Z',
   String paymentState = 'CREDIT',
   double paidAmount = 0,
   String? paymentMode,
@@ -1204,7 +1197,6 @@ InvoiceDraft _draft({
   return _draftWithItems(
     customer: customer,
     invoiceDate: invoiceDate,
-    invoiceDatetime: invoiceDatetime,
     paymentState: paymentState,
     paidAmount: paidAmount,
     paymentMode: paymentMode,
@@ -1225,7 +1217,6 @@ InvoiceDraft _draftWithItems({
   required Customer customer,
   required List<InvoiceDraftItem> items,
   String invoiceDate = '2026-01-10',
-  String? invoiceDatetime = '2026-01-10T15:30:00.000Z',
   String paymentState = 'CREDIT',
   double paidAmount = 0,
   String? paymentMode,
@@ -1235,7 +1226,6 @@ InvoiceDraft _draftWithItems({
   return InvoiceDraft(
     customer: customer,
     invoiceDate: invoiceDate,
-    invoiceDatetime: invoiceDatetime,
     paymentState: paymentState,
     paidAmount: paidAmount,
     paymentMode: paymentMode,
