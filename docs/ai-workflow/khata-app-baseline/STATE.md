@@ -7,7 +7,7 @@ Stage status: partial
 Repository: /Users/abhishek/python_venv/khata_app
 Branch: main
 Baseline commit: 53886a6ab98c488e96e7c3f666ed94bedbca236e
-Current HEAD: e5bc8db (workflow artifacts commit; synced baseline b326367)
+Current HEAD: d69f966 (workflow artifacts; synced baseline b326367)
 Worktree note: clean; synced with origin/main via fast-forward (53886a6 → b326367)
 
 Context topology:
@@ -71,7 +71,7 @@ Known risks/blockers:
 
 Execution ledger:
 | Stage | Context/model lane | Start SHA | End SHA | Status | Primary artifacts |
-| 0 | fresh SLM discovery | 53886a6 | e5bc8db | partial | `docs/ai-workflow/khata-app-baseline/00-discovery.md`, `STATE.md` |
+| 0 | fresh SLM discovery | 53886a6 | d69f966 | partial | `docs/ai-workflow/khata-app-baseline/00-discovery.md`, `STATE.md` |
 
 Last completed stage: 0-discovery
 Next required stage: 1-brainstorming
