@@ -24,6 +24,7 @@ import 'services/company_profile_service.dart';
 import 'services/buyers_service.dart';
 import 'services/invoices_service.dart';
 import 'services/invoice_share_service.dart';
+import 'services/balance_share_service.dart';
 import 'services/payments_service.dart';
 import 'services/products_service.dart';
 import 'services/customers_service.dart';
@@ -190,6 +191,8 @@ class _BillingAppState extends State<BillingApp> {
             customersService: widget.customersService,
             paymentsService: widget.paymentsService,
             onCreateInvoice: _openCreateInvoiceForCustomer,
+            companyProfileService: widget.companyProfileService,
+            balanceShareService: BalanceShareService.production(),
           );
         case AppDestination.buyers:
           return BuyerListScreen(

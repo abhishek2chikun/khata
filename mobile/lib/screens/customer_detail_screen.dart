@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/customer.dart';
 import '../models/customer_ledger.dart';
+import '../services/balance_share_service.dart';
+import '../services/company_profile_service.dart';
 import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
@@ -20,12 +22,16 @@ class CustomerDetailScreen extends StatefulWidget {
     required this.customersService,
     required this.paymentsService,
     required this.onCreateInvoice,
+    this.companyProfileService,
+    this.balanceShareService,
   });
 
   final String customerId;
   final CustomersService customersService;
   final PaymentsService paymentsService;
   final Future<bool> Function(Customer customer) onCreateInvoice;
+  final CompanyProfileService? companyProfileService;
+  final BalanceShareService? balanceShareService;
 
   @override
   State<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
@@ -97,6 +103,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               customer.pendingBalance.toStringAsFixed(2),
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
+                            if (widget.balanceShareService != null &&
+                                widget.companyProfileService != null) ...<Widget>[
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                key: const Key('shareIndividualBalanceButton'),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _previewShareIndividualBalance(
+                                          customer,
+                                        ),
+                                icon: const Icon(Icons.share_outlined),
+                                label: const Text('Share balance'),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -355,6 +375,68 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final shouldRefresh = await widget.onCreateInvoice(customer);
     if (shouldRefresh && mounted) {
       await _loadCustomer();
+    }
+  }
+
+  Future<void> _previewShareIndividualBalance(Customer customer) async {
+    final profileService = widget.companyProfileService;
+    final shareService = widget.balanceShareService;
+    if (profileService == null || shareService == null) {
+      return;
+    }
+
+    setState(() {
+      _errorMessage = null;
+    });
+
+    try {
+      final profile = await profileService.fetchCompanyProfile();
+      if (!mounted) {
+        return;
+      }
+      final asOfDate = _dateString(DateTime.now());
+      final message = formatIndividualBalanceShareMessage(
+        sellerName: profile.name,
+        customerName: customer.name,
+        pendingBalance: customer.pendingBalance,
+        asOfDate: asOfDate,
+      );
+      await _previewAndShareBalance(message, shareService);
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = _messageForLoadError(error);
+      });
+    }
+  }
+
+  Future<void> _previewAndShareBalance(
+    String message,
+    BalanceShareService shareService,
+  ) async {
+    final shouldShare = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share balance'),
+        content: SingleChildScrollView(child: Text(message)),
+        actions: <Widget>[
+          TextButton(
+            key: const Key('cancelBalanceShareButton'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirmBalanceShareButton'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+    if (shouldShare == true) {
+      await shareService.shareText(message);
     }
   }
 

@@ -18,6 +18,13 @@ The app models a wholesaler (distributor) business. Key entity names:
 - **Invoice**: a sale document to a customer with line items, tax computation, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), and stock/ledger side effects.
 - **Analytics**: dashboard aggregating revenue/profit by buyer, company, and customer; top products; low-stock alerts; customer khata balances; buyer pending payables. Available in both API and local modes.
 
+### GST invoicing (Stage 3)
+
+- Seller profile and each invoice snapshot persist `gst_flag` (GST vs non-GST).
+- Non-GST invoices force zero tax; GST sellers may issue non-GST only when all line GST rates are zero.
+- Mobile invoice creation sends date-only `invoice_date`; PDFs adapt A5 (≤10 lines) / A4 (>10) with GST or non-GST layouts.
+- Invoice PDF sharing uses the OS chooser with attachment plus a safe caption; customer pending balances can be shared individually or as a daily positive-only summary.
+
 ## PostgreSQL Setup
 
 Start the local PostgreSQL test database container:
@@ -209,7 +216,8 @@ columns. Key alignment expectations:
 - Local text IDs map to server UUIDs during migration; `salt` and
   `password_hash_version` are local-only.
 
-Backup schema version: **6**. Backend compatibility version: **`local-v2`**.
+Backup schema version: **9**. Backend compatibility version: **`local-v2`**.
+Includes `gst_flag` on company profiles and invoices (Drift v9 / Alembic 0009).
 
 ### Backup and Migration Compatibility
 

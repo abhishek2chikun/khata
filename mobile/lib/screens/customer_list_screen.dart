@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../models/company_profile.dart';
 import '../models/api_error.dart';
 import '../models/customer.dart';
+import '../services/balance_share_service.dart';
+import '../services/company_profile_service.dart';
 import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
@@ -16,12 +19,16 @@ class CustomerListScreen extends StatefulWidget {
     required this.paymentsService,
     required this.onCreateInvoice,
     this.drawer,
+    this.companyProfileService,
+    this.balanceShareService,
   });
 
   final CustomersService customersService;
   final PaymentsService paymentsService;
   final Future<bool> Function(Customer customer) onCreateInvoice;
   final Widget? drawer;
+  final CompanyProfileService? companyProfileService;
+  final BalanceShareService? balanceShareService;
 
   @override
   State<CustomerListScreen> createState() => _CustomerListScreenState();
@@ -33,6 +40,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   List<Customer> _allCustomers = const <Customer>[];
   List<Customer> _customers = const <Customer>[];
   bool _isLoading = true;
+  bool _isSharingDailySummary = false;
   String? _errorMessage;
 
   @override
@@ -51,7 +59,27 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: widget.drawer,
-      appBar: AppBar(title: const Text('Customers/Khata')),
+      appBar: AppBar(
+        title: const Text('Customers/Khata'),
+        actions: <Widget>[
+          if (widget.balanceShareService != null &&
+              widget.companyProfileService != null)
+            IconButton(
+              key: const Key('shareDailyBalanceButton'),
+              onPressed: _isLoading || _isSharingDailySummary
+                  ? null
+                  : _previewShareDailySummary,
+              icon: _isSharingDailySummary
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.share_outlined),
+              tooltip: 'Share daily balances',
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createCustomer,
         icon: const Icon(Icons.add),
@@ -178,12 +206,84 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           customersService: widget.customersService,
           paymentsService: widget.paymentsService,
           onCreateInvoice: widget.onCreateInvoice,
+          companyProfileService: widget.companyProfileService,
+          balanceShareService: widget.balanceShareService,
         ),
       ),
     );
     if (mounted) {
       await _loadCustomers();
     }
+  }
+
+  Future<void> _previewShareDailySummary() async {
+    final profileService = widget.companyProfileService;
+    final shareService = widget.balanceShareService;
+    if (profileService == null || shareService == null) {
+      return;
+    }
+
+    setState(() {
+      _isSharingDailySummary = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final results = await Future.wait(<Future<Object>>[
+        profileService.fetchCompanyProfile(),
+        widget.customersService.fetchCustomers(),
+      ]);
+      if (!mounted) {
+        return;
+      }
+      final profile = results[0] as CompanyProfile;
+      final customers = results[1] as List<Customer>;
+      final asOfDate = _dateString(DateTime.now());
+      final message = formatDailyBalanceShareMessage(
+        sellerName: profile.name,
+        asOfDate: asOfDate,
+        customers: customers,
+      );
+      final shouldShare = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Share daily balances'),
+          content: SingleChildScrollView(child: Text(message)),
+          actions: <Widget>[
+            TextButton(
+              key: const Key('cancelDailyBalanceShareButton'),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const Key('confirmDailyBalanceShareButton'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Share'),
+            ),
+          ],
+        ),
+      );
+      if (shouldShare == true) {
+        await shareService.shareText(message);
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = _messageForLoadError(error);
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharingDailySummary = false;
+        });
+      }
+    }
+  }
+
+  String _dateString(DateTime value) {
+    return '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
   }
 
   Future<void> _createCustomer() async {

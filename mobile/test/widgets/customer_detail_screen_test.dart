@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
+import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/screens/customer_detail_screen.dart';
+import 'package:internal_billing_khata_mobile/services/balance_share_service.dart';
+import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
@@ -595,6 +598,47 @@ void main() {
 
     expect(find.text('Unable to reach the server'), findsOneWidget);
   });
+
+  testWidgets('previews and shares individual balance', (tester) async {
+    final shareService = _RecordingBalanceShareService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerDetailScreen(
+          customerId: 'customer-1',
+          customersService: FakeCustomersService(
+            ledgers: <CustomerLedger>[
+              CustomerLedger(
+                customer: _customer,
+                transactions: const <CustomerLedgerTransaction>[],
+                invoices: const <CustomerInvoiceHistoryEntry>[],
+              ),
+            ],
+          ),
+          paymentsService: FakePaymentsService(),
+          onCreateInvoice: (_) async => false,
+          companyProfileService: _FakeCompanyProfileService(),
+          balanceShareService: shareService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('shareIndividualBalanceButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pending balance: 500.00'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancelBalanceShareButton')));
+    await tester.pumpAndSettle();
+    expect(shareService.sharedMessages, isEmpty);
+
+    await tester.tap(find.byKey(const Key('shareIndividualBalanceButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmBalanceShareButton')));
+    await tester.pumpAndSettle();
+
+    expect(shareService.sharedMessages, hasLength(1));
+    expect(shareService.sharedMessages.single, contains('ABC Stores'));
+  });
 }
 
 const _customer = Customer(
@@ -700,4 +744,42 @@ class _BalanceAdjustmentCall {
 
   final String customerId;
   final BalanceAdjustmentInput input;
+}
+
+class _FakeCompanyProfileService implements CompanyProfileService {
+  @override
+  Future<CompanyProfile> fetchCompanyProfile() async {
+    return const CompanyProfile(
+      id: 'profile-1',
+      name: 'Khata Traders',
+      address: '10 Market Road',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      stateCode: '27',
+      gstin: null,
+      phone: '9999999999',
+      email: 'info@khata.com',
+      bankName: 'State Bank',
+      bankAccount: '1234567890',
+      bankIfsc: 'SBIN0001234',
+      bankBranch: 'Main',
+      jurisdiction: 'IN',
+      isActive: true,
+    );
+  }
+
+  @override
+  Future<CompanyProfile> upsertCompanyProfile(
+      UpsertCompanyProfileInput input) {
+    throw UnimplementedError();
+  }
+}
+
+class _RecordingBalanceShareService implements BalanceShareService {
+  final List<String> sharedMessages = <String>[];
+
+  @override
+  Future<void> shareText(String message) async {
+    sharedMessages.add(message);
+  }
 }

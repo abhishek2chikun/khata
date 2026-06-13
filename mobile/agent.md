@@ -45,8 +45,9 @@ The app currently supports:
 - customer list and customer khata detail
 - buyer list and buyer payable ledger detail
 - collection recording, opening balance, and balance adjustment
-- invoice create → preview → confirm flow (multi-line, payment state)
-- invoice list and invoice detail screens
+- invoice create → preview → confirm flow (multi-line, payment state, GST/non-GST mode, date-only invoice date)
+- invoice list and invoice detail screens with adaptive GST/non-GST PDFs (A5 ≤10 lines, A4 >10) and PDF+caption sharing
+- customer balance sharing (individual and daily positive-balance summary)
 - analytics dashboard (revenue/profit by buyer/company/customer, top products, low stock, khata balances)
 - local Backup/Restore UI and automatic backup scheduler plumbing
 
@@ -145,10 +146,9 @@ stay compatible with backend DTOs and Postgres migration scripts.
 
 Local mode exposes `Backup & Restore` in the drawer. The core backup service
 (`LocalBackupService`) can export/import encrypted packages containing local
-table payloads. The current backup schema version is 6 with backend
-compatibility version `local-v2`, reflecting the wholesaler workflow schema
-including buyers, buyer transactions, customer transactions, product V2 fields,
-invoice item snapshot fields, and invoice payment states.
+table payloads. The current backup schema version is **9** with backend
+compatibility version `local-v2`, reflecting wholesaler workflow schema plus
+`seller/invoice gst_flag` fields on company profiles and invoices.
 
 Backup payload includes these tables: local_users, products, customers, buyers,
 company_profiles, invoices, invoice_items, stock_movements,
@@ -221,6 +221,7 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
+- **2026-06-13:** Stage 3 GST invoicing — Drift/backup schema **9**, seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing; **372** mobile tests passing.
 - **2026-06-12:** `ApiBuyersService.addPaymentMade` now posts to `/payments-made` (was `/collections-made`, 404 against live backend).
 - Login is working against the current local backend setup.
 - Inventory and customer flows now have realistic dev data available through the backend demo seed command.
@@ -228,7 +229,7 @@ adb reverse tcp:8010 tcp:8010
 - Local backend discovery now handles `8010` and emulator-friendly hosts.
 - Offline-first local mode is available through `DATA_MODE=local` with first-user setup, Drift-backed services, encrypted backup import/export foundations, and automatic Drive backup scheduler plumbing.
 - Wholesaler workflow complete: buyer CRUD and payable ledger, invoice list/detail screens, multi-line invoice creation, product V2 fields, analytics dashboard (both API and local modes).
-- 291 mobile tests passing (auth, config, services, state, widgets, backup, local mode, wholesaler flow).
+- 372 mobile tests passing (auth, config, services, state, widgets, backup, local mode, wholesaler flow, GST/PDF/share/balance).
 
 ## Deferred work
 
