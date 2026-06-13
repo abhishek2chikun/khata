@@ -9,7 +9,7 @@ import 'package:internal_billing_khata_mobile/services/invoice_share_service.dar
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 
 void main() {
-  testWidgets('share button is visible when invoice is loaded',
+  testWidgets('share pdf button is visible when invoice is loaded',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -25,9 +25,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('sharePdfButton')), findsOneWidget);
+    expect(
+      find.text('Share PDF (WhatsApp and more)'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('tapping share button shows bottom sheet with options',
+  testWidgets('share pdf visible without customer phone', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoiceDetailScreen(
+          invoiceId: 'inv-1',
+          invoicesService: _FakeInvoicesService(
+            invoice: _sampleInvoice(customerPhone: null),
+          ),
+          shareService: _FakeShareService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sharePdfButton')), findsOneWidget);
+    expect(find.byKey(const Key('sendSmsButton')), findsNothing);
+  });
+
+  testWidgets('send sms button appears when customer phone exists',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -42,36 +64,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('sharePdfButton')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Share Invoice'), findsOneWidget);
-    expect(find.byKey(const Key('shareViaWhatsAppOption')), findsOneWidget);
-    expect(find.byKey(const Key('shareViaSmsOption')), findsOneWidget);
-    expect(find.byKey(const Key('shareViaSystemOption')), findsOneWidget);
-  });
-
-  testWidgets('share bottom sheet hides WhatsApp when no phone number',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: InvoiceDetailScreen(
-          invoiceId: 'inv-1',
-          invoicesService: _FakeInvoicesService(
-            invoice: _sampleInvoice(customerPhone: null),
-          ),
-          shareService: _FakeShareService(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('sharePdfButton')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('shareViaWhatsAppOption')), findsNothing);
-    expect(find.byKey(const Key('shareViaSmsOption')), findsNothing);
-    expect(find.byKey(const Key('shareViaSystemOption')), findsOneWidget);
+    expect(find.byKey(const Key('sendSmsButton')), findsOneWidget);
   });
 }
 
@@ -88,6 +81,7 @@ InvoiceDetail _sampleInvoice({String? customerPhone, String? customerWhatsappNum
     customerWhatsappNumber: customerWhatsappNumber,
     invoiceDate: '2026-01-10',
     grandTotal: 236,
+    companyName: 'Khata Traders',
     notes: null,
     cancelReason: null,
     items: const <InvoiceDetailItem>[
@@ -136,22 +130,15 @@ class _FakeInvoicesService implements InvoicesService {
 
 class _FakeShareService implements InvoiceShareService {
   final List<String> shareCalls = <String>[];
-  final List<String> whatsAppCalls = <String>[];
   final List<String> smsCalls = <String>[];
 
   @override
-  Future<void> shareInvoicePdf(String filePath) async {
-    shareCalls.add(filePath);
+  Future<void> shareInvoicePdf(String filePath, {required String text}) async {
+    shareCalls.add('$filePath::$text');
   }
 
   @override
-  Future<void> shareViaWhatsApp(String filePath, String phoneNumber,
-      {String? whatsappNumber}) async {
-    whatsAppCalls.add(whatsappNumber ?? phoneNumber);
-  }
-
-  @override
-  Future<void> shareViaSms(String filePath, String phoneNumber) async {
+  Future<void> shareViaSms(String phoneNumber) async {
     smsCalls.add(phoneNumber);
   }
 }

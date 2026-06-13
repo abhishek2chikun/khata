@@ -199,7 +199,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       final pdfService = InvoicePdfService.production();
       final path = await pdfService.generateInvoicePdf(invoice);
       if (!mounted) return;
-      await widget.shareService!.shareInvoicePdf(path);
+      await widget.shareService!.shareInvoicePdf(
+        path,
+        text: formatInvoiceShareCaption(invoice),
+      );
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

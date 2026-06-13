@@ -166,9 +166,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('shareWhatsAppButton')), findsOneWidget);
-    expect(find.byKey(const Key('shareSmsButton')), findsOneWidget);
-    expect(find.byKey(const Key('shareSystemButton')), findsOneWidget);
+    expect(find.byKey(const Key('sharePdfButton')), findsOneWidget);
+    expect(find.byKey(const Key('sendSmsButton')), findsOneWidget);
+    expect(find.text('Share PDF (WhatsApp and more)'), findsOneWidget);
     expect(find.text('Invoice created'), findsOneWidget);
   });
 }
@@ -321,12 +321,8 @@ class _CreateInvoicesService implements InvoicesService {
 
 class _FakeShareService implements InvoiceShareService {
   @override
-  Future<void> shareInvoicePdf(String filePath) async {}
+  Future<void> shareInvoicePdf(String filePath, {required String text}) async {}
 
   @override
-  Future<void> shareViaWhatsApp(String filePath, String phoneNumber,
-      {String? whatsappNumber}) async {}
-
-  @override
-  Future<void> shareViaSms(String filePath, String phoneNumber) async {}
+  Future<void> shareViaSms(String phoneNumber) async {}
 }

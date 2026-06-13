@@ -97,11 +97,11 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           : const Text('Download PDF'),
                     ),
                     const SizedBox(height: 12),
-                    if (widget.shareService != null)
+                    if (widget.shareService != null) ...<Widget>[
                       OutlinedButton(
                         key: const Key('sharePdfButton'),
                         onPressed:
-                            _isGeneratingPdf ? null : _sharePdf,
+                            _isGeneratingPdf ? null : _sharePdfWithCaption,
                         child: _isGeneratingPdf
                             ? const SizedBox(
                                 width: 20,
@@ -109,8 +109,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Share'),
+                            : const Text('Share PDF (WhatsApp and more)'),
                       ),
+                      if ((invoice.customerPhone ?? '').isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          key: const Key('sendSmsButton'),
+                          onPressed: _isGeneratingPdf ? null : _sendSms,
+                          child: const Text('Send SMS'),
+                        ),
+                      ],
+                    ],
                     const SizedBox(height: 24),
                     Text('Items',
                         style: Theme.of(context).textTheme.titleLarge),
@@ -200,63 +209,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     }
   }
 
-  Future<void> _sharePdf() async {
+  Future<void> _sharePdfWithCaption() async {
     final invoice = _invoice;
     if (invoice == null || widget.shareService == null) return;
-    final hasPhone = (invoice.customerPhone ?? '').isNotEmpty;
-
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('Share Invoice',
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
-              if (hasPhone) ...<Widget>[
-                ListTile(
-                  key: const Key('shareViaWhatsAppOption'),
-                  leading: const Icon(Icons.chat),
-                  title: const Text('Share via WhatsApp'),
-                  onTap: () => _doShareWhatsApp(invoice),
-                ),
-                ListTile(
-                  key: const Key('shareViaSmsOption'),
-                  leading: const Icon(Icons.sms),
-                  title: const Text('Share via SMS'),
-                  onTap: () => _doShareSms(invoice),
-                ),
-              ],
-              ListTile(
-                key: const Key('shareViaSystemOption'),
-                leading: const Icon(Icons.share),
-                title: const Text('Share...'),
-                onTap: () => _doShareSystem(invoice),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _doShareWhatsApp(InvoiceDetail invoice) async {
-    Navigator.of(context).pop();
     setState(() {
       _isGeneratingPdf = true;
       _errorMessage = null;
     });
     try {
       final path = await _ensurePdf();
-      await widget.shareService!.shareViaWhatsApp(
-        path,
-        invoice.customerPhone ?? '',
-        whatsappNumber: invoice.customerWhatsappNumber,
-      );
+      final caption = formatInvoiceShareCaption(invoice);
+      await widget.shareService!.shareInvoicePdf(path, text: caption);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
@@ -271,52 +234,21 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     }
   }
 
-  Future<void> _doShareSms(InvoiceDetail invoice) async {
-    Navigator.of(context).pop();
+  Future<void> _sendSms() async {
+    final invoice = _invoice;
+    if (invoice == null || widget.shareService == null) return;
+    final phone = invoice.customerPhone ?? '';
+    if (phone.isEmpty) return;
     setState(() {
-      _isGeneratingPdf = true;
       _errorMessage = null;
     });
     try {
-      final path = await _ensurePdf();
-      await widget.shareService!.shareViaSms(
-        path,
-        invoice.customerPhone ?? '',
-      );
+      await widget.shareService!.shareViaSms(phone);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
         _errorMessage = error.toString();
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingPdf = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _doShareSystem(InvoiceDetail invoice) async {
-    Navigator.of(context).pop();
-    setState(() {
-      _isGeneratingPdf = true;
-      _errorMessage = null;
-    });
-    try {
-      final path = await _ensurePdf();
-      await widget.shareService!.shareInvoicePdf(path);
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = error.toString();
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingPdf = false;
-        });
-      }
     }
   }
 
