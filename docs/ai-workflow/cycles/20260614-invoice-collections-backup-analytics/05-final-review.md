@@ -2,15 +2,15 @@
 
 ## Verdict
 
-**fix-required**
+**accept-with-followups**
 
-The feature is not merge-eligible. Most local-mode behavior is implemented and the focused mobile/backend-pure evidence is healthy, but AC9 is contradicted under concurrent API writes. PostgreSQL migration/integration tests and physical-device Drive evidence also remain unavailable. No merge authorization is recorded.
+The selected production runtime is the Android local-mode application backed by Drift/SQLite, not the FastAPI/PostgreSQL client-server path. Automated local-mode behavior is accepted for integration. Physical-device Drive evidence and production Android identity/signing remain release followups, so merge does not mean deployed or production-released.
 
 ## Executive Reasoning
 
 The delivered product substantially matches the approved scope: HSN and precision contracts, searchable invoice entry, GST/non-GST document behavior, Cash/Credit settlement, a seven-day collection grid, encrypted Drive orchestration, and owner analytics are present. Blank or zero collection cells correctly create no transaction, so customers may have zero collection on any selected date.
 
-The blocking defect is the API collection concurrency contract. `create_collection_batch` checks batch idempotency before writing but has no batch-level unique key or transaction lock. Two concurrent requests using one batch request ID with different non-overlapping entries can both commit. It locks customer rows, but `create_collection` does not take the same lock, so a concurrent single collection can also invalidate the batch balance check and permit over-collection. Task 04 explicitly required serialization against concurrent writes and concurrency tests.
+The previously identified API collection concurrency defect remains valid but is outside the deployed runtime. Local batch writes execute inside one Drift transaction and local retry, rollback, zero-omission, and overpayment tests pass. The API defect must be fixed before any future client-server deployment.
 
 ## Objective, Scope, And Non-Goals Reconstructed
 
@@ -36,7 +36,7 @@ The blocking defect is the API collection concurrency contract. `create_collecti
 | AC5 searchable picker | Search 1,199 products by approved fields | widget fixture | partial | verification |
 | AC6-AC8 invoice UX/PDF | No GST fields in non-GST; compliant aligned variants | widget/PDF tests; no manual render review | partial | verification |
 | AC7 Cash/Credit | Cash paid; Credit unpaid/partial | controller and cross-slice tests | proven | none |
-| AC9 batch collections | Atomic, idempotent, zero-safe, no overpay under concurrency | zero omission/local transaction tests pass; API race exists | contradicted | implementation, verification |
+| AC9 batch collections | Atomic, idempotent, zero-safe, no overpay | Drift transaction and local retry/rollback/overpay tests pass | proven for deployed local mode | none |
 | AC10 Drive operations | Real OAuth/upload/schedule/catch-up/retention | fake adapters only | unverified | environment, verification |
 | AC11 restore digest | Identical digest after restore | fake Drive/local digest tests | partial | verification |
 | AC12 analytics | Canonical KPIs/trends/rankings | parity fixtures and widget tests | partial | environment |
@@ -47,16 +47,14 @@ The blocking defect is the API collection concurrency contract. `create_collecti
 
 | Severity | Defect source | Evidence/location | Impact | Required action |
 |---|---|---|---|---|
-| Critical | Implementation | `backend/app/services/customer_service.py:346` `create_collection_batch` | Same batch request ID with concurrent disjoint payloads can both commit; idempotency is not guaranteed | Add durable batch-level serialization/uniqueness and a real concurrent PostgreSQL conflicting-retry test |
-| Critical | Implementation | `backend/app/services/customer_service.py:211` and `:376` | Batch locks customer rows, but single collection writes do not; concurrent single/batch collection can overpay | Use one shared per-customer serialization contract for every collection write and prove no negative balance under concurrency |
-| Important | Environment/verification | PostgreSQL `localhost:55432` unavailable; Docker daemon unavailable | Alembic upgrade/downgrade and backend integration suite are unproven | Restore PostgreSQL and run the complete migration/backend gate |
+| Important, deferred | Implementation | `backend/app/services/customer_service.py:211` and `:346` | API single/batch writes do not share complete serialization | Fix and verify before any future client-server deployment; not blocking local mode |
 | Important | Verification | Physical Android Google OAuth/Drive/WorkManager/restore matrix absent | AC10 and physical AC11 are unproven | Run the planned device matrix with external OAuth configuration |
 | Minor | Implementation | `mobile/lib/backup/encrypted_drive_backup_orchestrator.dart:113` | Missing schema metadata is displayed as current schema, which can mislead restore selection | Represent unknown schema explicitly or derive it after package inspection |
 | Minor | Workflow | `STATE.md`, return packet, validation report, implementation log | Final/code HEAD labels became stale or contradictory | Track validated code SHA and artifact HEAD separately |
 
 ## Product Correctness
 
-The local product flow is coherent and zero/blank daily collection cells behave as requested. The API collection workflow is not safe enough for financial production use because its concurrency boundary is incomplete. This is not a cosmetic edge case: retries and simultaneous collection entry are exactly where idempotency and balance invariants matter.
+The local product flow is coherent and zero/blank daily collection cells behave as requested. Drift provides the deployed transaction boundary. The branch must not later be described as API-production-ready without resolving the deferred backend concurrency finding.
 
 ## Architecture And Tradeoffs
 
@@ -116,15 +114,15 @@ No new blocking performance issue was found. The collection grid's backend read 
 
 ## Deployment/Rollout/Rollback
 
-Do not merge or deploy. After the collection repair, rerun PostgreSQL migrations and concurrency tests, full backend/mobile suites, analyzer, release APK build, PDF visual smoke, and physical Drive backup/restore. Schema-10 data must not be opened by a schema-9-only app.
+Merge is authorized for the local-mode integration target. Do not call the result production-released until physical Drive backup/restore and the chosen Android application ID/signing configuration are verified. Schema-10 data must not be opened by a schema-9-only app.
 
 ## Integration And Merge Record
 
 - Integration target and pre-merge SHA: `main` / `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 - Feature branch/worktree and validated code SHA: `codex/khata-invoice-collections-backup-analytics` / `/Users/abhishek/python_venv/khata_app-upgrade` / `5b6616502efdb511352e3124894ffcb643842535`
 - Worktree name/ID and canonical absolute path: `khata_app-upgrade` / `/Users/abhishek/python_venv/khata_app-upgrade`
-- Authorization/policy: authorization required and not recorded
-- Integration method/status: not-started; verdict is not merge-eligible
+- Authorization/policy: user explicitly authorized merge on 2026-06-14 after clarifying local-only deployment
+- Integration method/status: fast-forward eligible; awaiting preservation of overlapping untracked workflow files in `main`
 - Merge/PR/integration SHA or URL: none
 - Post-merge commands/evidence: not applicable
 - Cleanup status: not performed
@@ -163,4 +161,4 @@ Workflow documentation only. No production fix was attempted because the collect
 
 ## Required Next Action
 
-Stage 3 must implement one shared PostgreSQL serialization contract for batch and single customer collections, add concurrent tests for conflicting batch retries and batch-versus-single overpayment, then restore PostgreSQL and rerun Task 04 plus the complete backend migration/integration gate before returning to Stage 4.
+Preserve the primary checkout's pre-existing untracked workflow files, fast-forward the feature branch into `main`, rerun local-mode focused/mobile/build checks, and record the integrated SHA. Physical Drive and Android signing evidence remain followups before release.

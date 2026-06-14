@@ -10,9 +10,9 @@ Workflow schema: five-stage-v1
 
 Current stage: `5-final-review`
 
-Stage status: `returned-to-stage-3`
+Stage status: `accepted-awaiting-integration`
 
-Current task: Repair collection concurrency and revalidate with PostgreSQL
+Current task: Preserve overlapping untracked workflow files and fast-forward into main
 
 Current artifact HEAD at Stage 5 intake: `f25e5cadc9b6db16a71032ed6003aa6e8ea2e435`
 
@@ -44,9 +44,9 @@ Worktree status: `stage-5-artifacts-dirty`; untracked `.venv` and rolling workfl
 
 Merge owner: Stage 5 persistent LLM
 
-Merge authorization: required (not recorded)
+Merge authorization: pre-authorized by user on 2026-06-14 for local-mode deployment
 
-Merge status: not-started (not merge-eligible)
+Merge status: awaiting-safe-worktree-preflight
 
 Untracked outside cycle folder: `.venv`, `docs/ai-workflow/INDEX.md`, `docs/ai-workflow/PROJECT_CONTEXT.md`
 
@@ -77,7 +77,7 @@ Primary checkout `/Users/abhishek/python_venv/khata_app` must remain untouched.
 6. Analytics contracts and dashboard UI.
 7. Full verification, artifacts, and handoff.
 
-All seven implementation tasks were attempted. Task 04 is returned to Stage 3 because its API concurrency contract is incomplete.
+All seven implementation tasks are accepted for the Android local-mode runtime. API concurrency is deferred until any future client-server deployment.
 
 ## High-Risk Gates
 
@@ -94,7 +94,7 @@ AC1-AC14 mapped in `03-implementation-log.md` and `04-validation-report.md`.
 
 Stage 4 verdict: **pass-with-minor-issues** (overruled by Stage 5)
 
-Stage 5 verdict: **fix-required**
+Stage 5 verdict: **accept-with-followups**
 
 Stage 5 artifact: `05-final-review.md`
 
@@ -119,12 +119,11 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 | `pg_isready -h localhost -p 55432` | fail (Docker daemon unavailable) |
 | `pytest backend/tests -q` | blocked |
 
-### Stage 5 Blocking Findings
+### Stage 5 Followups
 
-1. `create_collection_batch` has no durable batch-level lock/unique identity, so concurrent conflicting payloads using the same batch request ID can both commit.
-2. `create_collection` does not share the customer lock used by batch writes, so concurrent single and batch collections can violate the no-overpayment invariant.
-3. PostgreSQL on `:55432` remains unavailable; Alembic and full backend integration evidence is missing.
-4. AC10 and physical AC11 Drive evidence remain unverified.
+1. AC10 and physical AC11 Drive evidence remain unverified.
+2. Production Android application ID/signing remain unresolved release followups.
+3. API collection concurrency must be fixed before any future client-server deployment.
 
 ### Fresh Stage 5 Evidence
 
@@ -140,8 +139,8 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 
 - Persistent LLM lane: `resumed-stage-5`
 - Current owner: `Stage 5 persistent LLM`
-- Next owner: `Stage 3 fresh SLM`
-- Minimum read set: this file, `05-final-review.md`, Task 04, `customer_service.py`, and batch service/API tests
+- Next owner: `Stage 5 persistent LLM`
+- Minimum read set: this file and `05-final-review.md`
 - Merge owner/status: `Stage 5 persistent LLM` / `not-started`
 
 ## Integration Preflight
@@ -153,6 +152,6 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 
 ## Exact Next Action
 
-Start a fresh Stage 3 SLM in `/Users/abhishek/python_venv/khata_app-upgrade`. Verify branch `codex/khata-invoice-collections-backup-analytics`, read `STATE.md`, `05-final-review.md`, and `02-plan/04-batch-khata-collections.md`, then implement shared PostgreSQL serialization for single and batch collection writes with real concurrent regression tests. Do not merge.
+Preserve the primary checkout's untracked `docs/ai-workflow/INDEX.md` and `PROJECT_CONTEXT.md` without data loss, then fast-forward `codex/khata-invoice-collections-backup-analytics` into `main` and run post-merge local-mode verification.
 
-Last updated: 2026-06-14 IST (Stage 5 returned to Stage 3)
+Last updated: 2026-06-14 IST (local-only deployment clarified; merge authorized)

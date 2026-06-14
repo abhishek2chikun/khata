@@ -10,8 +10,8 @@ Active cycle: `20260614-invoice-collections-backup-analytics`
 
 ## Stable Architecture
 
-- FastAPI/PostgreSQL backend and Flutter mobile client.
-- Primary delivery target: Android local mode backed by Drift/SQLite.
+- Primary deployed product: Flutter Android local mode backed by Drift/SQLite; this release does not use the client-server runtime.
+- FastAPI/PostgreSQL remains compatibility code and is not a deployment gate for local mode.
 - API/local service boundaries remain parallel through `AppDependencies`.
 - Buyers are suppliers/payables; customers are retail shops/receivables.
 - Invoice creation/cancellation owns stock and ledger side effects transactionally.
@@ -41,14 +41,12 @@ python3 tools/build_preinstalled_catalog.py
 
 ## Active Handoff
 
-The feature branch contains candidate schema-10 HSN/precision, invoice UX/PDF, daily collections, Drive, and analytics capabilities. They are not promoted as accepted current behavior because Stage 5 found a blocking API collection concurrency defect.
+The feature branch's schema-10 HSN/precision, invoice UX/PDF, daily collections, Drive, and analytics capabilities are accepted for local-mode integration. Physical Drive and Android signing evidence remain release followups.
 
-Read `cycles/20260614-invoice-collections-backup-analytics/STATE.md`, `05-final-review.md`, and Task 04. Stage 3 must make single and batch collection writes share a durable PostgreSQL serialization contract and add concurrent regression tests before Stage 4 revalidation. Do not merge.
+Read `cycles/20260614-invoice-collections-backup-analytics/STATE.md` and `05-final-review.md`. Preserve the primary checkout's overlapping untracked workflow files, merge to `main`, and run local-mode post-merge verification.
 
 ## Active Risks And Release Blockers
 
-- Concurrent batch requests can reuse one batch request ID with disjoint payloads and both commit.
-- Concurrent single and batch collection writes do not share customer locking and can over-collect.
-- Live Alembic/full backend integration evidence is unavailable while PostgreSQL is down.
 - Physical Android Google OAuth, WorkManager, Drive backup, and restore remain unverified.
 - Production Android application ID and signing remain outside this cycle and unresolved.
+- API collection concurrency remains deferred and must be repaired before any future server-mode deployment.
