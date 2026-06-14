@@ -254,6 +254,5 @@ Future<void> initializeLocalBackupPlatformServices() async {
   }
   await Workmanager().initialize(
     backupWorkmanagerCallbackDispatcher,
-    isInDebugMode: kDebugMode,
   );
 }

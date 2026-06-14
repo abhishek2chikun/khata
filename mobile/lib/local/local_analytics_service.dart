@@ -122,9 +122,9 @@ class LocalAnalyticsService implements AnalyticsService {
       final date = invoiceDates[item.invoiceId];
       if (date == null) continue;
       revenueByDate[date] = (revenueByDate[date] ?? 0.0) +
-          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
+          (double.tryParse(item.revenueAmount) ?? 0.0);
       profitByDate[date] = (profitByDate[date] ?? 0.0) +
-          (double.tryParse(item.profitAmount ?? '') ?? 0.0);
+          (double.tryParse(item.profitAmount) ?? 0.0);
     }
 
     if (fromDate != null && toDate != null) {
@@ -169,7 +169,7 @@ class LocalAnalyticsService implements AnalyticsService {
     for (final item in items) {
       final company = item.productCompanyName;
       aggregated[company] = (aggregated[company] ?? 0.0) +
-          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
+          (double.tryParse(item.revenueAmount) ?? 0.0);
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
@@ -183,7 +183,7 @@ class LocalAnalyticsService implements AnalyticsService {
     final aggregated = <String, double>{};
     for (final item in items) {
       final company = item.productCompanyName;
-      final profit = double.tryParse(item.profitAmount ?? '') ?? 0.0;
+      final profit = double.tryParse(item.profitAmount) ?? 0.0;
       aggregated[company] = (aggregated[company] ?? 0.0) + profit;
     }
     final entries = aggregated.entries.toList()
@@ -292,7 +292,7 @@ class LocalAnalyticsService implements AnalyticsService {
     for (final item in items) {
       final name = item.productItemName;
       aggregated[name] = (aggregated[name] ?? 0.0) +
-          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
+          (double.tryParse(item.revenueAmount) ?? 0.0);
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -307,7 +307,7 @@ class LocalAnalyticsService implements AnalyticsService {
     for (final item in items) {
       final name = item.productItemName;
       aggregated[name] = (aggregated[name] ?? 0.0) +
-          (double.tryParse(item.profitAmount ?? '') ?? 0.0);
+          (double.tryParse(item.profitAmount) ?? 0.0);
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));

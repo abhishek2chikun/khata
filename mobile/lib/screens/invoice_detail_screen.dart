@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/invoice_detail.dart';
-import '../services/decimal_validators.dart';
 import '../services/invoice_settlement.dart';
 import '../services/invoice_pdf_service.dart';
 import '../services/invoice_share_service.dart';
