@@ -1,5 +1,15 @@
+import 'package:flutter/widgets.dart';
+import 'package:googleapis_auth/googleapis_auth.dart' as auth;
+import 'package:workmanager/workmanager.dart';
+
+import '../local/local_database.dart';
 import 'backup_scheduler.dart';
+import 'drive_backup_service.dart';
 import 'drive_platform.dart';
+import 'encrypted_drive_backup_orchestrator.dart';
+import 'google_auth_gateway.dart';
+import 'google_drive_gateway.dart';
+import 'secure_backup_secret_store.dart';
 
 /// Unique WorkManager task name for daily encrypted backup.
 const backupBackgroundTaskName = 'khata_daily_encrypted_backup';
@@ -40,11 +50,57 @@ Future<BackupBackgroundResult> runBackupBackgroundTask() async {
 }
 
 Future<BackupBackgroundResult> _defaultBackgroundRunner() async {
-  // Production wiring is completed in Task 05. Task 01 proves the callback
-  // boundary compiles and can be invoked without Flutter widget bindings.
-  return const BackupBackgroundResult.actionRequired(
-    'Background backup requires Google account and secure password.',
-  );
+  LocalDatabase? database;
+  auth.AuthClient? authClient;
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    database = LocalDatabase();
+    final authGateway = GoogleSignInAuthGateway();
+    final secretStore = FlutterSecureBackupSecretStore();
+    final prerequisites = await evaluateBackgroundPrerequisites(
+      authGateway: authGateway,
+      secretStore: secretStore,
+    );
+    if (prerequisites.actionRequired) {
+      await LocalBackupEventRecorder(database: database).recordBackupFailure(
+        prerequisites.message ?? 'Background backup requires user action.',
+      );
+      return prerequisites;
+    }
+
+    authClient = await authGateway.createDriveAuthClient(
+      promptIfUnauthorized: false,
+    );
+    if (authClient == null) {
+      const message =
+          'Sign in to Google Drive in the app to enable automatic backup.';
+      await LocalBackupEventRecorder(database: database).recordBackupFailure(
+        message,
+      );
+      return const BackupBackgroundResult.actionRequired(message);
+    }
+
+    final orchestrator = EncryptedDriveBackupOrchestrator(
+      database: database,
+      authGateway: authGateway,
+      secretStore: secretStore,
+      driveGatewayFactory: () async {
+        return GoogleApisDriveGateway(client: authClient!);
+      },
+    );
+    await orchestrator.runVerifiedBackup();
+    return const BackupBackgroundResult.success();
+  } on Object catch (error) {
+    if (database != null) {
+      await LocalBackupEventRecorder(database: database).recordBackupFailure(
+        error.toString(),
+      );
+    }
+    return BackupBackgroundResult.failure(error.toString());
+  } finally {
+    authClient?.close();
+    await database?.close();
+  }
 }
 
 /// Validates that background execution can consult auth/secret gateways without UI.
@@ -65,13 +121,16 @@ Future<BackupBackgroundResult> evaluateBackgroundPrerequisites({
   return const BackupBackgroundResult.success();
 }
 
-/// Top-level WorkManager entry point. Must not depend on widget state.
+/// Top-level WorkManager callback dispatcher.
 @pragma('vm:entry-point')
-Future<void> backupBackgroundCallbackDispatcher() async {
-  final result = await runBackupBackgroundTask();
-  if (result.actionRequired || !result.succeeded) {
-    throw BackupBackgroundExecutionException(result.message ?? 'backup failed');
-  }
+void backupWorkmanagerCallbackDispatcher() {
+  Workmanager().executeTask((taskName, inputData) async {
+    final result = await runBackupBackgroundTask();
+    if (result.actionRequired) {
+      return true;
+    }
+    return result.succeeded;
+  });
 }
 
 class BackupBackgroundExecutionException implements Exception {

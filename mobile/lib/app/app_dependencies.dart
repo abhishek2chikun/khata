@@ -1,13 +1,23 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:googleapis_auth/googleapis_auth.dart' as auth;
+import 'package:workmanager/workmanager.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
+import '../backup/backup_background_callback.dart';
 import '../backup/backup_scheduler.dart';
 import '../backup/drive_backup_service.dart';
+import '../backup/drive_platform.dart';
+import '../backup/encrypted_drive_backup_orchestrator.dart';
+import '../backup/google_auth_gateway.dart';
+import '../backup/google_drive_gateway.dart';
 import '../backup/local_backup_transfer_service.dart';
+import '../backup/secure_backup_secret_store.dart';
+import '../backup/workmanager_schedule_adapter.dart';
 import '../config/api_base_url.dart';
 import '../local/local_analytics_service.dart';
 import '../local/local_auth_service.dart';
@@ -77,6 +87,9 @@ class AppDependencies {
     SessionStore? sessionStore,
     ApiHttpClientsCreated? onApiHttpClientsCreated,
     CatalogJsonLoader? loadCatalogJson,
+    GoogleAuthGateway? authGateway,
+    BackupSecretStore? backupSecretStore,
+    BackupScheduleAdapter? backupScheduleAdapter,
   }) async {
     final resolvedMode = mode ?? resolveDataMode();
     switch (resolvedMode) {
@@ -90,6 +103,9 @@ class AppDependencies {
           database: localDatabase,
           sessionStore: sessionStore,
           loadCatalogJson: loadCatalogJson,
+          authGateway: authGateway,
+          backupSecretStore: backupSecretStore,
+          backupScheduleAdapter: backupScheduleAdapter,
         );
     }
   }
@@ -98,6 +114,9 @@ class AppDependencies {
     LocalDatabase? database,
     SessionStore? sessionStore,
     CatalogJsonLoader? loadCatalogJson,
+    GoogleAuthGateway? authGateway,
+    BackupSecretStore? backupSecretStore,
+    BackupScheduleAdapter? backupScheduleAdapter,
   }) async {
     final localDatabase = database ?? LocalDatabase();
     if (loadCatalogJson != null || database == null) {
@@ -110,9 +129,47 @@ class AppDependencies {
       ).seedIfNeeded();
     }
     final authService = LocalAuthService(database: localDatabase);
-    final backupService = LocalDriveBackupService(database: localDatabase);
     final backupTransferService =
         LocalBackupTransferService(database: localDatabase);
+    final googleAuthGateway =
+        authGateway is GoogleSignInAuthGateway
+            ? authGateway
+            : GoogleSignInAuthGateway();
+    final resolvedSecretStore =
+        backupSecretStore ?? FlutterSecureBackupSecretStore();
+    final scheduleAdapter =
+        backupScheduleAdapter ?? WorkManagerBackupScheduleAdapter();
+    auth.AuthClient? foregroundAuthClient;
+    final orchestrator = EncryptedDriveBackupOrchestrator(
+      database: localDatabase,
+      authGateway: googleAuthGateway,
+      secretStore: resolvedSecretStore,
+      driveGatewayFactory: () async {
+        foregroundAuthClient?.close();
+        foregroundAuthClient = await googleAuthGateway.createDriveAuthClient(
+          promptIfUnauthorized: true,
+        );
+        if (foregroundAuthClient == null) {
+          throw const DriveBackupConfigurationException(
+            'Google Drive authorization is required.',
+          );
+        }
+        return GoogleApisDriveGateway(client: foregroundAuthClient!);
+      },
+    );
+    final backupService = EncryptedDriveBackupService(
+      database: localDatabase,
+      authGateway: googleAuthGateway,
+      orchestrator: orchestrator,
+      scheduleAdapter: scheduleAdapter,
+      secretStore: resolvedSecretStore,
+    );
+    final backupScheduler = BackupScheduler(
+      settingsLoader: backupService.loadSettings,
+      runBackup: backupService.backupToDriveNow,
+      scheduleAdapter: scheduleAdapter,
+      eventRecorder: LocalBackupEventRecorder(database: localDatabase),
+    );
     final controller = AuthController(
       authService: authService,
       sessionStore: sessionStore ?? SecureSessionStore(keyPrefix: 'auth.local'),
@@ -131,13 +188,17 @@ class AppDependencies {
       localAuthService: authService,
       driveBackupService: backupService,
       backupTransferService: backupTransferService,
+      backupScheduler: backupScheduler,
       hasLocalUsers: () async {
         final users = await (localDatabase.select(localDatabase.localUsers)
               ..limit(1))
             .get();
         return users.isNotEmpty;
       },
-      dispose: localDatabase.close,
+      dispose: () async {
+        foregroundAuthClient?.close();
+        await localDatabase.close();
+      },
     );
   }
 
@@ -185,4 +246,14 @@ class AppDependencies {
   Future<void> dispose() async {
     await _dispose?.call();
   }
+}
+
+Future<void> initializeLocalBackupPlatformServices() async {
+  if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+    return;
+  }
+  await Workmanager().initialize(
+    backupWorkmanagerCallbackDispatcher,
+    isInDebugMode: kDebugMode,
+  );
 }

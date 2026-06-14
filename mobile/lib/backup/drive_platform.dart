@@ -38,6 +38,10 @@ class DriveTransportException implements Exception {
 
 /// Minimum Drive file scope for app-created backups in a visible folder.
 abstract class GoogleAuthGateway {
+  static const driveFileScope = 'https://www.googleapis.com/auth/drive.file';
+
+  static const driveScopes = <String>[driveFileScope];
+
   Future<bool> isSignedIn();
 
   Future<void> signIn();
@@ -46,6 +50,8 @@ abstract class GoogleAuthGateway {
 
   /// Returns true when an authenticated client can be created for Drive v3.
   Future<bool> hasDriveAccess();
+
+  Future<String?> accountEmail();
 }
 
 abstract class DriveGateway {

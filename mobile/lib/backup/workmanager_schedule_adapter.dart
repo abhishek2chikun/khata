@@ -49,7 +49,8 @@ class WorkManagerBackupScheduleAdapter implements BackupScheduleAdapter {
     );
   }
 
-  Future<void> cancelScheduledBackup() async {
+  @override
+  Future<void> cancelDailyBackup() async {
     if (_cancelByUniqueName != null) {
       await _cancelByUniqueName(backupBackgroundTaskName);
       return;

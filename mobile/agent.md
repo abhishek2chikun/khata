@@ -58,7 +58,7 @@ Important live behavior:
 - Auth uses `HttpAuthService`, `SecureSessionStore`, and `AuthController`.
 - All non-auth API calls go through `ApiClient`, which retries once after token refresh on `401`.
 - Customer detail doubles as the current invoice-history surface.
-- Local mode composes `LocalAuthService`, Drift-backed local services, `LocalDriveBackupService`, and `BackupScheduler` through `AppDependencies`.
+- Local mode composes `LocalAuthService`, Drift-backed local services, `EncryptedDriveBackupService`, and `BackupScheduler` through `AppDependencies`.
 
 ## Directory structure
 
@@ -107,7 +107,7 @@ mobile/
 | Analytics dashboard | Done | `mobile/lib/services/analytics_service.dart`, `mobile/lib/screens/analytics_screen.dart`, `mobile/lib/local/local_analytics_service.dart` | None yet |
 | Company profile client | Done | `mobile/lib/services/company_profile_service.dart` | None yet |
 | Local data mode | Done | `mobile/lib/app/app_mode.dart`, `mobile/lib/app/app_dependencies.dart`, `mobile/lib/local/` | None yet |
-| Backup/restore | Done — Drive production config external | `mobile/lib/backup/`, `mobile/lib/widgets/app_navigation_drawer.dart` | None yet |
+| Backup/restore | Done — Drive orchestration; device OAuth external | `mobile/lib/backup/`, `mobile/lib/widgets/app_navigation_drawer.dart` | None yet |
 | Widget/test coverage | Done — focused flows covered | `mobile/test/` | None yet |
 
 ## Conventions
@@ -152,9 +152,8 @@ stay compatible with backend DTOs and Postgres migration scripts.
 
 Local mode exposes `Backup & Restore` in the drawer. The core backup service
 (`LocalBackupService`) can export/import encrypted packages containing local
-table payloads. The current backup schema version is **9** with backend
-compatibility version `local-v2`, reflecting wholesaler workflow schema plus
-`seller/invoice gst_flag` fields on company profiles and invoices.
+table payloads. The current backup schema version is **10** with backend
+compatibility version `local-v2`.
 
 Backup payload includes these tables: local_users, products, customers, buyers,
 company_profiles, invoices, invoice_items, stock_movements,
@@ -162,10 +161,21 @@ customer_transactions, buyer_transactions, backup_settings, backup_events.
 Sessions (local_sessions) are intentionally excluded from backup and cleared on
 import.
 
-The current UI is wired to the Drive backup interface; until a configured
-Drive/file implementation is supplied, export/import actions show a
-configuration-required message. Import rejects unsupported schema or backend
-compatibility versions and missing required tables.
+**Google Drive (encrypted)**
+- Connect Google account (`google_sign_in` + Drive file scope only).
+- Backup password stored in `flutter_secure_storage` (separate from auth tokens).
+- Uploads verified `.khata` packages to visible folder `Khata Backups` with app ownership properties; retains newest 30 app-owned backups.
+- Automatic daily backup defaults to **02:00** local time with WorkManager periodic work (best effort) and startup catch-up.
+- Foreground UI: connect, password, automatic toggle, Back up now, Drive restore list; manual export/import preserved.
+- Background task requires prior foreground sign-in and password; otherwise records action-required without UI prompts.
+
+**External setup required (not in repo)**
+- Google Cloud: enable Drive API, Android OAuth client (package + SHA fingerprints), consent screen/test users.
+- Physical-device OAuth/sign-in/background evidence still required before production claims.
+
+Automatic backup settings persist in Drift `backup_settings`. `BackupScheduler`
+handles due/missed-backup decisions and catch-up on app launch. Platform
+scheduling uses `WorkManagerBackupScheduleAdapter` on Android.
 
 ### Local-to-server table mapping
 
@@ -187,17 +197,13 @@ compatibility versions and missing required tables.
 
 Automatic backup settings are stored locally. `BackupScheduler` handles daily
 due/missed-backup decisions and catch-up checks on app launch. In current repo
-wiring, automatic backup attempts call the Drive backup skeleton and record a
-configuration-required failure until a real Drive/file export implementation is
-provided. Platform background execution is behind `BackupScheduleAdapter`; real
-background tasks require Android/iOS scheduling setup outside the current
-skeleton.
+wiring, automatic backup uses encrypted Google Drive upload when account and
+password are configured. Platform background execution is via
+`WorkManagerBackupScheduleAdapter` on Android.
 
-Google Drive integration is currently plumbing only: `DriveBackupService`, local
-settings persistence, scheduler wiring, UI actions, and a Google Drive service
-skeleton. Real Google Drive OAuth, file picker/selection, upload/download,
-Firebase or Google Cloud app configuration, signing fingerprints, consent screen,
-and production secrets must be configured outside this repository.
+Google Drive integration includes production orchestration code with injectable
+gateways for tests. Real OAuth client configuration, signing fingerprints,
+consent screen, and production secrets must be configured outside this repository.
 
 ## Verification commands
 
@@ -227,6 +233,7 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
+- **2026-06-14:** Encrypted Google Drive backup — verified upload orchestration, 30-retention prune, secure password store, WorkManager + catch-up, full backup screen; 69 backup tests green; physical OAuth unverified.
 - **2026-06-14:** Owner analytics dashboard — backend/local KPI + `daily_trend` fields, `fl_chart` revenue/profit trend, date presets, low-stock removed from UI; parity fixture + 18 focused analytics tests green.
 - **2026-06-13:** Preinstalled local product catalog — 1,199 products + 30 buyers bundled as JSON asset, seeded idempotently on local-mode startup; build script at `tools/build_preinstalled_catalog.py`.
 - **2026-06-13:** Stage 3 GST invoicing — Drift/backup schema **9**, seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing; **372** mobile tests passing.
@@ -243,6 +250,5 @@ adb reverse tcp:8010 tcp:8010
 
 - There is no dedicated invoice cancel UI outside invoice detail.
 - There is no UI for product archive, customer archive, or manual stock adjustment even though backend APIs exist.
-- Real Google Drive backup upload/download requires external Google Cloud/Firebase/app configuration; the repository currently provides interfaces, scheduler plumbing, and UI skeleton behavior.
-- Platform background scheduling (Android WorkManager / iOS BGTaskScheduler) requires native configuration outside the current skeleton.
+- Real Google Drive backup on physical hardware requires external Google Cloud OAuth configuration and device/account evidence (AC10/AC11).
 - `mobile/analysis_options.yaml` includes `package:flutter_lints/flutter.yaml`, but `flutter_lints` is not listed in `pubspec.yaml`, so analyzer/format tooling may warn until that is reconciled.

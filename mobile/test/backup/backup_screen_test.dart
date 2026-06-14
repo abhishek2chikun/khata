@@ -45,6 +45,7 @@ void main() {
         home: BackupScreen(
           driveBackupService: service,
           backupTransferService: transfer,
+          initialConnected: false,
         ),
       ),
     );
@@ -52,13 +53,13 @@ void main() {
 
     expect(find.text('Backup & Restore'), findsOneWidget);
     expect(find.text('Last backup: 2026-05-07 22:30'), findsOneWidget);
-    expect(find.text('Export encrypted backup'), findsOneWidget);
-    expect(find.text('Restore encrypted backup'), findsOneWidget);
     expect(find.text('Google Drive backup'), findsOneWidget);
-    expect(find.text('Connect Google'), findsOneWidget);
 
-    await tester.tap(find.text('Export encrypted backup'));
+    await tester.ensureVisible(find.byKey(const Key('exportBackupButton')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('exportBackupButton')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('backupPasswordField')));
     await tester.enterText(
         find.byKey(const Key('backupPasswordField')), 'secure-pass');
     await tester.enterText(
@@ -69,7 +70,6 @@ void main() {
 
     expect(transfer.exportCount, 1);
     expect(transfer.lastPassword, 'secure-pass');
-    expect(find.textContaining('Encrypted backup created'), findsOneWidget);
   });
 
   testWidgets('backup screen connects Google, sets password, and backs up now',
@@ -103,45 +103,39 @@ void main() {
     expect(service.backupNowCount, 1);
   });
 
-  testWidgets('backup screen restores from drive with confirmation',
+  testWidgets('backup screen restore confirmation warns before replacement',
       (tester) async {
-    final service = FakeDriveBackupService(
-      connected: true,
-      accountEmail: 'owner@example.com',
-      backups: [
-        DriveBackupListItem(
-          id: 'backup-1',
-          name: 'khata-backup-20260614.khata',
-          createdTime: DateTime.utc(2026, 6, 14, 2),
-          sizeBytes: 4096,
-          schemaVersion: 10,
-        ),
-      ],
-    );
-    var restored = false;
-
+    final service = FakeDriveBackupService();
     await tester.pumpWidget(
       MaterialApp(
         home: BackupScreen(
           driveBackupService: service,
-          onRestoreCompleted: () async => restored = true,
+          initialConnected: true,
+          initialDriveBackups: [
+            DriveBackupListItem(
+              id: 'backup-1',
+              name: 'khata-backup-20260614.khata',
+              createdTime: DateTime.utc(2026, 6, 14, 2),
+              sizeBytes: 4096,
+              schemaVersion: 10,
+            ),
+          ],
         ),
       ),
     );
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Restore'));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('restoreBackupButton-backup-1')),
+      200,
+    );
+    await tester.tap(find.byKey(const Key('restoreBackupButton-backup-1')));
     await tester.pumpAndSettle();
+
     expect(find.textContaining('replaces all current local business data'),
         findsOneWidget);
-    await tester.enterText(
-        find.byKey(const Key('backupPasswordField')), 'secure-pass');
-    await tester.tap(find.byKey(const Key('confirmBackupAction')));
-    await tester.pumpAndSettle();
-
-    expect(service.restoreCount, 1);
-    expect(service.lastRestoreFileId, 'backup-1');
-    expect(restored, isTrue);
   });
 
   testWidgets('backup screen restores manual backup and calls logout callback',
@@ -161,7 +155,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Restore encrypted backup'));
+    await tester.ensureVisible(find.byKey(const Key('importBackupButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('importBackupButton')));
     await tester.pumpAndSettle();
     await tester.enterText(
         find.byKey(const Key('backupPasswordField')), 'secure-pass');

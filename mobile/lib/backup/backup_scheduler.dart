@@ -40,7 +40,7 @@ class BackupTimeOfDay {
 class BackupScheduleSettings {
   const BackupScheduleSettings({
     this.automaticBackupsEnabled = false,
-    this.dailyBackupTime = const BackupTimeOfDay(hour: 0, minute: 0),
+    this.dailyBackupTime = const BackupTimeOfDay(hour: 2, minute: 0),
     this.lastBackupAt,
   });
 
@@ -51,6 +51,8 @@ class BackupScheduleSettings {
 
 abstract class BackupScheduleAdapter {
   Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime);
+
+  Future<void> cancelDailyBackup();
 }
 
 abstract class BackupEventRecorder {
@@ -73,6 +75,9 @@ class UnsupportedBackupScheduleAdapter implements BackupScheduleAdapter {
       'Background backup scheduling requires platform task configuration.',
     );
   }
+
+  @override
+  Future<void> cancelDailyBackup() async {}
 }
 
 class BackupSchedulingUnsupportedException implements Exception {
@@ -156,6 +161,7 @@ class BackupScheduler {
   Future<void> registerPlatformSchedule() async {
     final settings = await _settingsLoader();
     if (!settings.automaticBackupsEnabled) {
+      await _scheduleAdapter.cancelDailyBackup();
       return;
     }
     await _scheduleAdapter.registerDailyBackup(settings.dailyBackupTime);

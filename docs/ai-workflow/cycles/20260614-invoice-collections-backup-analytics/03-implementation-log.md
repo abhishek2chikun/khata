@@ -19,7 +19,7 @@ Assigned tasks: 01-07 (full plan)
 | Contracts/migrations/catalog | complete | Task 02 merged at `d12306c` | prior ladder green | none |
 | Invoice creation/PDF | complete | searchable `ProductPicker`, Cash/Credit UX, compliant PDFs | 71 focused tests green; `flutter analyze` info-only | PDF text assertions use helper/metadata tests (compressed PDF bytes are not plain-text searchable) |
 | Batch collections | complete | atomic grid API/local/UI | 37 focused mobile tests + 55 pure tests | API integration tests require local Postgres on :55432 |
-| Drive backup | pending | pending | pending | External OAuth configuration cannot be committed |
+| Drive backup | complete | encrypted Drive orchestration + UI at Task 05 | 69 backup tests green; debug/release APK green | Physical-device OAuth/sign-in unverified (AC10/AC11 blocked) |
 | Analytics | complete | owner KPIs, zero-filled trend, redesigned screen | 19 backend pure + 18 mobile analytics tests green | Postgres parity/API tests need :55432 DB |
 | Integration/release | pending | pending | pending | Physical-device evidence depends on available configured device/account |
 
@@ -52,9 +52,39 @@ Assigned tasks: 01-07 (full plan)
 ```
 Result: **71 passed**, analyze info/warnings only (no new errors).
 
+### Task 05 — Encrypted Google Drive backup (2026-06-14)
+
+**Packages (from Task 01 lockfile)**
+- `google_sign_in` 7.2.0, `googleapis` 16.0.0, `extension_google_sign_in_as_googleapis_auth` 3.0.0, `workmanager` 0.9.0+3, `flutter_secure_storage` 9.2.2
+- Drive scope: `https://www.googleapis.com/auth/drive.file` only
+
+**Implementation**
+- Injectable gateways: `GoogleSignInAuthGateway`, `GoogleApisDriveGateway`, `FlutterSecureBackupSecretStore`
+- Orchestrator: export → SHA-256 → upload to visible `Khata Backups` folder (app property `khata_owner=khata_app`) → verify download/hash → update `last_backup_at` → prune to 30 owned files
+- Foreground UI: connect/disconnect Google, secure password set/change/remove, automatic toggle (default 02:00), Back up now, Drive restore list; manual export/import preserved
+- WorkManager unique periodic task + startup catch-up via `AppDependencies` / `main.dart`
+- Background callback rebuilds DB/auth/Drive deps without UI; missing auth/password returns action-required (recorded, no retry loop)
+
+**External OAuth setup (not committed)**
+- Enable Google Drive API; create Android OAuth client for app package + signing SHA-1/SHA-256; configure consent screen/test users
+- No `google-services.json` added to repo
+
+**Focused verification (Task 05)**
+```bash
+(cd mobile && flutter test test/backup)
+(cd mobile && flutter test test/app/app_dependencies_test.dart)
+(cd mobile && flutter analyze)
+(cd mobile && flutter build apk --debug --dart-define=DATA_MODE=local)
+(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+```
+Result: **69 backup tests passed** (includes fake Drive orchestration, secure-store, scheduler, digest round-trip, screen flows); analyze info/warnings only; debug + release APK green.
+
+**Device evidence (blocked)**
+- AC10/AC11 remain unproven: physical sign-in, visible Drive folder/file, background catch-up, wrong-password no-change on device, restore/logout/restart persistence require configured OAuth client + test account on hardware.
+
 **Files touched (summary)**
-- New: `mobile/lib/services/invoice_settlement.dart`, `mobile/test/widgets/product_picker_test.dart`
-- Updated: `product_picker.dart`, `create_invoice_screen.dart`, `invoice_draft_controller.dart`, `invoice_draft.dart`, `invoice_preview_screen.dart`, `invoice_detail_screen.dart`, `invoice_list_screen.dart`, `invoice_pdf_service.dart`, `invoice_detail.dart`, `local_invoices_service.dart`, 6 test files, this log, `STATE.md`
+- New: `google_auth_gateway.dart`, `google_drive_gateway.dart`, `secure_backup_secret_store.dart`, `encrypted_drive_backup_orchestrator.dart`, `test/backup/fake_drive_platform.dart`, `test/backup/drive_backup_orchestrator_test.dart`, `test/backup/drive_backup_digest_test.dart`, `test/backup/backup_test_fixtures.dart`
+- Updated: `drive_platform.dart`, `drive_backup_service.dart`, `backup_screen.dart`, `backup_background_callback.dart`, `backup_scheduler.dart`, `workmanager_schedule_adapter.dart`, `app_dependencies.dart`, `main.dart`, backup tests, this log
 
 **Files touched (summary)**
 - New: `mobile/lib/screens/daily_collections_screen.dart`, `backend/tests/api/test_customers_batch_collections_api.py`, `backend/tests/services/test_customer_batch_collections_service.py`, `mobile/test/local/local_customers_collections_batch_service_test.dart`, `mobile/test/widgets/daily_collections_screen_test.dart`

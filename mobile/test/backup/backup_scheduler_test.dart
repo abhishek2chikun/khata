@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 
 void main() {
-  test('defaults automatic backup time to midnight', () {
+  test('defaults automatic backup time to 02:00', () {
     const settings = BackupScheduleSettings();
 
-    expect(settings.dailyBackupTime, const BackupTimeOfDay(hour: 0, minute: 0));
+    expect(settings.dailyBackupTime, const BackupTimeOfDay(hour: 2, minute: 0));
   });
 
   test('computes next due backup before and after configured time', () {
@@ -83,6 +83,7 @@ void main() {
     final scheduler = BackupScheduler(
       settingsLoader: () async => BackupScheduleSettings(
         automaticBackupsEnabled: true,
+        dailyBackupTime: const BackupTimeOfDay(hour: 0, minute: 0),
         lastBackupAt: DateTime(2026, 5, 7, 23, 59),
       ),
       runBackup: () async {
@@ -121,6 +122,7 @@ void main() {
     final scheduler = BackupScheduler(
       settingsLoader: () async => BackupScheduleSettings(
         automaticBackupsEnabled: true,
+        dailyBackupTime: const BackupTimeOfDay(hour: 0, minute: 0),
         lastBackupAt: DateTime(2026, 5, 7, 23, 59),
       ),
       runBackup: () async {
@@ -139,10 +141,16 @@ void main() {
 
 class _RecordingBackupScheduleAdapter implements BackupScheduleAdapter {
   final registeredTimes = <BackupTimeOfDay>[];
+  var canceled = false;
 
   @override
   Future<void> registerDailyBackup(BackupTimeOfDay dailyBackupTime) async {
     registeredTimes.add(dailyBackupTime);
+  }
+
+  @override
+  Future<void> cancelDailyBackup() async {
+    canceled = true;
   }
 }
 

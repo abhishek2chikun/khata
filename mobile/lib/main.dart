@@ -33,6 +33,7 @@ import 'widgets/app_navigation_drawer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeLocalBackupPlatformServices();
 
   final dependencies = await AppDependencies.create();
   runApp(

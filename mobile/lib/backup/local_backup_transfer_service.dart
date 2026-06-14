@@ -127,7 +127,7 @@ class LocalBackupTransferService implements BackupTransferService {
                 Value(existing?.backupDirectory ?? 'Android share sheet'),
             automaticBackupsEnabled:
                 Value(existing?.automaticBackupsEnabled ?? false),
-            dailyBackupTime: Value(existing?.dailyBackupTime ?? '00:00'),
+            dailyBackupTime: Value(existing?.dailyBackupTime ?? '02:00'),
             lastBackupAt: Value(now.toIso8601String()),
             updatedAt: now.toIso8601String(),
           ),

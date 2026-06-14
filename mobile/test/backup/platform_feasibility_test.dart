@@ -5,6 +5,8 @@ import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_platform.dart';
 import 'package:internal_billing_khata_mobile/backup/workmanager_schedule_adapter.dart';
 
+import 'fake_drive_platform.dart';
+
 void main() {
   tearDown(() => configureBackupBackgroundRunner(null));
 
@@ -55,6 +57,19 @@ void main() {
       );
 
       expect(delay, const Duration(hours: 16));
+    });
+
+    test('cancels scheduled work when disabled', () async {
+      var canceled = false;
+      final adapter = WorkManagerBackupScheduleAdapter(
+        cancelByUniqueName: (name) async {
+          canceled = true;
+          expect(name, backupBackgroundTaskName);
+        },
+      );
+
+      await adapter.cancelDailyBackup();
+      expect(canceled, isTrue);
     });
   });
 
@@ -140,153 +155,4 @@ void main() {
       expect(chart.lineBarsData, hasLength(1));
     });
   });
-}
-
-class FakeDriveGateway implements DriveGateway {
-  FakeDriveGateway({this.shouldFailVerification = false});
-
-  final files = <String, _StoredDriveFile>{};
-  final shouldFailVerification;
-  var _folderId = 'folder-1';
-  var _nextId = 1;
-
-  @override
-  Future<String> ensureBackupFolder() async => _folderId;
-
-  @override
-  Future<List<DriveBackupFile>> listOwnedBackupFiles({required String folderId}) async {
-    return files.values
-        .where((file) => file.folderId == folderId)
-        .map((file) => file.toMetadata())
-        .toList()
-      ..sort((a, b) => b.createdTime.compareTo(a.createdTime));
-  }
-
-  @override
-  Future<DriveBackupFile> uploadBackupFile({
-    required String folderId,
-    required String fileName,
-    required List<int> bytes,
-    required Map<String, String> appProperties,
-  }) async {
-    final id = 'file-${_nextId++}';
-    final sha = 'sha-${bytes.join('-')}';
-    files[id] = _StoredDriveFile(
-      id: id,
-      folderId: folderId,
-      name: fileName,
-      bytes: List<int>.from(bytes),
-      appProperties: Map<String, String>.from(appProperties),
-      sha256: sha,
-    );
-    return files[id]!.toMetadata();
-  }
-
-  @override
-  Future<List<int>> downloadFile({required String fileId}) async {
-    final file = files[fileId];
-    if (file == null) {
-      throw const DriveTransportException('file not found');
-    }
-    return List<int>.from(file.bytes);
-  }
-
-  @override
-  Future<void> deleteFile({required String fileId}) async {
-    files.remove(fileId);
-  }
-
-  @override
-  Future<void> verifyUploadedFile({
-    required String fileId,
-    required String expectedSha256,
-  }) async {
-    if (shouldFailVerification) {
-      throw const DriveTransportException('upload verification failed');
-    }
-    final file = files[fileId];
-    if (file == null || file.sha256 != expectedSha256) {
-      throw const DriveTransportException('upload verification failed');
-    }
-  }
-}
-
-class _StoredDriveFile {
-  _StoredDriveFile({
-    required this.id,
-    required this.folderId,
-    required this.name,
-    required this.bytes,
-    required this.appProperties,
-    required this.sha256,
-  });
-
-  final String id;
-  final String folderId;
-  final String name;
-  final List<int> bytes;
-  final Map<String, String> appProperties;
-  final String sha256;
-
-  DriveBackupFile toMetadata() {
-    return DriveBackupFile(
-      id: id,
-      name: name,
-      createdTime: DateTime.utc(2026, 6, 14),
-      sizeBytes: bytes.length,
-      appProperties: appProperties,
-      sha256: sha256,
-    );
-  }
-}
-
-class FakeGoogleAuthGateway implements GoogleAuthGateway {
-  FakeGoogleAuthGateway({
-    bool signedIn = true,
-    this.hasAccess = true,
-    this.shouldCancelSignIn = false,
-  }) : _signedIn = signedIn;
-
-  bool _signedIn;
-  final bool hasAccess;
-  final bool shouldCancelSignIn;
-
-  @override
-  Future<bool> isSignedIn() async => _signedIn;
-
-  @override
-  Future<void> signIn() async {
-    if (shouldCancelSignIn) {
-      throw const DriveAuthException('sign in canceled');
-    }
-    _signedIn = true;
-  }
-
-  @override
-  Future<void> signOut() async {
-    _signedIn = false;
-  }
-
-  @override
-  Future<bool> hasDriveAccess() async => _signedIn && hasAccess;
-}
-
-class FakeBackupSecretStore implements BackupSecretStore {
-  String? _password;
-
-  @override
-  Future<void> clearPassword() async {
-    _password = null;
-  }
-
-  @override
-  Future<bool> hasPassword() async => _password != null && _password!.isNotEmpty;
-
-  @override
-  Future<String?> readPassword() async => _password;
-
-  @override
-  Future<void> savePassword(String password) async {
-    _password = password;
-  }
 }
