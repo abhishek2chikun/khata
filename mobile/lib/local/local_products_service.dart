@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../models/api_error.dart';
 import '../models/product.dart' as product_model;
 import '../services/products_service.dart';
+import '../services/decimal_validators.dart';
 import 'local_database.dart';
 import 'local_customers_service.dart';
 
@@ -23,6 +24,7 @@ class LocalProductsService implements ProductsService {
       itemName: input.itemName,
       itemNumber: input.itemNumber,
     );
+    _validateCreateInput(input);
 
     final now = DateTime.now().toUtc().toIso8601String();
     final id = _generateUuid();
@@ -35,12 +37,15 @@ class LocalProductsService implements ProductsService {
               itemName: input.itemName,
               itemNumber: input.itemNumber,
               buyerId: Value(input.buyerId),
-              buyingPrice: _normalizeDecimal(input.buyingPrice),
-              sellingPrice: _normalizeDecimal(input.sellingPrice),
+              buyingPrice: _normalizeUnitPrice(input.buyingPrice),
+              sellingPrice: _normalizeUnitPrice(input.sellingPrice),
               unit: Value(input.unit),
               gstRate: _normalizeDecimal(input.gstRate),
-              quantityOnHand: _normalizeDecimal(input.quantityOnHand),
-              lowStockThreshold: _normalizeDecimal(input.lowStockThreshold),
+              hsnCode: Value(normalizeHsn(input.hsnCode)),
+              quantityOnHand:
+                  _normalizeIntegralQuantity(input.quantityOnHand),
+              lowStockThreshold:
+                  _normalizeIntegralQuantity(input.lowStockThreshold),
               createdAt: now,
               updatedAt: now,
             ),
@@ -123,6 +128,7 @@ class LocalProductsService implements ProductsService {
       itemNumber: input.itemNumber,
       excludeId: id,
     );
+    _validateUpdateInput(input);
 
     try {
       await (_database.update(_database.products)
@@ -134,11 +140,13 @@ class LocalProductsService implements ProductsService {
           itemName: Value(input.itemName),
           itemNumber: Value(input.itemNumber),
           buyerId: Value(input.buyerId),
-          buyingPrice: Value(_normalizeDecimal(input.buyingPrice)),
-          sellingPrice: Value(_normalizeDecimal(input.sellingPrice)),
+          buyingPrice: Value(_normalizeUnitPrice(input.buyingPrice)),
+          sellingPrice: Value(_normalizeUnitPrice(input.sellingPrice)),
           unit: Value(input.unit),
           gstRate: Value(_normalizeDecimal(input.gstRate)),
-          lowStockThreshold: Value(_normalizeDecimal(input.lowStockThreshold)),
+          hsnCode: Value(normalizeHsn(input.hsnCode)),
+          lowStockThreshold:
+              Value(_normalizeIntegralQuantity(input.lowStockThreshold)),
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
@@ -210,6 +218,11 @@ class LocalProductsService implements ProductsService {
         statusCode: 400,
       );
     }
+    try {
+      validateNonZeroIntegralQuantity(input.quantityDelta);
+    } on ApiError {
+      rethrow;
+    }
 
     final existingMovement = await (_database.select(_database.stockMovements)
           ..where((movement) => movement.requestId.equals(input.requestId)))
@@ -217,7 +230,7 @@ class LocalProductsService implements ProductsService {
     if (existingMovement != null) {
       final matchesExistingPayload = existingMovement.productId == id &&
           existingMovement.quantityDelta ==
-              _normalizeDecimal(input.quantityDelta) &&
+              _normalizeIntegralQuantity(input.quantityDelta) &&
           existingMovement.reason == input.reason;
       if (!matchesExistingPayload) {
         throw const ApiError(
@@ -241,7 +254,7 @@ class LocalProductsService implements ProductsService {
             ..where((product) => product.id.equals(id)))
           .write(
         ProductsCompanion(
-          quantityOnHand: Value(_normalizeDecimal(nextQuantity)),
+          quantityOnHand: Value(_normalizeIntegralQuantity(nextQuantity)),
           updatedAt: Value(now),
         ),
       );
@@ -251,7 +264,7 @@ class LocalProductsService implements ProductsService {
               productId: id,
               requestId: Value(input.requestId),
               movementType: 'MANUAL_ADJUSTMENT',
-              quantityDelta: _normalizeDecimal(input.quantityDelta),
+              quantityDelta: _normalizeIntegralQuantity(input.quantityDelta),
               reason: Value(input.reason),
               createdByUserId: _systemUserId,
               createdAt: now,
@@ -374,10 +387,34 @@ class LocalProductsService implements ProductsService {
       sellingPrice: double.parse(product.sellingPrice),
       unit: product.unit,
       gstRate: double.parse(product.gstRate),
+      hsnCode: product.hsnCode,
       quantityOnHand: double.parse(product.quantityOnHand),
       lowStockThreshold: double.parse(product.lowStockThreshold),
       isActive: product.isActive,
     );
+  }
+
+  void _validateCreateInput(CreateProductInput input) {
+    validateUnitPrice(input.buyingPrice);
+    validateUnitPrice(input.sellingPrice);
+    validateNonNegativeIntegralQuantity(input.quantityOnHand);
+    validateNonNegativeIntegralQuantity(input.lowStockThreshold);
+    normalizeHsn(input.hsnCode);
+  }
+
+  void _validateUpdateInput(UpdateProductInput input) {
+    validateUnitPrice(input.buyingPrice);
+    validateUnitPrice(input.sellingPrice);
+    validateNonNegativeIntegralQuantity(input.lowStockThreshold);
+    normalizeHsn(input.hsnCode);
+  }
+
+  String _normalizeUnitPrice(double value) {
+    return _normalizeDecimal(validateUnitPrice(value));
+  }
+
+  String _normalizeIntegralQuantity(double value) {
+    return _normalizeDecimal(validateNonNegativeIntegralQuantity(value));
   }
 
   String _normalizeDecimal(double value) {

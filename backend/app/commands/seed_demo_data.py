@@ -79,6 +79,7 @@ def _sync_seed_product(product: Product, payload: ProductCreateRequest) -> None:
     product.selling_price = payload.selling_price
     product.unit = payload.unit
     product.gst_rate = payload.gst_rate
+    product.hsn_code = payload.hsn_code
     product.low_stock_threshold = payload.low_stock_threshold
 
 
@@ -89,44 +90,48 @@ def _demo_product_payloads() -> dict[str, ProductCreateRequest]:
             category="Pens",
             item_name="Blue Ball Pen",
             item_number="PEN-001",
-            buying_price=Decimal("9.44"),
-            selling_price=Decimal("14.16"),
+            buying_price=Decimal("9.440"),
+            selling_price=Decimal("14.160"),
             gst_rate=Decimal("18.00"),
-            quantity_on_hand=Decimal("120.000"),
-            low_stock_threshold=Decimal("20.000"),
+            hsn_code="960810",
+            quantity_on_hand=Decimal("120"),
+            low_stock_threshold=Decimal("20"),
         ),
         "NOTE-001": ProductCreateRequest(
             company_name="Navneet",
             category="Notebooks",
             item_name="A5 Notebook",
             item_number="NOTE-001",
-            buying_price=Decimal("42.56"),
-            selling_price=Decimal("61.60"),
+            buying_price=Decimal("42.560"),
+            selling_price=Decimal("61.600"),
             gst_rate=Decimal("12.00"),
-            quantity_on_hand=Decimal("80.000"),
-            low_stock_threshold=Decimal("15.000"),
+            hsn_code="482020",
+            quantity_on_hand=Decimal("80"),
+            low_stock_threshold=Decimal("15"),
         ),
         "MRK-001": ProductCreateRequest(
             company_name="Camlin",
             category="Markers",
             item_name="Permanent Marker Black",
             item_number="MRK-001",
-            buying_price=Decimal("28.32"),
-            selling_price=Decimal("41.30"),
+            buying_price=Decimal("28.320"),
+            selling_price=Decimal("41.300"),
             gst_rate=Decimal("18.00"),
-            quantity_on_hand=Decimal("18.000"),
-            low_stock_threshold=Decimal("12.000"),
+            hsn_code="960820",
+            quantity_on_hand=Decimal("18"),
+            low_stock_threshold=Decimal("12"),
         ),
         "FILE-001": ProductCreateRequest(
             company_name="Solo",
             category="Files",
             item_name="Plastic Document File",
             item_number="FILE-001",
-            buying_price=Decimal("17.70"),
-            selling_price=Decimal("25.96"),
+            buying_price=Decimal("17.700"),
+            selling_price=Decimal("25.960"),
             gst_rate=Decimal("18.00"),
-            quantity_on_hand=Decimal("45.000"),
-            low_stock_threshold=Decimal("10.000"),
+            hsn_code="482030",
+            quantity_on_hand=Decimal("45"),
+            low_stock_threshold=Decimal("10"),
         ),
     }
 
@@ -143,10 +148,10 @@ def _demo_invoice_line_payloads(products: dict[str, ProductCreateRequest | Produ
             discount_percent=discount_percent,
         )
         for item_number, product, quantity, discount_percent in [
-            ("PEN-001", products["PEN-001"], Decimal("10.000"), Decimal("0.00")),
-            ("NOTE-001", products["NOTE-001"], Decimal("5.000"), Decimal("5.00")),
-            ("FILE-001", products["FILE-001"], Decimal("12.000"), Decimal("0.00")),
-            ("MRK-001", products["MRK-001"], Decimal("8.000"), Decimal("0.00")),
+            ("PEN-001", products["PEN-001"], Decimal("10"), Decimal("0.00")),
+            ("NOTE-001", products["NOTE-001"], Decimal("5"), Decimal("0.00")),
+            ("FILE-001", products["FILE-001"], Decimal("12"), Decimal("0.00")),
+            ("MRK-001", products["MRK-001"], Decimal("8"), Decimal("0.00")),
         ]
     }
 

@@ -3,16 +3,23 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from app.core.tax import split_gst_rate
 
+from app.core.decimals import round_money, round_rate, round_unit_price
+
 MONEY_PRECISION = Decimal("0.01")
 RATE_PRECISION = Decimal("0.01")
+UNIT_PRICE_PRECISION = Decimal("0.001")
 
 
 def _round_money(value: Decimal | str) -> Decimal:
-    return Decimal(value).quantize(MONEY_PRECISION, rounding=ROUND_HALF_UP)
+    return round_money(value)
 
 
 def _round_rate(value: Decimal | str) -> Decimal:
-    return Decimal(value).quantize(RATE_PRECISION, rounding=ROUND_HALF_UP)
+    return round_rate(value)
+
+
+def _round_unit_price(value: Decimal | str) -> Decimal:
+    return round_unit_price(value)
 
 
 @dataclass(frozen=True)
@@ -46,7 +53,7 @@ def normalize_line(
     tax_regime: str = "INTRA_STATE",
 ) -> NormalizedLine:
     normalized_quantity = Decimal(quantity)
-    normalized_entered_price = _round_money(unit_price)
+    normalized_entered_price = _round_unit_price(unit_price)
     normalized_gst_rate = _round_rate(gst_rate)
     normalized_discount_percent = _round_rate(discount_percent)
 
@@ -111,7 +118,7 @@ def normalize_non_gst_line(
     discount_percent: Decimal,
 ) -> NormalizedLine:
     normalized_quantity = Decimal(quantity)
-    final_unit_price = _round_money(unit_price)
+    final_unit_price = _round_unit_price(unit_price)
     normalized_discount_percent = _round_rate(discount_percent)
     gross_line_total = _round_money(normalized_quantity * final_unit_price)
     discount_amount = _round_money(gross_line_total * (normalized_discount_percent / Decimal("100")))

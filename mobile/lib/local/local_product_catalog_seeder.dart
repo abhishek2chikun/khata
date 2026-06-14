@@ -47,6 +47,8 @@ class LocalProductCatalogSeeder {
         products,
         buyerIdsByName: buyerIdsByName,
         now: now,
+        storedVersion: storedVersion,
+        catalogVersion: catalogVersion,
       );
       await _writeStoredCatalogVersion(catalogVersion, now: now);
     });
@@ -85,35 +87,50 @@ class LocalProductCatalogSeeder {
     List<_CatalogProduct> products, {
     required Map<String, String> buyerIdsByName,
     required String now,
+    required int storedVersion,
+    required int catalogVersion,
   }) async {
     for (final product in products) {
       final existing = await (_database.select(_database.products)
             ..where((row) => row.itemNumber.equals(product.itemNumber)))
           .getSingleOrNull();
-      if (existing != null) {
+      if (existing == null) {
+        final buyerId = buyerIdsByName[product.companyName];
+        await _database.into(_database.products).insert(
+              ProductsCompanion.insert(
+                id: product.id,
+                itemNumber: product.itemNumber,
+                itemName: product.itemName,
+                category: product.category,
+                buyerId: Value(buyerId),
+                companyName: product.companyName,
+                buyingPrice: product.buyingPrice,
+                sellingPrice: product.sellingPrice,
+                unit: Value(product.unit),
+                gstRate: product.gstRate,
+                hsnCode: Value(product.hsnCode),
+                quantityOnHand: product.quantityOnHand,
+                lowStockThreshold: product.lowStockThreshold,
+                createdAt: _seedTimestamp,
+                updatedAt: _seedTimestamp,
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
         continue;
       }
 
-      final buyerId = buyerIdsByName[product.companyName];
-      await _database.into(_database.products).insert(
-            ProductsCompanion.insert(
-              id: product.id,
-              itemNumber: product.itemNumber,
-              itemName: product.itemName,
-              category: product.category,
-              buyerId: Value(buyerId),
-              companyName: product.companyName,
-              buyingPrice: product.buyingPrice,
-              sellingPrice: product.sellingPrice,
-              unit: Value(product.unit),
-              gstRate: product.gstRate,
-              quantityOnHand: product.quantityOnHand,
-              lowStockThreshold: product.lowStockThreshold,
-              createdAt: _seedTimestamp,
-              updatedAt: _seedTimestamp,
-            ),
-            mode: InsertMode.insertOrIgnore,
-          );
+      if (storedVersion < catalogVersion) {
+        await (_database.update(_database.products)
+              ..where((row) => row.itemNumber.equals(product.itemNumber)))
+            .write(
+          ProductsCompanion(
+            buyingPrice: Value(product.buyingPrice),
+            sellingPrice: Value(product.sellingPrice),
+            hsnCode: Value(product.hsnCode),
+            updatedAt: Value(now),
+          ),
+        );
+      }
     }
   }
 
@@ -184,6 +201,7 @@ class LocalProductCatalogSeeder {
         sellingPrice: _requireString(entry, 'selling_price'),
         unit: _optionalString(entry, 'unit'),
         gstRate: _requireString(entry, 'gst_rate'),
+        hsnCode: _optionalString(entry, 'hsn_code'),
         quantityOnHand: _requireString(entry, 'quantity_on_hand'),
         lowStockThreshold: _requireString(entry, 'low_stock_threshold'),
       );
@@ -244,6 +262,7 @@ class _CatalogProduct {
     required this.sellingPrice,
     required this.unit,
     required this.gstRate,
+    this.hsnCode,
     required this.quantityOnHand,
     required this.lowStockThreshold,
   });
@@ -257,6 +276,7 @@ class _CatalogProduct {
   final String sellingPrice;
   final String? unit;
   final String gstRate;
+  final String? hsnCode;
   final String quantityOnHand;
   final String lowStockThreshold;
 }

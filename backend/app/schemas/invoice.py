@@ -1,6 +1,11 @@
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
+from app.core.decimals import (
+    validate_discount_disabled,
+    validate_positive_integral_quantity,
+    validate_unit_price,
+)
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -16,16 +21,7 @@ class InvoiceLineRequest(BaseModel):
     @field_validator("quantity")
     @classmethod
     def validate_positive_quantity(cls, value: Decimal) -> Decimal:
-        if value <= 0:
-            raise ValueError("quantity must be greater than zero")
-        if value > Decimal("99999999999.999"):
-            raise ValueError("quantity exceeds maximum supported value")
-        try:
-            if value != value.quantize(Decimal("0.001")):
-                raise ValueError("quantity must have at most three decimal places")
-        except InvalidOperation as exc:
-            raise ValueError("quantity must have at most three decimal places") from exc
-        return value
+        return validate_positive_integral_quantity(value)
 
     @field_validator("pricing_mode")
     @classmethod
@@ -37,9 +33,9 @@ class InvoiceLineRequest(BaseModel):
     @field_validator("unit_price")
     @classmethod
     def validate_unit_price(cls, value: Decimal | None) -> Decimal | None:
-        if value is not None and value <= 0:
-            raise ValueError("unit_price must be greater than zero")
-        return value
+        if value is None:
+            return None
+        return validate_unit_price(value)
 
     @field_validator("gst_rate")
     @classmethod
@@ -51,9 +47,7 @@ class InvoiceLineRequest(BaseModel):
     @field_validator("discount_percent")
     @classmethod
     def validate_discount_percent(cls, value: Decimal) -> Decimal:
-        if value < 0 or value > 100:
-            raise ValueError("discount_percent must be between 0 and 100")
-        return value
+        return validate_discount_disabled(value)
 
     @model_validator(mode="after")
     def validate_required_overrides(self) -> "InvoiceLineRequest":
@@ -150,6 +144,7 @@ class InvoiceLineQuoteResponse(BaseModel):
     product_category: str
     product_buyer_id: uuid.UUID | None
     product_company_name: str
+    product_hsn_code: str | None = None
     buying_price: Decimal
     selling_price: Decimal
     unit: str | None
@@ -222,6 +217,7 @@ class InvoiceItemResponse(BaseModel):
     product_category: str
     product_buyer_id: uuid.UUID | None
     product_company_name: str
+    product_hsn_code: str | None = None
     buying_price: Decimal
     selling_price: Decimal
     unit: str | None

@@ -42,6 +42,7 @@ class CreateProductInput {
     required this.sellingPrice,
     this.unit,
     required this.gstRate,
+    this.hsnCode,
     required this.quantityOnHand,
     required this.lowStockThreshold,
     this.buyerId,
@@ -55,6 +56,7 @@ class CreateProductInput {
   final double sellingPrice;
   final String? unit;
   final double gstRate;
+  final String? hsnCode;
   final double quantityOnHand;
   final double lowStockThreshold;
   final String? buyerId;
@@ -69,6 +71,7 @@ class CreateProductInput {
       'selling_price': sellingPrice,
       'unit': unit,
       'gst_rate': gstRate,
+      if (hsnCode != null) 'hsn_code': hsnCode,
       'quantity_on_hand': quantityOnHand,
       'low_stock_threshold': lowStockThreshold,
       if (buyerId != null) 'buyer_id': buyerId,
@@ -85,6 +88,7 @@ class CreateProductInput {
     double? sellingPrice,
     String? unit,
     double? gstRate,
+    String? hsnCode,
     double? quantityOnHand,
     double? lowStockThreshold,
     String? buyerId,
@@ -98,6 +102,7 @@ class CreateProductInput {
       sellingPrice: sellingPrice ?? this.sellingPrice,
       unit: unit ?? this.unit,
       gstRate: gstRate ?? this.gstRate,
+      hsnCode: hsnCode ?? this.hsnCode,
       quantityOnHand: quantityOnHand ?? this.quantityOnHand,
       lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
       buyerId: buyerId ?? this.buyerId,
@@ -115,6 +120,7 @@ class UpdateProductInput {
     required this.sellingPrice,
     this.unit,
     required this.gstRate,
+    this.hsnCode,
     required this.lowStockThreshold,
     this.buyerId,
   });
@@ -127,6 +133,7 @@ class UpdateProductInput {
   final double sellingPrice;
   final String? unit;
   final double gstRate;
+  final String? hsnCode;
   final double lowStockThreshold;
   final String? buyerId;
 
@@ -140,6 +147,7 @@ class UpdateProductInput {
       'selling_price': sellingPrice,
       'unit': unit,
       'gst_rate': gstRate,
+      if (hsnCode != null) 'hsn_code': hsnCode,
       'low_stock_threshold': lowStockThreshold,
       'buyer_id': buyerId,
     };

@@ -145,11 +145,10 @@ void main() {
       customer: customer,
       product: product,
       quantity: 6,
-      discountPercent: 10,
     ));
 
-    expect(quote.items.single.lineTotal, 637.2);
-    expect(quote.totals.grandTotal, 637.2);
+    expect(quote.items.single.lineTotal, 708);
+    expect(quote.totals.grandTotal, 708);
     expect(quote.warnings, hasLength(1));
     expect(quote.warnings.single.code, 'NEGATIVE_STOCK');
   });
@@ -272,7 +271,7 @@ void main() {
         items: <InvoiceDraftItem>[
           InvoiceDraftItem(
             product: product,
-            quantity: 1.5,
+            quantity: 1,
             unitPrice: 118,
           ),
           InvoiceDraftItem(
@@ -286,10 +285,10 @@ void main() {
     );
 
     expect(result.invoice.items, hasLength(2));
-    expect(result.invoice.items.map((item) => item.quantity), <double>[1.5, 2]);
+    expect(result.invoice.items.map((item) => item.quantity), <double>[1, 2]);
     expect(
         (await database.select(database.products).getSingle()).quantityOnHand,
-        '1.5');
+        '2');
     expect(await database.select(database.invoiceItems).get(), hasLength(2));
     expect(await database.select(database.stockMovements).get(), hasLength(2));
   });
@@ -302,7 +301,7 @@ void main() {
         items: <InvoiceDraftItem>[
           InvoiceDraftItem(
             product: product,
-            quantity: 1.5,
+            quantity: 1,
             unitPrice: 118,
           ),
           InvoiceDraftItem(
@@ -401,6 +400,7 @@ void main() {
         buyingPrice: 80,
         sellingPrice: 236,
         gstRate: 18,
+        hsnCode: '960810',
         lowStockThreshold: 2,
       ),
     );
@@ -446,8 +446,7 @@ void main() {
     );
   });
 
-  test('idempotent replay compares place, pricing, gst, and discount',
-      () async {
+  test('idempotent replay compares place, pricing, and gst', () async {
     final draft = _draftWithItems(
       customer: customer,
       placeOfSupplyStateCode: '29',
@@ -458,7 +457,6 @@ void main() {
           pricingMode: 'PRE_TAX',
           unitPrice: 100,
           gstRate: 12,
-          discountPercent: 5,
         ),
       ],
     );
@@ -480,7 +478,6 @@ void main() {
         pricingMode: 'TAX_INCLUSIVE',
         unitPrice: 100,
         gstRate: 12,
-        discountPercent: 5,
       ),
     ]));
     await expectConflict(draft.copyWith(items: <InvoiceDraftItem>[
@@ -490,7 +487,6 @@ void main() {
         pricingMode: 'PRE_TAX',
         unitPrice: 100,
         gstRate: 18,
-        discountPercent: 5,
       ),
     ]));
     await expectConflict(draft.copyWith(items: <InvoiceDraftItem>[
@@ -498,9 +494,8 @@ void main() {
         product: product,
         quantity: 1,
         pricingMode: 'PRE_TAX',
-        unitPrice: 100,
+        unitPrice: 101,
         gstRate: 12,
-        discountPercent: 6,
       ),
     ]));
   });
@@ -757,7 +752,7 @@ void main() {
 
     await expectInvalid(InvoiceDraftItem(product: product, quantity: 0));
     await expectInvalid(InvoiceDraftItem(product: product, quantity: -1));
-    await expectInvalid(InvoiceDraftItem(product: product, quantity: 1.0001));
+    await expectInvalid(InvoiceDraftItem(product: product, quantity: 1.5));
     await expectInvalid(
       InvoiceDraftItem(product: product, quantity: 100000000000),
     );
@@ -768,16 +763,16 @@ void main() {
       InvoiceDraftItem(product: product, quantity: 1, unitPrice: -1),
     );
     await expectInvalid(
+      InvoiceDraftItem(product: product, quantity: 1, unitPrice: 1.2345),
+    );
+    await expectInvalid(
       InvoiceDraftItem(product: product, quantity: 1, gstRate: -0.01),
     );
     await expectInvalid(
       InvoiceDraftItem(product: product, quantity: 1, gstRate: 100.01),
     );
     await expectInvalid(
-      InvoiceDraftItem(product: product, quantity: 1, discountPercent: -0.01),
-    );
-    await expectInvalid(
-      InvoiceDraftItem(product: product, quantity: 1, discountPercent: 100.01),
+      InvoiceDraftItem(product: product, quantity: 1, discountPercent: 0.01),
     );
 
     expect(await database.select(database.invoices).get(), isEmpty);
@@ -823,7 +818,7 @@ void main() {
     expect(created.invoice.invoiceDatetime, '2026-01-10T00:00:00.000Z');
   });
 
-  test('inclusive GST half-cent rounding is deterministic', () async {
+  test('inclusive GST unit price keeps three-decimal precision', () async {
     final quote = await invoicesService.quoteInvoice(_draftWithItems(
       customer: customer,
       items: <InvoiceDraftItem>[
@@ -831,29 +826,27 @@ void main() {
       ],
     ));
 
-    expect(quote.items.single.enteredUnitPrice, 1.01);
+    expect(quote.items.single.enteredUnitPrice, 1.005);
     expect(quote.items.single.lineTotal, 1.01);
     expect(quote.totals.grandTotal, 1.01);
   });
 
-  test('inclusive GST decimal edge keeps two-decimal totals stable', () async {
+  test('inclusive GST decimal edge keeps totals stable with integral qty',
+      () async {
     final quote = await invoicesService.quoteInvoice(_draftWithItems(
       customer: customer,
       items: <InvoiceDraftItem>[
         InvoiceDraftItem(
           product: product,
-          quantity: 2.555,
+          quantity: 2,
           unitPrice: 19.995,
-          discountPercent: 12.345,
         ),
       ],
     ));
 
-    // This protects the current double-based half-up shim for known edge input.
-    // A future Decimal rewrite should update this only after backend parity checks.
-    expect(quote.items.single.enteredUnitPrice, 20);
-    expect(quote.items.single.lineTotal, 44.79);
-    expect(quote.totals.grandTotal, 44.79);
+    expect(quote.items.single.enteredUnitPrice, 19.995);
+    expect(quote.items.single.lineTotal, 39.99);
+    expect(quote.totals.grandTotal, 39.99);
   });
 
   test('rejects unsupported payment modes', () async {
@@ -1103,6 +1096,35 @@ void main() {
     expect(await database.select(database.invoices).get(), isEmpty);
   });
 
+  test('gst invoice rejects product without hsn', () async {
+    final noHsnProduct = await productsService.createProduct(
+      _productInput(
+        itemNumber: 'PEN-NOHSN',
+        itemName: 'No HSN Pen',
+        hsnCode: null,
+      ),
+    );
+
+    await expectLater(
+      invoicesService.quoteInvoice(_draft(
+        customer: customer,
+        product: noHsnProduct,
+        quantity: 1,
+      )),
+      throwsA(_apiError(code: 'MISSING_PRODUCT_HSN', statusCode: 400)),
+    );
+  });
+
+  test('invoice item stores product hsn snapshot', () async {
+    await invoicesService.createInvoice(
+      draft: _draft(customer: customer, product: product, quantity: 1),
+      requestId: _uuid(53),
+    );
+
+    final storedItem = await database.select(database.invoiceItems).getSingle();
+    expect(storedItem.productHsnCode, '960810');
+  });
+
   test('idempotency_hash_includes_gst_flag', () async {
     final first = await invoicesService.createInvoice(
       draft: _draft(
@@ -1166,6 +1188,7 @@ CreateProductInput _productInput({
   String itemName = 'Blue Pen',
   String itemNumber = 'PEN-1',
   String? unit,
+  String? hsnCode = '960810',
 }) {
   return CreateProductInput(
     companyName: companyName,
@@ -1176,6 +1199,7 @@ CreateProductInput _productInput({
     sellingPrice: 118,
     unit: unit,
     gstRate: 18,
+    hsnCode: hsnCode,
     quantityOnHand: 5,
     lowStockThreshold: 2,
   );
@@ -1189,7 +1213,6 @@ InvoiceDraft _draft({
   String paymentState = 'CREDIT',
   double paidAmount = 0,
   String? paymentMode,
-  double discountPercent = 0,
   String? placeOfSupplyStateCode,
   bool? gstFlag,
 }) {
@@ -1206,7 +1229,6 @@ InvoiceDraft _draft({
         product: product,
         quantity: quantity,
         unitPrice: 118,
-        discountPercent: discountPercent,
       ),
     ],
   );

@@ -10,6 +10,7 @@ class Product {
     required this.sellingPrice,
     this.unit,
     required this.gstRate,
+    this.hsnCode,
     required this.quantityOnHand,
     required this.lowStockThreshold,
     required this.isActive,
@@ -25,6 +26,7 @@ class Product {
   final double sellingPrice;
   final String? unit;
   final double gstRate;
+  final String? hsnCode;
   final double quantityOnHand;
   final double lowStockThreshold;
   final bool isActive;
@@ -43,6 +45,7 @@ class Product {
       sellingPrice: _requireDouble(json, 'selling_price'),
       unit: json['unit'] as String?,
       gstRate: _requireDouble(json, 'gst_rate'),
+      hsnCode: _optionalString(json, 'hsn_code'),
       quantityOnHand: _requireDouble(json, 'quantity_on_hand'),
       lowStockThreshold: _requireDouble(json, 'low_stock_threshold'),
       isActive: _requireBool(json, 'is_active'),

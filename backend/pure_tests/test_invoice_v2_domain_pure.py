@@ -47,7 +47,7 @@ def test_invoice_item_model_exposes_product_snapshot_and_profit_input_columns():
 
 
 def test_invoice_line_request_defaults_to_product_price_and_gst_overrides_optional():
-    request = InvoiceLineRequest(product_id="aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa", quantity=Decimal("1.000"))
+    request = InvoiceLineRequest(product_id="aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa", quantity=Decimal("1"))
 
     assert request.pricing_mode == "TAX_INCLUSIVE"
     assert request.unit_price is None
@@ -85,48 +85,60 @@ def test_invoice_list_api_and_service_expose_payment_state_filter_not_payment_mo
         {"gst_rate": Decimal("100.01")},
         {"discount_percent": Decimal("-0.01")},
         {"discount_percent": Decimal("100.01")},
+        {"discount_percent": Decimal("5.00")},
     ],
 )
 def test_invoice_line_request_rejects_invalid_overrides(payload):
     with pytest.raises(ValidationError):
-        InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.000"), **payload)
+        InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1"), **payload)
 
 
-def test_invoice_line_quantity_matches_persistence_precision():
-    request = InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.001"))
+def test_invoice_line_quantity_must_be_integral():
+    request = InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("2"))
 
-    assert request.quantity == Decimal("1.001")
+    assert request.quantity == Decimal("2")
+
+    with pytest.raises(ValidationError):
+        InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.001"))
 
     with pytest.raises(ValidationError):
         InvoiceLineRequest(product_id=uuid4(), quantity=Decimal("1.0004"))
 
 
+def test_invoice_line_request_rejects_non_zero_discount():
+    with pytest.raises(ValidationError):
+        InvoiceLineRequest(
+            product_id=uuid4(),
+            quantity=Decimal("1"),
+            discount_percent=Decimal("10.00"),
+        )
+
+
 def test_tax_inclusive_pricing_preserves_entered_total_after_rounding():
     line = normalize_line(
-        quantity=Decimal("3.000"),
-        unit_price=Decimal("99.99"),
+        quantity=Decimal("3"),
+        unit_price=Decimal("99.990"),
         pricing_mode="TAX_INCLUSIVE",
         gst_rate=Decimal("18.00"),
-        discount_percent=Decimal("10.00"),
+        discount_percent=Decimal("0.00"),
     )
 
     undiscounted_total = Decimal("299.97")
-    expected_discount = Decimal("30.00")
-    assert line.line_total == undiscounted_total - expected_discount
+    assert line.line_total == undiscounted_total
     assert line.gst_amount == line.line_total - line.taxable_amount
     assert line.line_total >= 0
 
 
 def test_invoice_datetime_must_be_timezone_aware_and_match_invoice_date_when_supplied():
     with pytest.raises(ValidationError):
-        InvoiceQuoteRequest(customer_id=uuid4(), invoice_datetime=datetime(2026, 4, 19, 12, 0), items=[{"product_id": uuid4(), "quantity": "1.000"}])
+        InvoiceQuoteRequest(customer_id=uuid4(), invoice_datetime=datetime(2026, 4, 19, 12, 0), items=[{"product_id": uuid4(), "quantity": "1"}])
 
     with pytest.raises(ValidationError):
         InvoiceQuoteRequest(
             customer_id=uuid4(),
             invoice_datetime=datetime(2026, 4, 19, 12, 0, tzinfo=timezone.utc),
             invoice_date=date(2026, 4, 20),
-            items=[{"product_id": uuid4(), "quantity": "1.000"}],
+            items=[{"product_id": uuid4(), "quantity": "1"}],
         )
 
 
@@ -134,7 +146,7 @@ def test_date_only_invoice_request_resolves_to_utc_midnight():
     request = InvoiceQuoteRequest(
         customer_id=uuid4(),
         invoice_date=date(2026, 4, 19),
-        items=[{"product_id": uuid4(), "quantity": "1.000"}],
+        items=[{"product_id": uuid4(), "quantity": "1"}],
     )
 
     assert request.resolved_invoice_datetime() == datetime(
@@ -154,7 +166,7 @@ def test_total_paid_request_hash_uses_resolved_paid_amount():
         "invoice_datetime": invoice_datetime,
         "payment_state": "TOTAL_PAID",
         "place_of_supply_state_code": "27",
-        "items": [{"product_id": product_id, "quantity": "2.000"}],
+        "items": [{"product_id": product_id, "quantity": "2"}],
     }
 
     omitted_paid_amount = InvoiceCreateRequest(**base_payload)

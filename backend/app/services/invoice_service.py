@@ -9,6 +9,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.decimals import (
+    canonical_integral_quantity_string,
+    canonical_unit_price_string,
+    normalize_hsn_code,
+)
 from app.core.idempotency import canonical_request_hash
 from app.core.pricing import NormalizedLine, _round_money, normalize_line, normalize_non_gst_line
 from app.core.state_codes import get_state_name, normalize_state_code
@@ -83,6 +88,14 @@ def _validate_invoice_gst_mode(company: CompanyProfile, resolved_gst_flag: bool,
             product = products_by_id[item.product_id]
             if _resolve_line_gst_rate(item, product) != Decimal("0.00"):
                 raise _policy_error("NON_GST_TAXABLE_LINES", "Non-GST invoice cannot include taxable lines")
+    if resolved_gst_flag:
+        for item in payload.items:
+            product = products_by_id[item.product_id]
+            if normalize_hsn_code(product.hsn_code) is None:
+                raise _policy_error(
+                    "MISSING_PRODUCT_HSN",
+                    f"Product {product.item_name} requires an HSN for GST invoices",
+                )
 
 
 def _normalize_prepared_line(*, item: object, product: Product, tax_regime: str, resolved_gst_flag: bool, company: CompanyProfile) -> NormalizedLine:
@@ -154,7 +167,10 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
         return f"{Decimal(value):.2f}"
 
     def quantity(value: Decimal) -> str:
-        return f"{Decimal(value):.3f}"
+        return canonical_integral_quantity_string(value)
+
+    def unit_price(value: Decimal) -> str:
+        return canonical_unit_price_string(value)
 
     normalized_payload = {
         "customer_id": str(payload.customer_id),
@@ -169,7 +185,7 @@ def _build_invoice_request_hash(payload: InvoiceCreateRequest, resolved_state_co
                 "product_id": str(item.product_id),
                 "quantity": quantity(item.quantity),
                 "pricing_mode": item.pricing_mode,
-                "unit_price": None if item.unit_price is None else money(item.unit_price),
+                "unit_price": None if item.unit_price is None else unit_price(item.unit_price),
                 "gst_rate": None if item.gst_rate is None else money(item.gst_rate),
                 "discount_percent": money(item.discount_percent),
             }
@@ -273,6 +289,7 @@ def build_quote(session: Session, payload: InvoiceQuoteRequest) -> InvoiceQuoteR
                 product_category=line.product.category,
                 product_buyer_id=line.product.buyer_id,
                 product_company_name=line.product.company_name,
+                product_hsn_code=normalize_hsn_code(line.product.hsn_code),
                 buying_price=line.product.buying_price,
                 selling_price=line.product.selling_price,
                 unit=line.product.unit,

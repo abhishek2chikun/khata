@@ -389,6 +389,63 @@ void main() {
     expect(products.single.id, 'target-product');
   });
 
+  test('imports v9 backup by adding null hsn columns', () async {
+    final source = db.LocalDatabase.memory();
+    final target = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    addTearDown(target.close);
+    await _seedRoundTripData(source);
+
+    final package = await _tamperPayloadPackage(
+      database: source,
+      password: 'backup-password',
+      mutate: (payload) {
+        payload['schema_version'] = 9;
+        final tables = payload['tables'] as Map<String, Object?>;
+        final products = tables['products'] as List<Object?>;
+        for (final row in products) {
+          (row as Map<String, Object?>).remove('hsn_code');
+        }
+        final items = tables['invoice_items'] as List<Object?>;
+        for (final row in items) {
+          (row as Map<String, Object?>).remove('product_hsn_code');
+        }
+      },
+    );
+
+    await LocalBackupService(database: target).importEncrypted(
+      package: package,
+      password: 'backup-password',
+    );
+
+    final product = await target.select(target.products).getSingle();
+    final item = await target.select(target.invoiceItems).getSingle();
+    expect(product.hsnCode, isNull);
+    expect(item.productHsnCode, isNull);
+  });
+
+  test('rejects v11 backup package', () async {
+    final source = db.LocalDatabase.memory();
+    addTearDown(source.close);
+    await _seedRoundTripData(source);
+
+    final package = await LocalBackupService(database: source).exportEncrypted(
+      password: 'backup-password',
+      schemaVersion: 11,
+    );
+
+    final target = db.LocalDatabase.memory();
+    addTearDown(target.close);
+
+    await expectLater(
+      () => LocalBackupService(database: target).importEncrypted(
+        package: package,
+        password: 'backup-password',
+      ),
+      throwsA(isA<UnsupportedBackupVersionException>()),
+    );
+  });
+
   test('rejects v8 backup package', () async {
     final source = db.LocalDatabase.memory();
     addTearDown(source.close);
@@ -413,7 +470,7 @@ void main() {
 
   test('backup schema version and compatibility version are updated for V2',
       () async {
-    expect(LocalBackupPayload.currentSchemaVersion, 9);
+    expect(LocalBackupPayload.currentSchemaVersion, 10);
     expect(
         LocalBackupPayload.currentBackendCompatibilityVersion, 'local-v2');
   });

@@ -66,6 +66,7 @@ class LocalBackupService {
       'selling_price',
       'unit',
       'gst_rate',
+      'hsn_code',
       'quantity_on_hand',
       'low_stock_threshold',
       'is_active',
@@ -180,6 +181,7 @@ class LocalBackupService {
       'product_category',
       'product_buyer_id',
       'product_company_name',
+      'product_hsn_code',
       'buying_price',
       'selling_price',
       'unit',
@@ -290,7 +292,8 @@ class LocalBackupService {
     final payload = LocalBackupPayload.decode(
       await _crypto.decrypt(package: package, password: password),
     );
-    if (payload.schemaVersion != LocalBackupPayload.currentSchemaVersion) {
+    if (payload.schemaVersion < 9 ||
+        payload.schemaVersion > LocalBackupPayload.currentSchemaVersion) {
       throw UnsupportedBackupVersionException(
         'Unsupported backup schema version ${payload.schemaVersion}',
       );
@@ -302,7 +305,10 @@ class LocalBackupService {
         '${payload.backendCompatibilityVersion}',
       );
     }
-    _validatePayload(payload);
+    final normalizedPayload = payload.schemaVersion == 9
+        ? _convertV9BackupPayload(payload)
+        : payload;
+    _validatePayload(normalizedPayload);
 
     await _database.transaction(() async {
       for (final tableName in _deleteOrder) {
@@ -310,11 +316,34 @@ class LocalBackupService {
       }
       for (final tableName in _tables) {
         for (final row
-            in payload.tables[tableName] ?? const <Map<String, Object?>>[]) {
+            in normalizedPayload.tables[tableName] ??
+                const <Map<String, Object?>>[]) {
           await _insertRow(tableName, row);
         }
       }
     });
+  }
+
+  LocalBackupPayload _convertV9BackupPayload(LocalBackupPayload payload) {
+    final tables = payload.tables.map(
+      (tableName, rows) => MapEntry(
+        tableName,
+        rows.map((row) => Map<String, Object?>.from(row)).toList(),
+      ),
+    );
+    for (final row in tables['products'] ?? const <Map<String, Object?>>[]) {
+      row.putIfAbsent('hsn_code', () => null);
+    }
+    for (final row
+        in tables['invoice_items'] ?? const <Map<String, Object?>>[]) {
+      row.putIfAbsent('product_hsn_code', () => null);
+    }
+    return LocalBackupPayload(
+      schemaVersion: LocalBackupPayload.currentSchemaVersion,
+      backendCompatibilityVersion: payload.backendCompatibilityVersion,
+      exportedAt: payload.exportedAt,
+      tables: tables,
+    );
   }
 
   void _validatePayload(LocalBackupPayload payload) {

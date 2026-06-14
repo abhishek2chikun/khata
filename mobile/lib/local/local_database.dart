@@ -36,6 +36,7 @@ class Products extends Table {
   TextColumn get sellingPrice => text()();
   TextColumn get unit => text().nullable()();
   TextColumn get gstRate => text()();
+  TextColumn get hsnCode => text().nullable()();
   TextColumn get quantityOnHand => text()();
   TextColumn get lowStockThreshold => text()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
@@ -264,6 +265,7 @@ class InvoiceItems extends Table {
   TextColumn get productCategory => text().withDefault(const Constant(''))();
   TextColumn get productBuyerId => text().nullable()();
   TextColumn get productCompanyName => text().withDefault(const Constant(''))();
+  TextColumn get productHsnCode => text().nullable()();
   TextColumn get buyingPrice => text().withDefault(const Constant(''))();
   TextColumn get sellingPrice => text().withDefault(const Constant(''))();
   TextColumn get unit => text().nullable()();
@@ -358,7 +360,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -571,6 +573,16 @@ class LocalDatabase extends _$LocalDatabase {
                   "UPDATE invoices SET gst_flag = 1 WHERE (company_gstin IS NOT NULL AND TRIM(company_gstin) <> '') OR CAST(gst_total AS REAL) <> 0");
               await customStatement(
                   "UPDATE invoices SET gst_flag = 0 WHERE gst_flag IS NULL");
+            }
+          }
+          if (from < 10) {
+            if (await _tableExists('products') &&
+                !await _columnExists('products', 'hsn_code')) {
+              await m.addColumn(products, products.hsnCode);
+            }
+            if (await _tableExists('invoice_items') &&
+                !await _columnExists('invoice_items', 'product_hsn_code')) {
+              await m.addColumn(invoiceItems, invoiceItems.productHsnCode);
             }
           }
         },

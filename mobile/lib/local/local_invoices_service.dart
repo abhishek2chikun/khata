@@ -10,6 +10,7 @@ import '../models/invoice_quote.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
 import '../services/money_validator.dart';
+import '../services/decimal_validators.dart';
 import 'local_database.dart';
 import 'local_customers_service.dart';
 
@@ -122,6 +123,7 @@ class LocalInvoicesService implements InvoicesService {
                 productCategory: Value(line.product.category),
                 productBuyerId: Value(line.product.buyerId),
                 productCompanyName: Value(line.product.companyName),
+                productHsnCode: Value(line.product.hsnCode),
                 buyingPrice: Value(
                     _normalizeDecimal(double.parse(line.product.buyingPrice))),
                 sellingPrice: Value(
@@ -484,6 +486,12 @@ class LocalInvoicesService implements InvoicesService {
           statusCode: 400,
         );
       }
+      if (resolvedGstFlag && normalizeHsn(product.hsnCode) == null) {
+        throw _policyError(
+          'MISSING_PRODUCT_HSN',
+          'Product ${product.itemName} requires an HSN for GST invoices',
+        );
+      }
       if (!resolvedGstFlag && company.gstFlag) {
         final lineRate = _roundRate(
           item.gstRate ?? double.parse(product.gstRate),
@@ -624,8 +632,9 @@ class LocalInvoicesService implements InvoicesService {
       }
       final unitPrice = draftItem.unitPrice;
       if (unitPrice != null &&
-          _normalizeDecimal(_roundMoney(unitPrice)) !=
-              _normalizeDecimal(double.parse(storedItem.enteredUnitPrice))) {
+          canonicalUnitPriceString(_roundUnitPrice(unitPrice)) !=
+              canonicalUnitPriceString(
+                  double.parse(storedItem.enteredUnitPrice))) {
         return false;
       }
       if (draftItem.gstRate != null &&
@@ -633,7 +642,12 @@ class LocalInvoicesService implements InvoicesService {
               _normalizeDecimal(double.parse(storedItem.gstRate))) {
         return false;
       }
-      if (_normalizeDecimal(_roundRate(draftItem.discountPercent)) !=
+      try {
+        validateDiscountDisabled(draftItem.discountPercent);
+      } on ApiError {
+        return false;
+      }
+      if (_normalizeDecimal(draftItem.discountPercent) !=
           _normalizeDecimal(double.parse(storedItem.discountPercent))) {
         return false;
       }
@@ -659,10 +673,11 @@ class LocalInvoicesService implements InvoicesService {
     required int lineNumber,
   }) {
     _validateLine(item);
-    final finalUnitPrice = _roundMoney(
+    final finalUnitPrice = _roundUnitPrice(
       item.unitPrice ?? double.parse(product.sellingPrice),
     );
-    final discountPercent = _roundRate(item.discountPercent);
+    validateDiscountDisabled(item.discountPercent);
+    final discountPercent = 0.0;
     final grossLineTotal = _roundMoney(item.quantity * finalUnitPrice);
     final discountAmount =
         _roundMoney(grossLineTotal * (discountPercent / 100));
@@ -717,11 +732,12 @@ class LocalInvoicesService implements InvoicesService {
     required int lineNumber,
   }) {
     _validateLine(item);
-    final enteredUnitPrice = _roundMoney(
+    final enteredUnitPrice = _roundUnitPrice(
       item.unitPrice ?? double.parse(product.sellingPrice),
     );
     final gstRate = _roundRate(item.gstRate ?? double.parse(product.gstRate));
-    final discountPercent = _roundRate(item.discountPercent);
+    validateDiscountDisabled(item.discountPercent);
+    final discountPercent = 0.0;
     late final double unitPriceExclTax;
     late final double unitPriceInclTax;
     switch (item.pricingMode) {
@@ -992,38 +1008,18 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   void _validateLine(InvoiceDraftItem item) {
-    if (item.quantity <= 0) {
-      throw _validationError('quantity must be greater than zero');
-    }
-    if (item.quantity > 99999999999.999) {
-      throw _validationError('quantity exceeds maximum supported value');
-    }
-    if (!_hasAtMostDecimalPlaces(item.quantity, 3)) {
-      throw _validationError('quantity must have at most three decimal places');
-    }
+    validatePositiveIntegralQuantity(item.quantity);
     if (item.pricingMode == 'PRE_TAX' && item.unitPrice == null) {
       throw _validationError(
           'unit_price is required when pricing_mode is PRE_TAX');
     }
-    if (item.unitPrice != null && item.unitPrice! <= 0) {
-      throw _validationError('unit_price must be greater than zero');
+    if (item.unitPrice != null) {
+      validateUnitPrice(item.unitPrice!);
     }
     if (item.gstRate != null && (item.gstRate! < 0 || item.gstRate! > 100)) {
       throw _validationError('gst_rate must be between 0 and 100');
     }
-    if (item.discountPercent < 0 || item.discountPercent > 100) {
-      throw _validationError('discount_percent must be between 0 and 100');
-    }
-  }
-
-  bool _hasAtMostDecimalPlaces(double value, int places) {
-    final text = value.toString();
-    final exponentParts = text.toLowerCase().split('e');
-    final decimalPart = exponentParts.first.split('.');
-    final decimals = decimalPart.length == 1 ? 0 : decimalPart.last.length;
-    final exponent =
-        exponentParts.length == 1 ? 0 : int.tryParse(exponentParts.last) ?? 0;
-    return decimals - exponent <= places;
+    validateDiscountDisabled(item.discountPercent);
   }
 
   double _resolvePaidAmount(
@@ -1119,9 +1115,9 @@ class LocalInvoicesService implements InvoicesService {
       'items': prepared.lines
           .map((line) => <String, dynamic>{
                 'product_id': line.product.id,
-                'quantity': _normalizeQuantityDecimal(line.item.quantity),
+                'quantity': canonicalIntegralQuantityString(line.item.quantity),
                 'pricing_mode': line.item.pricingMode,
-                'unit_price': _normalizeMoneyDecimal(line.enteredUnitPrice),
+                'unit_price': canonicalUnitPriceString(line.enteredUnitPrice),
                 'gst_rate': _normalizeMoneyDecimal(line.gstRate),
                 'discount_percent':
                     _normalizeMoneyDecimal(line.discountPercent),
@@ -1239,6 +1235,8 @@ class LocalInvoicesService implements InvoicesService {
 
   double _roundRate(double value) => _roundHalfUp(value, 2);
 
+  double _roundUnitPrice(double value) => roundUnitPrice(value);
+
   double _roundHalfUp(double value, int places) {
     if (!value.isFinite) {
       throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
@@ -1288,13 +1286,6 @@ class LocalInvoicesService implements InvoicesService {
       throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
     }
     return value.toStringAsFixed(2);
-  }
-
-  String _normalizeQuantityDecimal(double value) {
-    if (!value.isFinite) {
-      throw ArgumentError.value(value, 'value', 'Decimal value must be finite');
-    }
-    return value.toStringAsFixed(3);
   }
 
   String? _emptyToNull(String? value) {

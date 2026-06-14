@@ -551,6 +551,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
   late final GeneratedColumn<String> gstRate = GeneratedColumn<String>(
       'gst_rate', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _hsnCodeMeta =
+      const VerificationMeta('hsnCode');
+  @override
+  late final GeneratedColumn<String> hsnCode = GeneratedColumn<String>(
+      'hsn_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _quantityOnHandMeta =
       const VerificationMeta('quantityOnHand');
   @override
@@ -597,6 +603,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         sellingPrice,
         unit,
         gstRate,
+        hsnCode,
         quantityOnHand,
         lowStockThreshold,
         isActive,
@@ -676,6 +683,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     } else if (isInserting) {
       context.missing(_gstRateMeta);
     }
+    if (data.containsKey('hsn_code')) {
+      context.handle(_hsnCodeMeta,
+          hsnCode.isAcceptableOrUnknown(data['hsn_code']!, _hsnCodeMeta));
+    }
     if (data.containsKey('quantity_on_hand')) {
       context.handle(
           _quantityOnHandMeta,
@@ -742,6 +753,8 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
           .read(DriftSqlType.string, data['${effectivePrefix}unit']),
       gstRate: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}gst_rate'])!,
+      hsnCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}hsn_code']),
       quantityOnHand: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}quantity_on_hand'])!,
       lowStockThreshold: attachedDatabase.typeMapping.read(
@@ -772,6 +785,7 @@ class Product extends DataClass implements Insertable<Product> {
   final String sellingPrice;
   final String? unit;
   final String gstRate;
+  final String? hsnCode;
   final String quantityOnHand;
   final String lowStockThreshold;
   final bool isActive;
@@ -788,6 +802,7 @@ class Product extends DataClass implements Insertable<Product> {
       required this.sellingPrice,
       this.unit,
       required this.gstRate,
+      this.hsnCode,
       required this.quantityOnHand,
       required this.lowStockThreshold,
       required this.isActive,
@@ -810,6 +825,9 @@ class Product extends DataClass implements Insertable<Product> {
       map['unit'] = Variable<String>(unit);
     }
     map['gst_rate'] = Variable<String>(gstRate);
+    if (!nullToAbsent || hsnCode != null) {
+      map['hsn_code'] = Variable<String>(hsnCode);
+    }
     map['quantity_on_hand'] = Variable<String>(quantityOnHand);
     map['low_stock_threshold'] = Variable<String>(lowStockThreshold);
     map['is_active'] = Variable<bool>(isActive);
@@ -832,6 +850,9 @@ class Product extends DataClass implements Insertable<Product> {
       sellingPrice: Value(sellingPrice),
       unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
       gstRate: Value(gstRate),
+      hsnCode: hsnCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hsnCode),
       quantityOnHand: Value(quantityOnHand),
       lowStockThreshold: Value(lowStockThreshold),
       isActive: Value(isActive),
@@ -854,6 +875,7 @@ class Product extends DataClass implements Insertable<Product> {
       sellingPrice: serializer.fromJson<String>(json['sellingPrice']),
       unit: serializer.fromJson<String?>(json['unit']),
       gstRate: serializer.fromJson<String>(json['gstRate']),
+      hsnCode: serializer.fromJson<String?>(json['hsnCode']),
       quantityOnHand: serializer.fromJson<String>(json['quantityOnHand']),
       lowStockThreshold: serializer.fromJson<String>(json['lowStockThreshold']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -875,6 +897,7 @@ class Product extends DataClass implements Insertable<Product> {
       'sellingPrice': serializer.toJson<String>(sellingPrice),
       'unit': serializer.toJson<String?>(unit),
       'gstRate': serializer.toJson<String>(gstRate),
+      'hsnCode': serializer.toJson<String?>(hsnCode),
       'quantityOnHand': serializer.toJson<String>(quantityOnHand),
       'lowStockThreshold': serializer.toJson<String>(lowStockThreshold),
       'isActive': serializer.toJson<bool>(isActive),
@@ -894,6 +917,7 @@ class Product extends DataClass implements Insertable<Product> {
           String? sellingPrice,
           Value<String?> unit = const Value.absent(),
           String? gstRate,
+          Value<String?> hsnCode = const Value.absent(),
           String? quantityOnHand,
           String? lowStockThreshold,
           bool? isActive,
@@ -910,6 +934,7 @@ class Product extends DataClass implements Insertable<Product> {
         sellingPrice: sellingPrice ?? this.sellingPrice,
         unit: unit.present ? unit.value : this.unit,
         gstRate: gstRate ?? this.gstRate,
+        hsnCode: hsnCode.present ? hsnCode.value : this.hsnCode,
         quantityOnHand: quantityOnHand ?? this.quantityOnHand,
         lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
         isActive: isActive ?? this.isActive,
@@ -933,6 +958,7 @@ class Product extends DataClass implements Insertable<Product> {
           : this.sellingPrice,
       unit: data.unit.present ? data.unit.value : this.unit,
       gstRate: data.gstRate.present ? data.gstRate.value : this.gstRate,
+      hsnCode: data.hsnCode.present ? data.hsnCode.value : this.hsnCode,
       quantityOnHand: data.quantityOnHand.present
           ? data.quantityOnHand.value
           : this.quantityOnHand,
@@ -958,6 +984,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('sellingPrice: $sellingPrice, ')
           ..write('unit: $unit, ')
           ..write('gstRate: $gstRate, ')
+          ..write('hsnCode: $hsnCode, ')
           ..write('quantityOnHand: $quantityOnHand, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('isActive: $isActive, ')
@@ -979,6 +1006,7 @@ class Product extends DataClass implements Insertable<Product> {
       sellingPrice,
       unit,
       gstRate,
+      hsnCode,
       quantityOnHand,
       lowStockThreshold,
       isActive,
@@ -998,6 +1026,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.sellingPrice == this.sellingPrice &&
           other.unit == this.unit &&
           other.gstRate == this.gstRate &&
+          other.hsnCode == this.hsnCode &&
           other.quantityOnHand == this.quantityOnHand &&
           other.lowStockThreshold == this.lowStockThreshold &&
           other.isActive == this.isActive &&
@@ -1016,6 +1045,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String> sellingPrice;
   final Value<String?> unit;
   final Value<String> gstRate;
+  final Value<String?> hsnCode;
   final Value<String> quantityOnHand;
   final Value<String> lowStockThreshold;
   final Value<bool> isActive;
@@ -1033,6 +1063,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.sellingPrice = const Value.absent(),
     this.unit = const Value.absent(),
     this.gstRate = const Value.absent(),
+    this.hsnCode = const Value.absent(),
     this.quantityOnHand = const Value.absent(),
     this.lowStockThreshold = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -1051,6 +1082,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required String sellingPrice,
     this.unit = const Value.absent(),
     required String gstRate,
+    this.hsnCode = const Value.absent(),
     required String quantityOnHand,
     required String lowStockThreshold,
     this.isActive = const Value.absent(),
@@ -1080,6 +1112,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? sellingPrice,
     Expression<String>? unit,
     Expression<String>? gstRate,
+    Expression<String>? hsnCode,
     Expression<String>? quantityOnHand,
     Expression<String>? lowStockThreshold,
     Expression<bool>? isActive,
@@ -1098,6 +1131,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (sellingPrice != null) 'selling_price': sellingPrice,
       if (unit != null) 'unit': unit,
       if (gstRate != null) 'gst_rate': gstRate,
+      if (hsnCode != null) 'hsn_code': hsnCode,
       if (quantityOnHand != null) 'quantity_on_hand': quantityOnHand,
       if (lowStockThreshold != null) 'low_stock_threshold': lowStockThreshold,
       if (isActive != null) 'is_active': isActive,
@@ -1118,6 +1152,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       Value<String>? sellingPrice,
       Value<String?>? unit,
       Value<String>? gstRate,
+      Value<String?>? hsnCode,
       Value<String>? quantityOnHand,
       Value<String>? lowStockThreshold,
       Value<bool>? isActive,
@@ -1135,6 +1170,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       sellingPrice: sellingPrice ?? this.sellingPrice,
       unit: unit ?? this.unit,
       gstRate: gstRate ?? this.gstRate,
+      hsnCode: hsnCode ?? this.hsnCode,
       quantityOnHand: quantityOnHand ?? this.quantityOnHand,
       lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
       isActive: isActive ?? this.isActive,
@@ -1177,6 +1213,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (gstRate.present) {
       map['gst_rate'] = Variable<String>(gstRate.value);
     }
+    if (hsnCode.present) {
+      map['hsn_code'] = Variable<String>(hsnCode.value);
+    }
     if (quantityOnHand.present) {
       map['quantity_on_hand'] = Variable<String>(quantityOnHand.value);
     }
@@ -1211,6 +1250,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('sellingPrice: $sellingPrice, ')
           ..write('unit: $unit, ')
           ..write('gstRate: $gstRate, ')
+          ..write('hsnCode: $hsnCode, ')
           ..write('quantityOnHand: $quantityOnHand, ')
           ..write('lowStockThreshold: $lowStockThreshold, ')
           ..write('isActive: $isActive, ')
@@ -7241,6 +7281,12 @@ class $InvoiceItemsTable extends InvoiceItems
           type: DriftSqlType.string,
           requiredDuringInsert: false,
           defaultValue: const Constant(''));
+  static const VerificationMeta _productHsnCodeMeta =
+      const VerificationMeta('productHsnCode');
+  @override
+  late final GeneratedColumn<String> productHsnCode = GeneratedColumn<String>(
+      'product_hsn_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _buyingPriceMeta =
       const VerificationMeta('buyingPrice');
   @override
@@ -7413,6 +7459,7 @@ class $InvoiceItemsTable extends InvoiceItems
         productCategory,
         productBuyerId,
         productCompanyName,
+        productHsnCode,
         buyingPrice,
         sellingPrice,
         unit,
@@ -7519,6 +7566,12 @@ class $InvoiceItemsTable extends InvoiceItems
           _productCompanyNameMeta,
           productCompanyName.isAcceptableOrUnknown(
               data['product_company_name']!, _productCompanyNameMeta));
+    }
+    if (data.containsKey('product_hsn_code')) {
+      context.handle(
+          _productHsnCodeMeta,
+          productHsnCode.isAcceptableOrUnknown(
+              data['product_hsn_code']!, _productHsnCodeMeta));
     }
     if (data.containsKey('buying_price')) {
       context.handle(
@@ -7719,6 +7772,8 @@ class $InvoiceItemsTable extends InvoiceItems
           DriftSqlType.string, data['${effectivePrefix}product_buyer_id']),
       productCompanyName: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}product_company_name'])!,
+      productHsnCode: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}product_hsn_code']),
       buyingPrice: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}buying_price'])!,
       sellingPrice: attachedDatabase.typeMapping
@@ -7790,6 +7845,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
   final String productCategory;
   final String? productBuyerId;
   final String productCompanyName;
+  final String? productHsnCode;
   final String buyingPrice;
   final String sellingPrice;
   final String? unit;
@@ -7827,6 +7883,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       required this.productCategory,
       this.productBuyerId,
       required this.productCompanyName,
+      this.productHsnCode,
       required this.buyingPrice,
       required this.sellingPrice,
       this.unit,
@@ -7868,6 +7925,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       map['product_buyer_id'] = Variable<String>(productBuyerId);
     }
     map['product_company_name'] = Variable<String>(productCompanyName);
+    if (!nullToAbsent || productHsnCode != null) {
+      map['product_hsn_code'] = Variable<String>(productHsnCode);
+    }
     map['buying_price'] = Variable<String>(buyingPrice);
     map['selling_price'] = Variable<String>(sellingPrice);
     if (!nullToAbsent || unit != null) {
@@ -7913,6 +7973,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           ? const Value.absent()
           : Value(productBuyerId),
       productCompanyName: Value(productCompanyName),
+      productHsnCode: productHsnCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productHsnCode),
       buyingPrice: Value(buyingPrice),
       sellingPrice: Value(sellingPrice),
       unit: unit == null && nullToAbsent ? const Value.absent() : Value(unit),
@@ -7957,6 +8020,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       productBuyerId: serializer.fromJson<String?>(json['productBuyerId']),
       productCompanyName:
           serializer.fromJson<String>(json['productCompanyName']),
+      productHsnCode: serializer.fromJson<String?>(json['productHsnCode']),
       buyingPrice: serializer.fromJson<String>(json['buyingPrice']),
       sellingPrice: serializer.fromJson<String>(json['sellingPrice']),
       unit: serializer.fromJson<String?>(json['unit']),
@@ -7999,6 +8063,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       'productCategory': serializer.toJson<String>(productCategory),
       'productBuyerId': serializer.toJson<String?>(productBuyerId),
       'productCompanyName': serializer.toJson<String>(productCompanyName),
+      'productHsnCode': serializer.toJson<String?>(productHsnCode),
       'buyingPrice': serializer.toJson<String>(buyingPrice),
       'sellingPrice': serializer.toJson<String>(sellingPrice),
       'unit': serializer.toJson<String?>(unit),
@@ -8039,6 +8104,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           String? productCategory,
           Value<String?> productBuyerId = const Value.absent(),
           String? productCompanyName,
+          Value<String?> productHsnCode = const Value.absent(),
           String? buyingPrice,
           String? sellingPrice,
           Value<String?> unit = const Value.absent(),
@@ -8077,6 +8143,8 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         productBuyerId:
             productBuyerId.present ? productBuyerId.value : this.productBuyerId,
         productCompanyName: productCompanyName ?? this.productCompanyName,
+        productHsnCode:
+            productHsnCode.present ? productHsnCode.value : this.productHsnCode,
         buyingPrice: buyingPrice ?? this.buyingPrice,
         sellingPrice: sellingPrice ?? this.sellingPrice,
         unit: unit.present ? unit.value : this.unit,
@@ -8129,6 +8197,9 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
       productCompanyName: data.productCompanyName.present
           ? data.productCompanyName.value
           : this.productCompanyName,
+      productHsnCode: data.productHsnCode.present
+          ? data.productHsnCode.value
+          : this.productHsnCode,
       buyingPrice:
           data.buyingPrice.present ? data.buyingPrice.value : this.buyingPrice,
       sellingPrice: data.sellingPrice.present
@@ -8196,6 +8267,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           ..write('productCategory: $productCategory, ')
           ..write('productBuyerId: $productBuyerId, ')
           ..write('productCompanyName: $productCompanyName, ')
+          ..write('productHsnCode: $productHsnCode, ')
           ..write('buyingPrice: $buyingPrice, ')
           ..write('sellingPrice: $sellingPrice, ')
           ..write('unit: $unit, ')
@@ -8238,6 +8310,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
         productCategory,
         productBuyerId,
         productCompanyName,
+        productHsnCode,
         buyingPrice,
         sellingPrice,
         unit,
@@ -8279,6 +8352,7 @@ class InvoiceItem extends DataClass implements Insertable<InvoiceItem> {
           other.productCategory == this.productCategory &&
           other.productBuyerId == this.productBuyerId &&
           other.productCompanyName == this.productCompanyName &&
+          other.productHsnCode == this.productHsnCode &&
           other.buyingPrice == this.buyingPrice &&
           other.sellingPrice == this.sellingPrice &&
           other.unit == this.unit &&
@@ -8318,6 +8392,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
   final Value<String> productCategory;
   final Value<String?> productBuyerId;
   final Value<String> productCompanyName;
+  final Value<String?> productHsnCode;
   final Value<String> buyingPrice;
   final Value<String> sellingPrice;
   final Value<String?> unit;
@@ -8356,6 +8431,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     this.productCategory = const Value.absent(),
     this.productBuyerId = const Value.absent(),
     this.productCompanyName = const Value.absent(),
+    this.productHsnCode = const Value.absent(),
     this.buyingPrice = const Value.absent(),
     this.sellingPrice = const Value.absent(),
     this.unit = const Value.absent(),
@@ -8395,6 +8471,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     this.productCategory = const Value.absent(),
     this.productBuyerId = const Value.absent(),
     this.productCompanyName = const Value.absent(),
+    this.productHsnCode = const Value.absent(),
     this.buyingPrice = const Value.absent(),
     this.sellingPrice = const Value.absent(),
     this.unit = const Value.absent(),
@@ -8458,6 +8535,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     Expression<String>? productCategory,
     Expression<String>? productBuyerId,
     Expression<String>? productCompanyName,
+    Expression<String>? productHsnCode,
     Expression<String>? buyingPrice,
     Expression<String>? sellingPrice,
     Expression<String>? unit,
@@ -8498,6 +8576,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       if (productBuyerId != null) 'product_buyer_id': productBuyerId,
       if (productCompanyName != null)
         'product_company_name': productCompanyName,
+      if (productHsnCode != null) 'product_hsn_code': productHsnCode,
       if (buyingPrice != null) 'buying_price': buyingPrice,
       if (sellingPrice != null) 'selling_price': sellingPrice,
       if (unit != null) 'unit': unit,
@@ -8539,6 +8618,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       Value<String>? productCategory,
       Value<String?>? productBuyerId,
       Value<String>? productCompanyName,
+      Value<String?>? productHsnCode,
       Value<String>? buyingPrice,
       Value<String>? sellingPrice,
       Value<String?>? unit,
@@ -8577,6 +8657,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
       productCategory: productCategory ?? this.productCategory,
       productBuyerId: productBuyerId ?? this.productBuyerId,
       productCompanyName: productCompanyName ?? this.productCompanyName,
+      productHsnCode: productHsnCode ?? this.productHsnCode,
       buyingPrice: buyingPrice ?? this.buyingPrice,
       sellingPrice: sellingPrice ?? this.sellingPrice,
       unit: unit ?? this.unit,
@@ -8641,6 +8722,9 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
     }
     if (productCompanyName.present) {
       map['product_company_name'] = Variable<String>(productCompanyName.value);
+    }
+    if (productHsnCode.present) {
+      map['product_hsn_code'] = Variable<String>(productHsnCode.value);
     }
     if (buyingPrice.present) {
       map['buying_price'] = Variable<String>(buyingPrice.value);
@@ -8737,6 +8821,7 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
           ..write('productCategory: $productCategory, ')
           ..write('productBuyerId: $productBuyerId, ')
           ..write('productCompanyName: $productCompanyName, ')
+          ..write('productHsnCode: $productHsnCode, ')
           ..write('buyingPrice: $buyingPrice, ')
           ..write('sellingPrice: $sellingPrice, ')
           ..write('unit: $unit, ')
@@ -10621,6 +10706,7 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String sellingPrice,
   Value<String?> unit,
   required String gstRate,
+  Value<String?> hsnCode,
   required String quantityOnHand,
   required String lowStockThreshold,
   Value<bool> isActive,
@@ -10639,6 +10725,7 @@ typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<String> sellingPrice,
   Value<String?> unit,
   Value<String> gstRate,
+  Value<String?> hsnCode,
   Value<String> quantityOnHand,
   Value<String> lowStockThreshold,
   Value<bool> isActive,
@@ -10720,6 +10807,9 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<String> get gstRate => $composableBuilder(
       column: $table.gstRate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hsnCode => $composableBuilder(
+      column: $table.hsnCode, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand,
@@ -10821,6 +10911,9 @@ class $$ProductsTableOrderingComposer
   ColumnOrderings<String> get gstRate => $composableBuilder(
       column: $table.gstRate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get hsnCode => $composableBuilder(
+      column: $table.hsnCode, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand,
       builder: (column) => ColumnOrderings(column));
@@ -10877,6 +10970,9 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<String> get gstRate =>
       $composableBuilder(column: $table.gstRate, builder: (column) => column);
+
+  GeneratedColumn<String> get hsnCode =>
+      $composableBuilder(column: $table.hsnCode, builder: (column) => column);
 
   GeneratedColumn<String> get quantityOnHand => $composableBuilder(
       column: $table.quantityOnHand, builder: (column) => column);
@@ -10969,6 +11065,7 @@ class $$ProductsTableTableManager extends RootTableManager<
             Value<String> sellingPrice = const Value.absent(),
             Value<String?> unit = const Value.absent(),
             Value<String> gstRate = const Value.absent(),
+            Value<String?> hsnCode = const Value.absent(),
             Value<String> quantityOnHand = const Value.absent(),
             Value<String> lowStockThreshold = const Value.absent(),
             Value<bool> isActive = const Value.absent(),
@@ -10987,6 +11084,7 @@ class $$ProductsTableTableManager extends RootTableManager<
             sellingPrice: sellingPrice,
             unit: unit,
             gstRate: gstRate,
+            hsnCode: hsnCode,
             quantityOnHand: quantityOnHand,
             lowStockThreshold: lowStockThreshold,
             isActive: isActive,
@@ -11005,6 +11103,7 @@ class $$ProductsTableTableManager extends RootTableManager<
             required String sellingPrice,
             Value<String?> unit = const Value.absent(),
             required String gstRate,
+            Value<String?> hsnCode = const Value.absent(),
             required String quantityOnHand,
             required String lowStockThreshold,
             Value<bool> isActive = const Value.absent(),
@@ -11023,6 +11122,7 @@ class $$ProductsTableTableManager extends RootTableManager<
             sellingPrice: sellingPrice,
             unit: unit,
             gstRate: gstRate,
+            hsnCode: hsnCode,
             quantityOnHand: quantityOnHand,
             lowStockThreshold: lowStockThreshold,
             isActive: isActive,
@@ -15103,6 +15203,7 @@ typedef $$InvoiceItemsTableCreateCompanionBuilder = InvoiceItemsCompanion
   Value<String> productCategory,
   Value<String?> productBuyerId,
   Value<String> productCompanyName,
+  Value<String?> productHsnCode,
   Value<String> buyingPrice,
   Value<String> sellingPrice,
   Value<String?> unit,
@@ -15143,6 +15244,7 @@ typedef $$InvoiceItemsTableUpdateCompanionBuilder = InvoiceItemsCompanion
   Value<String> productCategory,
   Value<String?> productBuyerId,
   Value<String> productCompanyName,
+  Value<String?> productHsnCode,
   Value<String> buyingPrice,
   Value<String> sellingPrice,
   Value<String?> unit,
@@ -15245,6 +15347,10 @@ class $$InvoiceItemsTableFilterComposer
 
   ColumnFilters<String> get productCompanyName => $composableBuilder(
       column: $table.productCompanyName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get productHsnCode => $composableBuilder(
+      column: $table.productHsnCode,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get buyingPrice => $composableBuilder(
@@ -15409,6 +15515,10 @@ class $$InvoiceItemsTableOrderingComposer
       column: $table.productCompanyName,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get productHsnCode => $composableBuilder(
+      column: $table.productHsnCode,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get buyingPrice => $composableBuilder(
       column: $table.buyingPrice, builder: (column) => ColumnOrderings(column));
 
@@ -15571,6 +15681,9 @@ class $$InvoiceItemsTableAnnotationComposer
   GeneratedColumn<String> get productCompanyName => $composableBuilder(
       column: $table.productCompanyName, builder: (column) => column);
 
+  GeneratedColumn<String> get productHsnCode => $composableBuilder(
+      column: $table.productHsnCode, builder: (column) => column);
+
   GeneratedColumn<String> get buyingPrice => $composableBuilder(
       column: $table.buyingPrice, builder: (column) => column);
 
@@ -15721,6 +15834,7 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             Value<String> productCategory = const Value.absent(),
             Value<String?> productBuyerId = const Value.absent(),
             Value<String> productCompanyName = const Value.absent(),
+            Value<String?> productHsnCode = const Value.absent(),
             Value<String> buyingPrice = const Value.absent(),
             Value<String> sellingPrice = const Value.absent(),
             Value<String?> unit = const Value.absent(),
@@ -15760,6 +15874,7 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             productCategory: productCategory,
             productBuyerId: productBuyerId,
             productCompanyName: productCompanyName,
+            productHsnCode: productHsnCode,
             buyingPrice: buyingPrice,
             sellingPrice: sellingPrice,
             unit: unit,
@@ -15799,6 +15914,7 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             Value<String> productCategory = const Value.absent(),
             Value<String?> productBuyerId = const Value.absent(),
             Value<String> productCompanyName = const Value.absent(),
+            Value<String?> productHsnCode = const Value.absent(),
             Value<String> buyingPrice = const Value.absent(),
             Value<String> sellingPrice = const Value.absent(),
             Value<String?> unit = const Value.absent(),
@@ -15838,6 +15954,7 @@ class $$InvoiceItemsTableTableManager extends RootTableManager<
             productCategory: productCategory,
             productBuyerId: productBuyerId,
             productCompanyName: productCompanyName,
+            productHsnCode: productHsnCode,
             buyingPrice: buyingPrice,
             sellingPrice: sellingPrice,
             unit: unit,

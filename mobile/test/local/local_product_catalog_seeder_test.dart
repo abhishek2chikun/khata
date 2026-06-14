@@ -8,7 +8,7 @@ import 'package:internal_billing_khata_mobile/local/local_product_catalog_seeder
 import 'package:path/path.dart' as p;
 
 void main() {
-  const fixtureCatalog = '''
+  const fixtureCatalogV1 = '''
 {
   "catalog_version": 1,
   "generated_at": "2026-06-13T00:00:00.000Z",
@@ -37,12 +37,42 @@ void main() {
 }
 ''';
 
+  const fixtureCatalogV2 = '''
+{
+  "catalog_version": 2,
+  "generated_at": "2026-06-14T00:00:00.000Z",
+  "buyers": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Acemark Stationers",
+      "address": ""
+    }
+  ],
+  "products": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "item_number": "ACEMARK-0001",
+      "item_name": "A4 College Note Book 404P Ace",
+      "category": "Notebook",
+      "company_name": "Acemark Stationers",
+      "hsn_code": "482020",
+      "buying_price": "92.800",
+      "selling_price": "69.600",
+      "unit": "pcs",
+      "gst_rate": "12",
+      "quantity_on_hand": "6",
+      "low_stock_threshold": "0"
+    }
+  ]
+}
+''';
+
   test('seeds buyers and products from bundled catalog fixture', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
     await LocalProductCatalogSeeder(database: database).seedIfNeeded(
-      catalogJson: fixtureCatalog,
+      catalogJson: fixtureCatalogV1,
     );
 
     final buyers = await database.select(database.buyers).get();
@@ -70,8 +100,8 @@ void main() {
     addTearDown(database.close);
     final seeder = LocalProductCatalogSeeder(database: database);
 
-    await seeder.seedIfNeeded(catalogJson: fixtureCatalog);
-    await seeder.seedIfNeeded(catalogJson: fixtureCatalog);
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV1);
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV1);
 
     final buyers = await database.select(database.buyers).get();
     final products = await database.select(database.products).get();
@@ -84,7 +114,7 @@ void main() {
     addTearDown(database.close);
     final seeder = LocalProductCatalogSeeder(database: database);
 
-    await seeder.seedIfNeeded(catalogJson: fixtureCatalog);
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV1);
     await (database.update(database.products)
           ..where((product) => product.itemNumber.equals('ACEMARK-0001')))
         .write(
@@ -93,12 +123,38 @@ void main() {
       ),
     );
 
-    await seeder.seedIfNeeded(catalogJson: fixtureCatalog);
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV1);
 
     final product = await (database.select(database.products)
           ..where((product) => product.itemNumber.equals('ACEMARK-0001')))
         .getSingle();
     expect(product.itemName, 'Edited Notebook Name');
+  });
+
+  test('catalog version upgrade refreshes hsn and prices but keeps quantity',
+      () async {
+    final database = LocalDatabase.memory();
+    addTearDown(database.close);
+    final seeder = LocalProductCatalogSeeder(database: database);
+
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV1);
+    await (database.update(database.products)
+          ..where((product) => product.itemNumber.equals('ACEMARK-0001')))
+        .write(
+      const ProductsCompanion(
+        quantityOnHand: Value('42'),
+      ),
+    );
+
+    await seeder.seedIfNeeded(catalogJson: fixtureCatalogV2);
+
+    final product = await (database.select(database.products)
+          ..where((product) => product.itemNumber.equals('ACEMARK-0001')))
+        .getSingle();
+    expect(product.hsnCode, '482020');
+    expect(product.buyingPrice, '92.800');
+    expect(product.sellingPrice, '69.600');
+    expect(product.quantityOnHand, '42');
   });
 
   test('full bundled catalog seeds expected counts', () async {

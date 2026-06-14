@@ -16,7 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_XLSX = REPO_ROOT / "data" / "source" / "products.xlsx"
 OUTPUT_JSON = REPO_ROOT / "mobile" / "assets" / "catalog" / "preinstalled_catalog.json"
-CATALOG_VERSION = 1
+CATALOG_VERSION = 2
 CATALOG_NAMESPACE = uuid.UUID("8f4e2c1a-9b3d-4f6e-a7c5-1d2e3f4a5b6c")
 
 HEADERS = [
@@ -38,6 +38,17 @@ def company_slug(name: str) -> str:
         return "COMPANY"
     slug = re.sub(r"[^A-Za-z0-9]", "", words[0]).upper()
     return slug or "COMPANY"
+
+
+def normalize_hsn(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if len(normalized) > 32:
+        raise ValueError("hsn_code must be at most 32 characters")
+    return normalized
 
 
 def normalize_decimal(value: str, *, scale: int = 2, default: str = "") -> str:
@@ -141,12 +152,13 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
                     "item_name": row["item_name"].strip(),
                     "category": row["category"].strip(),
                     "company_name": company,
-                    "buying_price": normalize_decimal(row["buying_price"], scale=2, default="0"),
-                    "selling_price": normalize_decimal(row["selling_price"], scale=2, default="0"),
+                    "hsn_code": normalize_hsn(row["hsn_code"]),
+                    "buying_price": normalize_decimal(row["buying_price"], scale=3, default="0"),
+                    "selling_price": normalize_decimal(row["selling_price"], scale=3, default="0"),
                     "unit": normalize_unit(row["unit"]),
                     "gst_rate": normalize_gst_rate(row["gst_rate"]),
                     "quantity_on_hand": normalize_decimal(
-                        row["quantity_on_hand"], scale=3, default="0"
+                        row["quantity_on_hand"], scale=0, default="0"
                     ),
                     "low_stock_threshold": "0",
                 }

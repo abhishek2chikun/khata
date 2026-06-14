@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 9);
+    expect(database.schemaVersion, 10);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -47,6 +47,7 @@ void main() {
           'selling_price',
           'unit',
           'gst_rate',
+          'hsn_code',
           'quantity_on_hand',
           'low_stock_threshold',
           'is_active',
@@ -123,6 +124,7 @@ void main() {
           'product_category',
           'product_buyer_id',
           'product_company_name',
+          'product_hsn_code',
           'buying_price',
           'selling_price',
           'unit',
@@ -159,6 +161,7 @@ void main() {
           'selling_price',
           'unit',
           'gst_rate',
+          'hsn_code',
           'quantity_on_hand',
           'low_stock_threshold',
           'is_active',
