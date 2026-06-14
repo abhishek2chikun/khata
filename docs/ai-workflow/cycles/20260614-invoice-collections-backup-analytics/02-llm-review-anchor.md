@@ -125,6 +125,6 @@ Non-goals: invoice-list search, regenerated identifiers, guessed HSN, rewritten 
 ## Stage 3 Handoff (2026-06-14)
 
 - Stage 3 complete; owner → Stage 4 fresh validation agent.
-- Automated: 55 pure + 458 mobile pass; release APK SHA-256 `3de1bc6a…` at HEAD `18693a9`.
+- Automated: 55 pure + 458 mobile pass; release APK SHA-256 `3de1bc6a…` at HEAD `c6139e5`.
 - Blocked: Postgres `backend/tests`; AC10/AC11 physical Drive matrix.
 - First command: `pg_isready -h localhost -p 55432`

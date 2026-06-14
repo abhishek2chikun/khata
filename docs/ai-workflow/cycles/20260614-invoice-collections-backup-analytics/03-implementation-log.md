@@ -3,7 +3,7 @@
 ## Workflow Summary
 
 Baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
-Current HEAD: `18693a9d483a8a4195a4308f6899561d367e81e5`
+Current HEAD: `c6139e5d88851175c0dad313a07146e8b89d78a4`
 Integration target branch: `main`
 Feature branch: `codex/khata-invoice-collections-backup-analytics`
 Worktree name/ID: `khata_app-upgrade`
