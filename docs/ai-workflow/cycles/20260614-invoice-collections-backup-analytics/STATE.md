@@ -8,12 +8,13 @@ Objective: Upgrade product/HSN and invoice contracts, invoice entry/PDF UX, batc
 
 Workflow schema: five-stage-v1
 
-Current stage: `3-implementation`
+Current stage: `4-validation`
 
 Stage status: `complete`
 
-Current task: `07-integration-and-handoff` (complete)
-Current HEAD: `c07b3ef54e78ec6b9587bd7b16c7f0f30c84da2d`
+Current task: Stage 4 independent validation (complete)
+
+Current HEAD: `184ad25b48c0c9da5c56c46ffbed79d80169f573`
 
 ## Stage 1 Repair
 
@@ -21,7 +22,7 @@ The supplied Stage 1 artifact was a context refresh with no objective-specific d
 
 ## Git And Worktree Contract
 
-Integration target branch: `main`
+Integration target branch: `main` (SHA `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`)
 
 Feature branch: `codex/khata-invoice-collections-backup-analytics`
 
@@ -31,15 +32,21 @@ Canonical worktree absolute path: `/Users/abhishek/python_venv/khata_app-upgrade
 
 Worktree baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
-Worktree status: `stage-3-complete`
+Stage 3 ending SHA: `49cec2c630fed1add8db110c9001fab4f060e9f9`
+
+Stage 4 final SHA: `184ad25b48c0c9da5c56c46ffbed79d80169f573` (code fixes in `5b66165`)
+
+Worktree status: `stage-4-complete-clean`
 
 Merge owner: Stage 5 persistent LLM
 
-Merge authorization: required
+Merge authorization: required (not recorded)
 
 Merge status: not-started
 
-The primary checkout contains user-owned untracked workflow refresh files and must remain untouched.
+Untracked outside cycle folder: `.venv`, `docs/ai-workflow/INDEX.md`, `docs/ai-workflow/PROJECT_CONTEXT.md`
+
+Primary checkout `/Users/abhishek/python_venv/khata_app` must remain untouched.
 
 ## Locked Decisions
 
@@ -66,7 +73,7 @@ The primary checkout contains user-owned untracked workflow refresh files and mu
 6. Analytics contracts and dashboard UI.
 7. Full verification, artifacts, and handoff.
 
-All seven tasks complete.
+All seven tasks complete. Stage 4 validation complete.
 
 ## High-Risk Gates
 
@@ -79,21 +86,50 @@ All seven tasks complete.
 
 ## Acceptance Criteria
 
-AC1-AC14 mapped in `03-implementation-log.md`. Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`.
+AC1-AC14 mapped in `03-implementation-log.md` and `04-validation-report.md`.
+
+Stage 4 verdict: **pass-with-minor-issues**
+
+Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
+
+## Stage 4 Summary
+
+### Fixes (commit `5b66165`)
+
+- Persist `product_hsn_code` on API invoice create (`invoice_service._insert_invoice_items`).
+- Batch UI: reload grid on `IDEMPOTENCY_CONFLICT`; invalidate request ID on date column add/remove.
+- Align local `_canonicalBatchHash` key ordering with backend `sort_keys`.
+- Redact sensitive backup failures in background callback and catch-up scheduler.
+
+### Independent evidence
+
+| Check | Result |
+|---|---|
+| `pytest backend/pure_tests -q` | 56 passed |
+| `flutter test test` | 460 passed |
+| `flutter build apk --release --dart-define=DATA_MODE=local` | 66.5 MB; SHA-256 `3de1bc6a121f294305f53daccb50c69f00ccfae63507b1f766757139ecfb8542` |
+| `pg_isready -h localhost -p 55432` | fail (Docker daemon unavailable) |
+| `pytest backend/tests -q` | blocked |
+
+### Remaining blockers for Stage 5
+
+1. Start PostgreSQL on `:55432`; run Alembic upgrade/downgrade + full `backend/tests`.
+2. AC10/AC11 physical Drive matrix or explicit waiver.
+3. Optional: manual PDF visual review; Drive restore download SHA-256 hardening.
 
 ## Context Topology
 
-- Persistent LLM lane: `paused-after-stage-3`
-- Current owner: `Stage 4 fresh validation agent`
-- Next owner: `Stage 4 fresh validation agent`
-- Owner after Stage 3: `Stage 4 fresh validation agent`
-- Minimum read set: this file, `04-return-packet.md`, `04-validation-report.md`, `03-implementation-log.md`
+- Persistent LLM lane: `paused-after-stage-4`
+- Current owner: `Stage 5 persistent LLM`
+- Next owner: `Stage 5 persistent LLM`
+- Minimum read set: this file, `02-llm-review-anchor.md`, `04-return-packet.md`
 - Merge owner/status: `Stage 5 persistent LLM` / `not-started`
 
-## Stage 3 Handoff
+## Integration Preflight
 
-- Stage 3 complete; branch unmerged.
-- First Stage 4 command: `pg_isready -h localhost -p 55432` then `PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q`
-- Unresolved blockers: PostgreSQL integration suite; AC10/AC11 physical Drive evidence.
+- Merge-base with `main`: `837ccbc` (no upstream divergence)
+- Feature commits ahead: 12 (`837ccbc..5b66165`)
+- Likely merge conflicts: low (README/docs content merges only)
+- Post-merge checks: Alembic 0010, `pytest backend/tests -q`, mobile suite, APK smoke
 
-Last updated: 2026-06-14 IST (Task 07 integration and validation handoff)
+Last updated: 2026-06-14 IST (Stage 4 independent validation complete)
