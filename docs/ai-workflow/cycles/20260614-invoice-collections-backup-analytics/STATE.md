@@ -10,10 +10,10 @@ Workflow schema: five-stage-v1
 
 Current stage: `3-implementation`
 
-Stage status: `in_progress`
+Stage status: `complete`
 
-Current task: `04-batch-khata-collections` (complete)
-Current HEAD: `97b100e6a520a87aa33bb786b5cb9a6ed369351a`
+Current task: `07-integration-and-handoff` (complete)
+Current HEAD: `18693a9d483a8a4195a4308f6899561d367e81e5`
 
 ## Stage 1 Repair
 
@@ -31,7 +31,7 @@ Canonical worktree absolute path: `/Users/abhishek/python_venv/khata_app-upgrade
 
 Worktree baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
-Worktree status: `task-04-complete`
+Worktree status: `stage-3-complete`
 
 Merge owner: Stage 5 persistent LLM
 
@@ -66,7 +66,7 @@ The primary checkout contains user-owned untracked workflow refresh files and mu
 6. Analytics contracts and dashboard UI.
 7. Full verification, artifacts, and handoff.
 
-Exact first task: `02-plan/01-platform-feasibility.md`
+All seven tasks complete.
 
 ## High-Risk Gates
 
@@ -79,23 +79,21 @@ Exact first task: `02-plan/01-platform-feasibility.md`
 
 ## Acceptance Criteria
 
-AC1-AC14 are fully mapped in `02-plan/00-plan-index.md`. Stage 3 records implementation evidence in `03-implementation-log.md`; Stage 4 creates `04-validation-report.md` and `04-return-packet.md`.
+AC1-AC14 mapped in `03-implementation-log.md`. Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`.
 
 ## Context Topology
 
-- Persistent LLM lane: `paused-after-stage-2`
-- Current owner: `Stage 3 fresh SLM`
-- Next owner: `Stage 4 fresh validation agent` (after Stage 3 complete)
+- Persistent LLM lane: `paused-after-stage-3`
+- Current owner: `Stage 4 fresh validation agent`
+- Next owner: `Stage 4 fresh validation agent`
 - Owner after Stage 3: `Stage 4 fresh validation agent`
-- Minimum read set: this file, `02-design.md` sections referenced by the assigned task, `02-plan/00-plan-index.md`, and exactly one assigned task packet.
+- Minimum read set: this file, `04-return-packet.md`, `04-validation-report.md`, `03-implementation-log.md`
 - Merge owner/status: `Stage 5 persistent LLM` / `not-started`
 
-## Stage 2 Handoff
+## Stage 3 Handoff
 
-- Persistent LLM lane: `paused-after-stage-2`
-- No production code has been implemented in this cycle.
-- The only worktree changes are Stage 2 workflow artifacts.
-- Stage 3 must verify branch/worktree identity and baseline before editing.
-- Stage 3 begins with Task 01 and must stop at its feasibility gate if package/platform requirements cannot be met without reopening design.
+- Stage 3 complete; branch unmerged.
+- First Stage 4 command: `pg_isready -h localhost -p 55432` then `PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q`
+- Unresolved blockers: PostgreSQL integration suite; AC10/AC11 physical Drive evidence.
 
-Last updated: 2026-06-14 IST (Task 04 batch collection grid complete)
+Last updated: 2026-06-14 IST (Task 07 integration and validation handoff)

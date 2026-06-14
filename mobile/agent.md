@@ -224,8 +224,11 @@ adb reverse tcp:8010 tcp:8010
 (cd mobile && \
   flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://localhost:8010/)
 
-# Run mobile tests
+# Run mobile tests (full suite — 458 tests)
 (cd mobile && flutter test test)
+
+# Backend pure tests (no Postgres)
+PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 
 # Run full expanded mobile tests
 (cd mobile && flutter test test -r expanded)
@@ -233,10 +236,12 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
-- **2026-06-14:** Encrypted Google Drive backup — verified upload orchestration, 30-retention prune, secure password store, WorkManager + catch-up, full backup screen; 69 backup tests green; physical OAuth unverified.
+- **2026-06-14 (Task 07):** Integration handoff — signed stock-delta fix, 5 cross-slice regression tests, stale fixture refresh; **458** mobile + **55** pure tests green; release APK SHA-256 recorded; Postgres/device gates documented.
+- **2026-06-14:** Encrypted Google Drive backup — verified upload orchestration, 30-retention prune, secure password store, WorkManager + catch-up, full backup screen; 69 backup tests green; physical OAuth unverified (AC10/AC11).
 - **2026-06-14:** Owner analytics dashboard — backend/local KPI + `daily_trend` fields, `fl_chart` revenue/profit trend, date presets, low-stock removed from UI; parity fixture + 18 focused analytics tests green.
-- **2026-06-13:** Preinstalled local product catalog — 1,199 products + 30 buyers bundled as JSON asset, seeded idempotently on local-mode startup; build script at `tools/build_preinstalled_catalog.py`.
-- **2026-06-13:** Stage 3 GST invoicing — Drift/backup schema **9**, seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing; **372** mobile tests passing.
+- **2026-06-14:** Drift/backup schema **10**, HSN/precision contracts, searchable invoice picker, Cash/Credit UX, batch collections, compliant PDFs.
+- **2026-06-13:** Preinstalled local product catalog — 1,199 products + 30 buyers bundled as JSON asset (catalog v2 with HSN), seeded idempotently on local-mode startup; build script at `tools/build_preinstalled_catalog.py`.
+- **2026-06-13:** Stage 3 GST invoicing baseline — seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing.
 - **2026-06-12:** `ApiBuyersService.addPaymentMade` now posts to `/payments-made` (was `/collections-made`, 404 against live backend).
 - Login is working against the current local backend setup.
 - Inventory and customer flows now have realistic dev data available through the backend demo seed command.
@@ -244,7 +249,7 @@ adb reverse tcp:8010 tcp:8010
 - Local backend discovery now handles `8010` and emulator-friendly hosts.
 - Offline-first local mode is available through `DATA_MODE=local` with first-user setup, Drift-backed services, encrypted backup import/export foundations, and automatic Drive backup scheduler plumbing.
 - Wholesaler workflow complete: buyer CRUD and payable ledger, invoice list/detail screens, multi-line invoice creation, product V2 fields, analytics dashboard (both API and local modes).
-- 372 mobile tests passing (auth, config, services, state, widgets, backup, local mode, wholesaler flow, GST/PDF/share/balance).
+- 458 mobile tests passing (includes 5 cross-slice integration regressions).
 
 ## Deferred work
 

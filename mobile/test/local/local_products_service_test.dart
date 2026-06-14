@@ -30,7 +30,7 @@ void main() {
     expect(product.sellingPrice, 10.5);
     expect(product.unit, 'box');
     expect(product.gstRate, 18);
-    expect(product.quantityOnHand, 3.25);
+    expect(product.quantityOnHand, 3);
     expect(product.lowStockThreshold, 2);
     expect(product.isActive, isTrue);
 
@@ -42,7 +42,7 @@ void main() {
     expect(storedProduct.sellingPrice, '10.5');
     expect(storedProduct.unit, 'box');
     expect(storedProduct.gstRate, '18');
-    expect(storedProduct.quantityOnHand, '3.25');
+    expect(storedProduct.quantityOnHand, '3');
     expect(storedProduct.lowStockThreshold, '2');
   });
 
@@ -182,7 +182,7 @@ void main() {
     expect(updated.sellingPrice, 22.75);
     expect(updated.unit, 'pcs');
     expect(updated.gstRate, 12);
-    expect(updated.quantityOnHand, 3.25);
+    expect(updated.quantityOnHand, 3);
     expect(updated.lowStockThreshold, 4);
 
     final storedProduct = await database.select(database.products).getSingle();
@@ -190,7 +190,7 @@ void main() {
     expect(storedProduct.sellingPrice, '22.75');
     expect(storedProduct.unit, 'pcs');
     expect(storedProduct.gstRate, '12');
-    expect(storedProduct.quantityOnHand, '3.25');
+    expect(storedProduct.quantityOnHand, '3');
     expect(storedProduct.lowStockThreshold, '4');
   });
 
@@ -244,10 +244,10 @@ void main() {
 
     expect(archived.id, product.id);
     expect(archived.isActive, isFalse);
-    expect(archived.quantityOnHand, 3.25);
+    expect(archived.quantityOnHand, 3);
     final storedProduct = await database.select(database.products).getSingle();
     expect(storedProduct.isActive, isFalse);
-    expect(storedProduct.quantityOnHand, '3.25');
+    expect(storedProduct.quantityOnHand, '3');
   });
 
   test('reactivate marks archived product active locally', () async {
@@ -269,7 +269,7 @@ void main() {
       id: product.id,
       input: const AdjustStockInput(
         requestId: 'stock-adjust-1',
-        quantityDelta: -1.25,
+        quantityDelta: -1,
         reason: 'Damaged goods',
       ),
     );
@@ -282,7 +282,7 @@ void main() {
     expect(movements.single.productId, product.id);
     expect(movements.single.requestId, 'stock-adjust-1');
     expect(movements.single.movementType, 'MANUAL_ADJUSTMENT');
-    expect(movements.single.quantityDelta, '-1.25');
+    expect(movements.single.quantityDelta, '-1');
     expect(movements.single.reason, 'Damaged goods');
     expect(movements.single.createdByUserId, 'local-system-user');
   });
@@ -306,7 +306,7 @@ void main() {
       ),
     );
 
-    expect(duplicate.quantityOnHand, 4.25);
+    expect(duplicate.quantityOnHand, 4);
     expect(await database.select(database.stockMovements).get(), hasLength(1));
   });
 
@@ -478,7 +478,7 @@ void main() {
         sellingPrice: 10.5,
         unit: 'box',
         gstRate: 18,
-        quantityOnHand: 3.25,
+        quantityOnHand: 3,
         lowStockThreshold: 2,
         buyerId: 'buyer-123',
       ),
@@ -533,7 +533,7 @@ void main() {
         sellingPrice: 10.5,
         unit: 'box',
         gstRate: 18,
-        quantityOnHand: 3.25,
+        quantityOnHand: 3,
         lowStockThreshold: 2,
         buyerId: 'buyer-123',
       ),
@@ -607,7 +607,7 @@ CreateProductInput _createProductInput({
   double sellingPrice = 10.5,
   String? unit = 'box',
   double gstRate = 18,
-  double quantityOnHand = 3.25,
+  double quantityOnHand = 3,
   double lowStockThreshold = 2,
   String? buyerId,
 }) {

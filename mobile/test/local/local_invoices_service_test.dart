@@ -12,6 +12,7 @@ import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
+import 'package:internal_billing_khata_mobile/services/invoice_settlement.dart';
 
 void main() {
   late db.LocalDatabase database;
@@ -226,6 +227,7 @@ void main() {
         product: product,
         quantity: 2,
         paymentState: 'TOTAL_PAID',
+        paymentMode: settlementModeCash,
       ),
       requestId: _uuid(21),
     );
@@ -357,6 +359,7 @@ void main() {
       product: product,
       quantity: 2,
       paymentState: 'TOTAL_PAID',
+      paymentMode: settlementModeCash,
     );
 
     final first = await invoicesService.createInvoice(
@@ -369,6 +372,7 @@ void main() {
         product: product,
         quantity: 2,
         paymentState: 'TOTAL_PAID',
+        paymentMode: settlementModeCash,
         paidAmount: 236,
       ),
       requestId: _uuid(23),
@@ -856,7 +860,7 @@ void main() {
           customer: customer,
           product: product,
           quantity: 1,
-          paymentMode: 'CASH',
+          paymentMode: 'WIRE',
         ),
         requestId: _uuid(8),
       ),

@@ -92,6 +92,7 @@ void main() {
       buyingPrice: 80,
       sellingPrice: 118,
       gstRate: 18,
+      hsnCode: '960810',
       quantityOnHand: 50,
       lowStockThreshold: 5,
     ));

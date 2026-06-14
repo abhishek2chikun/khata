@@ -65,10 +65,8 @@ double validateNonZeroIntegralQuantity(double value) {
   if (value == 0) {
     throw _validationError('quantity delta must be non-zero');
   }
-  if (value > 0) {
-    return validatePositiveIntegralQuantity(value);
-  }
-  return validateNonNegativeIntegralQuantity(value);
+  validatePositiveIntegralQuantity(value.abs());
+  return value;
 }
 
 double validateDiscountDisabled(double value) {

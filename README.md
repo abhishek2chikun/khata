@@ -16,9 +16,17 @@ The app models a wholesaler (distributor) business. Key entity names:
 - **Customer**: a retail customer/shop that buys goods from the wholesaler. Customers have their own receivable ledger (opening balance, collections, balance adjustments, invoice debits).
 - **Product**: an inventory item with `item_number`, `item_name`, `category`, `buyer_id`, `company_name`, `buying_price` (purchase cost from buyer), and `selling_price` (sale price to customer). Prices are GST-inclusive.
 - **Invoice**: a sale document to a customer with line items, tax computation, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), and stock/ledger side effects.
-- **Analytics**: dashboard aggregating revenue/profit by buyer, company, and customer; top products; low-stock alerts; customer khata balances; buyer pending payables. Available in both API and local modes.
+- **Analytics**: owner dashboard with KPI totals (revenue, profit, receivables, payables, active invoice count, average invoice value), zero-filled daily trend, ranked products/customers, and date presets. Low-stock remains in API/local payloads for compatibility but is excluded from the analytics UI.
 
-### GST invoicing (Stage 3)
+### Product, HSN, and invoice precision (Stage 3 upgrade)
+
+- Products carry nullable, non-unique `hsn_code`; invoice lines snapshot `product_hsn_code`.
+- GST invoice creation rejects products missing HSN; non-GST invoices allow missing HSN.
+- New invoice and stock-adjustment quantities must be whole numbers; historical fractional values remain readable.
+- Unit prices use three-decimal precision (`12.008`); monetary totals remain two-decimal currency values.
+- New invoice writes require zero discount; historical discounted invoices remain readable in PDFs.
+
+### GST invoicing (Stage 3 baseline + upgrade)
 
 - Seller profile and each invoice snapshot persist `gst_flag` (GST vs non-GST).
 - Non-GST invoices force zero tax; GST sellers may issue non-GST only when all line GST rates are zero.
@@ -207,12 +215,12 @@ python3 tools/build_preinstalled_catalog.py
 ```
 
 Column mapping: Company → buyer + `company_name`; Category → `category`; Item
-Name → `item_name`; Buying Price (MRP) → GST-inclusive `buying_price`; Selling
-Price (DP) → GST-inclusive `selling_price`; Unit `1.0` → `pcs`; GST Rate →
+Name → `item_name`; HSN → nullable `hsn_code` (125 source rows intentionally
+blank); Buying Price (MRP) → GST-inclusive `buying_price`; Selling Price (DP) →
+GST-inclusive `selling_price`; Unit `1.0` → `pcs`; GST Rate →
 `gst_rate`; Quantity on Hand → `quantity_on_hand`; generated
 `item_number` per company (e.g. `DOMS-0001`); default `low_stock_threshold`
-`0`. HSN codes are not stored (no matching DB column). Re-seeding is
-idempotent and never overwrites existing rows.
+`0`. Re-seeding is idempotent and never overwrites existing rows.
 
 The local schema is intentionally backend-aligned for future server migration:
 local tables keep stable IDs, request IDs/request hashes, invoice numbers,
@@ -239,8 +247,10 @@ columns. Key alignment expectations:
 - Local text IDs map to server UUIDs during migration; `salt` and
   `password_hash_version` are local-only.
 
-Backup schema version: **9**. Backend compatibility version: **`local-v2`**.
-Includes `gst_flag` on company profiles and invoices (Drift v9 / Alembic 0009).
+Backup schema version: **10**. Backend compatibility version: **`local-v2`**.
+Includes `hsn_code` on products, `product_hsn_code` on invoice items,
+three-decimal unit prices, and `gst_flag` on company profiles and invoices
+(Drift v10 / Alembic 0010). Version 9 backups import with null HSN fields.
 
 ### Backup and Migration Compatibility
 
@@ -252,18 +262,20 @@ can restore on another device running the same schema version. Future schema
 changes must bump `schema_version` and/or `backend_compatibility_version` to
 prevent cross-version restore corruption.
 
-### Drive/Background Scheduling Limitations
+### Drive backup and scheduling
 
-- Google Drive integration is plumbing only: `DriveBackupService` interface,
-  local settings persistence, scheduler wiring, UI actions, and a Drive service
-  skeleton. Real OAuth, file picker/selection, upload/download, and Firebase
-  configuration must be set up outside this repository.
-- `BackupScheduler` handles daily due/missed-backup decisions and app-launch
-  catch-up. Automatic backup attempts currently call the Drive skeleton and
-  record a configuration-required failure event until a real implementation is
-  provided.
-- Platform background execution (`BackupScheduleAdapter`) requires Android/iOS
-  scheduling setup (e.g. WorkManager) outside the current skeleton.
+Local mode supports encrypted Google Drive backup via `google_sign_in` (Drive file
+scope), upload to visible folder `Khata Backups`, secure password storage
+(`flutter_secure_storage`), WorkManager periodic scheduling (default **02:00**
+local time) with startup catch-up, verified upload (SHA-256), and 30-backup
+retention. Manual export/import remains available.
+
+**External setup required:** Google Cloud Drive API, Android OAuth client
+(package + signing SHA fingerprints), consent screen/test users. No secrets in
+repo. Physical-device OAuth/background evidence required before production
+claims.
+
+### Drive/Background limitations (legacy note)
 
 ## Build Release APK
 

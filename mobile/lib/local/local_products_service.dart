@@ -230,7 +230,7 @@ class LocalProductsService implements ProductsService {
     if (existingMovement != null) {
       final matchesExistingPayload = existingMovement.productId == id &&
           existingMovement.quantityDelta ==
-              _normalizeIntegralQuantity(input.quantityDelta) &&
+              _normalizeSignedIntegralQuantity(input.quantityDelta) &&
           existingMovement.reason == input.reason;
       if (!matchesExistingPayload) {
         throw const ApiError(
@@ -264,7 +264,7 @@ class LocalProductsService implements ProductsService {
               productId: id,
               requestId: Value(input.requestId),
               movementType: 'MANUAL_ADJUSTMENT',
-              quantityDelta: _normalizeIntegralQuantity(input.quantityDelta),
+              quantityDelta: _normalizeSignedIntegralQuantity(input.quantityDelta),
               reason: Value(input.reason),
               createdByUserId: _systemUserId,
               createdAt: now,
@@ -415,6 +415,11 @@ class LocalProductsService implements ProductsService {
 
   String _normalizeIntegralQuantity(double value) {
     return _normalizeDecimal(validateNonNegativeIntegralQuantity(value));
+  }
+
+  String _normalizeSignedIntegralQuantity(double value) {
+    validateNonZeroIntegralQuantity(value);
+    return _normalizeDecimal(value);
   }
 
   String _normalizeDecimal(double value) {

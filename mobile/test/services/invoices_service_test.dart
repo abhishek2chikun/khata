@@ -257,7 +257,7 @@ void main() {
 
       final body = jsonDecode(httpClient.lastBody!) as Map<String, dynamic>;
       expect(body['payment_state'], 'TOTAL_PAID');
-      expect(body.containsKey('payment_mode'), isFalse);
+      expect(body['payment_mode'], 'PAID');
     });
   });
 }

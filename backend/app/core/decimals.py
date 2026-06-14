@@ -61,9 +61,8 @@ def validate_non_negative_integral_quantity(value: Decimal) -> Decimal:
 def validate_non_zero_integral_quantity(value: Decimal) -> Decimal:
     if value == 0:
         raise ValueError("quantity delta must be non-zero")
-    if value > 0:
-        return validate_positive_integral_quantity(value)
-    return validate_non_negative_integral_quantity(value)
+    validate_positive_integral_quantity(abs(value))
+    return value
 
 
 def validate_discount_disabled(value: Decimal) -> Decimal:

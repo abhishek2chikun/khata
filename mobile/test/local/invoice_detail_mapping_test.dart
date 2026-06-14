@@ -350,6 +350,7 @@ CreateProductInput _productInput({
     sellingPrice: 118,
     unit: unit,
     gstRate: 18,
+    hsnCode: '960810',
     quantityOnHand: 5,
     lowStockThreshold: 2,
   );
