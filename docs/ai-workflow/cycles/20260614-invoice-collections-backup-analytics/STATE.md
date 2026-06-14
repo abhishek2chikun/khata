@@ -13,7 +13,7 @@ Current stage: `3-implementation`
 Stage status: `in_progress`
 
 Current task: `04-batch-khata-collections` (complete)
-Current HEAD: pending Task 04 commit
+Current HEAD: `97b100e6a520a87aa33bb786b5cb9a6ed369351a`
 
 ## Stage 1 Repair
 
