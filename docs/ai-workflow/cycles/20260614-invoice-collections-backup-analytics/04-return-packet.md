@@ -33,7 +33,7 @@ Planning baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
 Stage 3 starting/ending SHA: `837ccbc..49cec2c630fed1add8db110c9001fab4f060e9f9`
 
-Stage 4 starting/final SHA: `49cec2c..184ad25b48c0c9da5c56c46ffbed79d80169f573` (code fixes: `5b66165`)
+Stage 4 starting/final SHA: `49cec2c..2399faecff7f594378a6d41dd2d41264de2bd5f0` (code fixes: `5b66165`)
 
 Dirty/uncommitted state: clean for tracked cycle files; untracked `.venv`, top-level `docs/ai-workflow/INDEX.md`, `PROJECT_CONTEXT.md` (outside cycle folder)
 
