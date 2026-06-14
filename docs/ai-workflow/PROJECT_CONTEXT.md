@@ -1,12 +1,12 @@
 # Verified Project Context
 
-Repository: `/Users/abhishek/python_venv/khata_app-upgrade`
+Repository: `/Users/abhishek/python_venv/khata_app`
 
 Accepted baseline: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
-Active candidate reviewed code SHA: `5b6616502efdb511352e3124894ffcb643842535` (not accepted or merged)
+Integrated code SHA: `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
 
-Active cycle: `20260614-invoice-collections-backup-analytics`
+Latest cycle: `20260614-invoice-collections-backup-analytics` (integrated; release followups open)
 
 ## Stable Architecture
 
@@ -41,9 +41,9 @@ python3 tools/build_preinstalled_catalog.py
 
 ## Active Handoff
 
-The feature branch's schema-10 HSN/precision, invoice UX/PDF, daily collections, Drive, and analytics capabilities are accepted for local-mode integration. Physical Drive and Android signing evidence remain release followups.
+Schema-10 HSN/precision, invoice UX/PDF, daily collections, Drive, and analytics capabilities are integrated on `main` for local mode. Physical Drive evidence and production Android identity/signing remain release blockers.
 
-Read `cycles/20260614-invoice-collections-backup-analytics/STATE.md` and `05-final-review.md`. Preserve the primary checkout's overlapping untracked workflow files, merge to `main`, and run local-mode post-merge verification.
+Read `cycles/20260614-invoice-collections-backup-analytics/STATE.md` and `05-final-review.md`. Integration is complete; the next action is production Android identity/signing plus physical Drive verification.
 
 ## Active Risks And Release Blockers
 

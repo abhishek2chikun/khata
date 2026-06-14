@@ -4,7 +4,7 @@
 
 **accept-with-followups**
 
-The selected production runtime is the Android local-mode application backed by Drift/SQLite, not the FastAPI/PostgreSQL client-server path. Automated local-mode behavior is accepted for integration. Physical-device Drive evidence and production Android identity/signing remain release followups, so merge does not mean deployed or production-released.
+The selected production runtime is the Android local-mode application backed by Drift/SQLite, not the FastAPI/PostgreSQL client-server path. The implementation is merged and post-merge code-verified. Physical-device Drive evidence and production Android identity/signing remain release blockers, so integration does not mean deployed or production-released.
 
 ## Executive Reasoning
 
@@ -81,6 +81,10 @@ Stage 4's `5b66165` fixes are accepted: API HSN snapshot persistence, canonical 
 | `docker ps` / Docker launch wait | environment recovery | daemon unavailable after wait | backend integration could not be recovered in review |
 | `git diff --check 837ccbc0..HEAD` | diff hygiene | pass | no whitespace errors in committed delta |
 | code inspection of collection transaction paths | concurrency contract | fail | shared serialization and durable batch identity are absent |
+| post-merge `flutter test test` | complete mobile/local suite | 460 passed | integrated local behavior and compatibility pass |
+| post-merge relaxed analyzer policy | static analysis | pass with 47 existing findings | no fatal analyzer finding in the integration candidate |
+| post-merge local APK build | Android artifact | pass; SHA-256 `d9b3b2a23779f651728ee823e10b7e1068ed79ac98adb6fe3bb0ac290467f203` | integrated code builds |
+| `apksigner verify --print-certs` | release identity | `CN=Android Debug` | APK is not production-signed |
 
 ## Production Readiness Checklist
 
@@ -119,21 +123,21 @@ Merge is authorized for the local-mode integration target. Do not call the resul
 ## Integration And Merge Record
 
 - Integration target and pre-merge SHA: `main` / `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
-- Feature branch/worktree and validated code SHA: `codex/khata-invoice-collections-backup-analytics` / `/Users/abhishek/python_venv/khata_app-upgrade` / `5b6616502efdb511352e3124894ffcb643842535`
+- Feature branch/worktree and validated code SHA: `codex/khata-invoice-collections-backup-analytics` / `/Users/abhishek/python_venv/khata_app-upgrade` / `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
 - Worktree name/ID and canonical absolute path: `khata_app-upgrade` / `/Users/abhishek/python_venv/khata_app-upgrade`
 - Authorization/policy: user explicitly authorized merge on 2026-06-14 after clarifying local-only deployment
-- Integration method/status: fast-forward eligible; awaiting preservation of overlapping untracked workflow files in `main`
-- Merge/PR/integration SHA or URL: none
-- Post-merge commands/evidence: not applicable
+- Integration method/status: fast-forward; `merged-and-verified`
+- Merge/PR/integration SHA or URL: `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
+- Post-merge commands/evidence: 460 mobile tests, 56 backend pure tests, relaxed analyzer pass, local APK build/hash
 - Cleanup status: not performed
 
 ## Documentation And Workflow-State Accuracy
 
-`STATE.md`, the cycle registry, and rolling context are updated by this review. The untracked top-level workflow files are now the canonical feature-worktree copies but remain uncommitted until the Stage 5 artifact checkpoint. The primary checkout's unrelated untracked workflow files were not modified.
+`STATE.md`, the cycle registry, and rolling context are updated by this review. The primary checkout's prior untracked workflow files were preserved under `docs/ai-workflow/refreshes/` before the fast-forward merge.
 
 ## Fixes Made During Review
 
-Workflow documentation only. No production fix was attempted because the collection repair requires a shared database concurrency mechanism and PostgreSQL-backed validation.
+Stage 5 added explicit `googleapis_auth` dependency ownership and removed newly introduced production analyzer warnings/deprecations before integration (`1d8e5dc`).
 
 ## Residual Risk And Unverified Evidence
 
@@ -161,4 +165,4 @@ Workflow documentation only. No production fix was attempted because the collect
 
 ## Required Next Action
 
-Preserve the primary checkout's pre-existing untracked workflow files, fast-forward the feature branch into `main`, rerun local-mode focused/mobile/build checks, and record the integrated SHA. Physical Drive and Android signing evidence remain followups before release.
+Configure a production application ID and release signing key outside source control, configure Google OAuth for that identity, then run the physical-device Drive sign-in, verified backup, scheduled/catch-up backup, destructive restore/digest, and restart-persistence matrix before distributing the app.

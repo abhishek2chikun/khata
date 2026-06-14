@@ -10,13 +10,13 @@ Workflow schema: five-stage-v1
 
 Current stage: `5-final-review`
 
-Stage status: `accepted-awaiting-integration`
+Stage status: `accepted-integrated-release-unverified`
 
-Current task: Preserve overlapping untracked workflow files and fast-forward into main
+Current task: Configure production Android identity/signing and obtain physical Drive evidence
 
 Current artifact HEAD at Stage 5 intake: `f25e5cadc9b6db16a71032ed6003aa6e8ea2e435`
 
-Final reviewed code SHA: `5b6616502efdb511352e3124894ffcb643842535`
+Final integrated and post-merge verified code SHA: `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
 
 ## Stage 1 Repair
 
@@ -40,17 +40,17 @@ Stage 4 reviewed code SHA: `5b6616502efdb511352e3124894ffcb643842535`
 
 Stage 4 validation artifact commit: `2399faecff7f594378a6d41dd2d41264de2bd5f0`; post-validation SHA-label correction: `f25e5cadc9b6db16a71032ed6003aa6e8ea2e435`
 
-Worktree status: `stage-5-artifacts-dirty`; untracked `.venv` and rolling workflow files are present
+Worktree status: integration checkout post-merge verified; feature worktree retains untracked `.venv`
 
 Merge owner: Stage 5 persistent LLM
 
 Merge authorization: pre-authorized by user on 2026-06-14 for local-mode deployment
 
-Merge status: awaiting-safe-worktree-preflight
+Merge status: merged-and-verified at `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
 
 Untracked outside cycle folder: `.venv`, `docs/ai-workflow/INDEX.md`, `docs/ai-workflow/PROJECT_CONTEXT.md`
 
-Primary checkout `/Users/abhishek/python_venv/khata_app` must remain untouched.
+Primary checkout `/Users/abhishek/python_venv/khata_app` is now the integrated canonical checkout.
 
 ## Locked Decisions
 
@@ -134,6 +134,11 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 | `pg_isready -h localhost -p 55432` | no response |
 | Docker Desktop recovery wait | daemon remained unavailable |
 | collection transaction code review | AC9 concurrency contradicted |
+| post-merge `flutter test test` | 460 passed |
+| post-merge backend pure tests | 56 passed |
+| post-merge relaxed analyzer | pass; 47 existing findings |
+| post-merge local release APK | SHA-256 `d9b3b2a23779f651728ee823e10b7e1068ed79ac98adb6fe3bb0ac290467f203` |
+| APK signer | Android Debug certificate; not production-distribution-ready |
 
 ## Context Topology
 
@@ -141,7 +146,7 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 - Current owner: `Stage 5 persistent LLM`
 - Next owner: `Stage 5 persistent LLM`
 - Minimum read set: this file and `05-final-review.md`
-- Merge owner/status: `Stage 5 persistent LLM` / `not-started`
+- Merge owner/status: `Stage 5 persistent LLM` / `merged-and-verified`
 
 ## Integration Preflight
 
@@ -150,8 +155,10 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 - Likely merge conflicts: low (README/docs content merges only)
 - Post-merge checks: Alembic 0010, `pytest backend/tests -q`, mobile suite, APK smoke
 
+Integration completed by fast-forward from `837ccbc0` to `1d8e5dc`. Local-mode post-merge checks passed; PostgreSQL checks are deferred because the deployed runtime is Drift/SQLite.
+
 ## Exact Next Action
 
-Preserve the primary checkout's untracked `docs/ai-workflow/INDEX.md` and `PROJECT_CONTEXT.md` without data loss, then fast-forward `codex/khata-invoice-collections-backup-analytics` into `main` and run post-merge local-mode verification.
+Configure production application ID/signing and Google OAuth, then run the physical-device Drive backup/restore matrix before distribution. No further merge action is required.
 
-Last updated: 2026-06-14 IST (local-only deployment clarified; merge authorized)
+Last updated: 2026-06-14 IST (merged and post-merge verified; release unverified)
