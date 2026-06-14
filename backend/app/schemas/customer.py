@@ -114,3 +114,41 @@ class CustomerLedgerResponse(BaseModel):
     customer: CustomerResponse
     transactions: list[CustomerTransactionResponse]
     invoices: list[InvoiceHistoryEntry] = []
+
+
+class CollectionGridCustomerRow(BaseModel):
+    id: uuid.UUID
+    name: str
+    pending_balance: str
+    existing_totals: dict[str, str]
+
+
+class CollectionGridResponse(BaseModel):
+    from_date: date
+    to_date: date
+    dates: list[date]
+    customers: list[CollectionGridCustomerRow]
+
+
+class BatchCollectionEntry(BaseModel):
+    customer_id: uuid.UUID
+    occurred_on: date
+    amount: Decimal
+
+    @field_validator("amount")
+    @classmethod
+    def validate_positive_amount(cls, value: Decimal) -> Decimal:
+        return validate_money_amount(value)
+
+
+class BatchCollectionRequest(BaseModel):
+    request_id: uuid.UUID
+    entries: list[BatchCollectionEntry]
+
+
+class BatchCollectionResponse(BaseModel):
+    request_id: uuid.UUID
+    entry_count: int
+    total_amount: str
+    affected_customers: int
+    customers: list[CustomerResponse]

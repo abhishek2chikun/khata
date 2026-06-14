@@ -8,6 +8,7 @@ import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_screen.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_backup_service.dart';
+import 'package:internal_billing_khata_mobile/backup/encrypted_drive_backup_orchestrator.dart';
 import 'package:internal_billing_khata_mobile/backup/local_backup_transfer_service.dart';
 import 'package:internal_billing_khata_mobile/main.dart';
 import 'package:internal_billing_khata_mobile/models/buyer.dart';
@@ -53,8 +54,8 @@ void main() {
     expect(find.text('Last backup: 2026-05-07 22:30'), findsOneWidget);
     expect(find.text('Export encrypted backup'), findsOneWidget);
     expect(find.text('Restore encrypted backup'), findsOneWidget);
-    expect(
-        find.text('Automatic cloud backup is not configured'), findsOneWidget);
+    expect(find.text('Google Drive backup'), findsOneWidget);
+    expect(find.text('Connect Google'), findsOneWidget);
 
     await tester.tap(find.text('Export encrypted backup'));
     await tester.pumpAndSettle();
@@ -71,7 +72,79 @@ void main() {
     expect(find.textContaining('Encrypted backup created'), findsOneWidget);
   });
 
-  testWidgets('backup screen restores, warns, and calls logout callback',
+  testWidgets('backup screen connects Google, sets password, and backs up now',
+      (tester) async {
+    final service = FakeDriveBackupService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupScreen(driveBackupService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Connect Google'));
+    await tester.pumpAndSettle();
+    expect(service.connected, isTrue);
+
+    await tester.tap(find.text('Set password'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordField')), 'secure-pass');
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordConfirmationField')),
+        'secure-pass');
+    await tester.tap(find.byKey(const Key('confirmBackupAction')));
+    await tester.pumpAndSettle();
+    expect(service.hasPassword, isTrue);
+
+    await tester.tap(find.text('Back up now'));
+    await tester.pumpAndSettle();
+    expect(service.backupNowCount, 1);
+  });
+
+  testWidgets('backup screen restores from drive with confirmation',
+      (tester) async {
+    final service = FakeDriveBackupService(
+      connected: true,
+      accountEmail: 'owner@example.com',
+      backups: [
+        DriveBackupListItem(
+          id: 'backup-1',
+          name: 'khata-backup-20260614.khata',
+          createdTime: DateTime.utc(2026, 6, 14, 2),
+          sizeBytes: 4096,
+          schemaVersion: 10,
+        ),
+      ],
+    );
+    var restored = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupScreen(
+          driveBackupService: service,
+          onRestoreCompleted: () async => restored = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('replaces all current local business data'),
+        findsOneWidget);
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordField')), 'secure-pass');
+    await tester.tap(find.byKey(const Key('confirmBackupAction')));
+    await tester.pumpAndSettle();
+
+    expect(service.restoreCount, 1);
+    expect(service.lastRestoreFileId, 'backup-1');
+    expect(restored, isTrue);
+  });
+
+  testWidgets('backup screen restores manual backup and calls logout callback',
       (tester) async {
     final service = FakeDriveBackupService();
     final transfer = FakeBackupTransferService();
@@ -90,8 +163,6 @@ void main() {
 
     await tester.tap(find.text('Restore encrypted backup'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('replaces all current local business data'),
-        findsOneWidget);
     await tester.enterText(
         find.byKey(const Key('backupPasswordField')), 'secure-pass');
     await tester.tap(find.byKey(const Key('confirmBackupAction')));
@@ -365,6 +436,26 @@ class _FakePaymentsService implements PaymentsService {
 
   @override
   Future<void> recordCollection(RecordCollectionInput input) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    return CollectionGridData(
+      fromDate: fromDate,
+      toDate: toDate,
+      dates: const <String>[],
+      customers: const <CollectionGridCustomerRow>[],
+    );
+  }
+
+  @override
+  Future<BatchCollectionResult> recordCollectionBatch(
+    BatchCollectionInput input,
+  ) async {
     throw UnimplementedError();
   }
 }

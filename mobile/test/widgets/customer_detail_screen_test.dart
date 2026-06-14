@@ -730,6 +730,19 @@ class FakePaymentsService implements PaymentsService {
   Future<void> recordCollection(RecordCollectionInput input) async {
     recordedCollections.add(input);
   }
+  @override
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+    throw UnimplementedError();
+  }
+
 }
 
 class _OpeningBalanceCall {

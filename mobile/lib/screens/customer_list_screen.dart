@@ -11,6 +11,7 @@ import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
 import 'customer_detail_screen.dart';
+import 'daily_collections_screen.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({
@@ -62,6 +63,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       appBar: AppBar(
         title: const Text('Customers/Khata'),
         actions: <Widget>[
+          TextButton.icon(
+            key: const Key('openDailyCollectionsButton'),
+            onPressed: _isLoading ? null : _openDailyCollections,
+            icon: const Icon(Icons.grid_view_outlined),
+            label: const Text('Daily collections'),
+          ),
           if (widget.balanceShareService != null &&
               widget.companyProfileService != null)
             IconButton(
@@ -196,6 +203,20 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           phone.contains(normalizedQuery) ||
           gstin.contains(normalizedQuery);
     }).toList();
+  }
+
+  Future<void> _openDailyCollections() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => DailyCollectionsScreen(
+          paymentsService: widget.paymentsService,
+          onSubmitted: _loadCustomers,
+        ),
+      ),
+    );
+    if (mounted) {
+      await _loadCustomers();
+    }
   }
 
   Future<void> _openCustomer(Customer customer) async {

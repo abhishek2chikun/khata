@@ -247,6 +247,19 @@ class FakePaymentsService implements PaymentsService {
       throw paymentError!;
     }
   }
+  @override
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+    throw UnimplementedError();
+  }
+
 }
 
 class _OpeningBalanceCall {

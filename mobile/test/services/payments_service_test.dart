@@ -42,6 +42,79 @@ void main() {
       expect(payload['occurred_on'], '2026-04-20');
       expect(payload['notes'], 'Cash');
     });
+
+    test('loadCollectionGrid calls collection-grid endpoint', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 200,
+          body: '''
+{
+  "from_date": "2026-06-14",
+  "to_date": "2026-06-14",
+  "dates": ["2026-06-14"],
+  "customers": []
+}
+''',
+        ),
+      );
+      final service = ApiPaymentsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final grid = await service.loadCollectionGrid(fromDate: '2026-06-14', toDate: '2026-06-14');
+
+      expect(httpClient.lastMethod, 'GET');
+      expect(httpClient.lastPath, '/customers/collection-grid');
+      expect(grid.dates, <String>['2026-06-14']);
+    });
+
+    test('recordCollectionBatch posts batch payload', () async {
+      final httpClient = RecordingHttpClient(
+        response: FakeHttpResponse(
+          statusCode: 201,
+          body: '''
+{
+  "request_id": "11111111-1111-4111-8111-111111111111",
+  "entry_count": 1,
+  "total_amount": "25.00",
+  "affected_customers": 1,
+  "customers": []
+}
+''',
+        ),
+      );
+      final service = ApiPaymentsService(
+        apiClient: ApiClient(
+          baseUri: Uri.parse('http://localhost:8000/'),
+          httpClient: httpClient,
+          authService: FakeAuthService(),
+          sessionStore: InMemorySessionStore(),
+        ),
+      );
+
+      final result = await service.recordCollectionBatch(
+        const BatchCollectionInput(
+          requestId: '11111111-1111-4111-8111-111111111111',
+          entries: <BatchCollectionEntryInput>[
+            BatchCollectionEntryInput(
+              customerId: 'customer-1',
+              occurredOn: '2026-06-14',
+              amount: 25,
+            ),
+          ],
+        ),
+      );
+
+      expect(httpClient.lastMethod, 'POST');
+      expect(httpClient.lastPath, '/customers/collection-batch');
+      expect(result.entryCount, 1);
+      expect(result.totalAmount, 25);
+    });
   });
 }
 
@@ -89,6 +162,16 @@ class RecordingHttpClient implements HttpClient {
   String? lastMethod;
   String? lastPath;
   String? lastBody;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async {
+    lastMethod = 'GET';
+    lastPath = url.path;
+    return RecordingHttpRequest(
+      response: response,
+      onClose: (_) {},
+    );
+  }
 
   @override
   Future<HttpClientRequest> postUrl(Uri url) async {

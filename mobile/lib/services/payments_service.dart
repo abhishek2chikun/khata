@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'api_client.dart';
@@ -74,6 +75,126 @@ class BalanceAdjustmentInput {
   }
 }
 
+class CollectionGridCustomerRow {
+  const CollectionGridCustomerRow({
+    required this.id,
+    required this.name,
+    required this.pendingBalance,
+    required this.existingTotals,
+  });
+
+  final String id;
+  final String name;
+  final double pendingBalance;
+  final Map<String, double> existingTotals;
+
+  factory CollectionGridCustomerRow.fromJson(Map<String, dynamic> json) {
+    final totals = <String, double>{};
+    final rawTotals = json['existing_totals'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    for (final entry in rawTotals.entries) {
+      totals[entry.key] = _parseAmount(entry.value);
+    }
+    return CollectionGridCustomerRow(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      pendingBalance: _parseAmount(json['pending_balance']),
+      existingTotals: totals,
+    );
+  }
+}
+
+class CollectionGridData {
+  const CollectionGridData({
+    required this.fromDate,
+    required this.toDate,
+    required this.dates,
+    required this.customers,
+  });
+
+  final String fromDate;
+  final String toDate;
+  final List<String> dates;
+  final List<CollectionGridCustomerRow> customers;
+
+  factory CollectionGridData.fromJson(Map<String, dynamic> json) {
+    return CollectionGridData(
+      fromDate: json['from_date'] as String,
+      toDate: json['to_date'] as String,
+      dates: (json['dates'] as List<dynamic>).cast<String>(),
+      customers: (json['customers'] as List<dynamic>)
+          .map((row) => CollectionGridCustomerRow.fromJson(row as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class BatchCollectionEntryInput {
+  const BatchCollectionEntryInput({
+    required this.customerId,
+    required this.occurredOn,
+    required this.amount,
+  });
+
+  final String customerId;
+  final String occurredOn;
+  final double amount;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'customer_id': customerId,
+      'occurred_on': occurredOn,
+      'amount': amount,
+    };
+  }
+}
+
+class BatchCollectionInput {
+  const BatchCollectionInput({
+    required this.requestId,
+    required this.entries,
+  });
+
+  final String requestId;
+  final List<BatchCollectionEntryInput> entries;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'request_id': requestId,
+      'entries': entries.map((entry) => entry.toJson()).toList(),
+    };
+  }
+}
+
+class BatchCollectionResult {
+  const BatchCollectionResult({
+    required this.requestId,
+    required this.entryCount,
+    required this.totalAmount,
+    required this.affectedCustomers,
+  });
+
+  final String requestId;
+  final int entryCount;
+  final double totalAmount;
+  final int affectedCustomers;
+
+  factory BatchCollectionResult.fromJson(Map<String, dynamic> json) {
+    return BatchCollectionResult(
+      requestId: json['request_id'] as String,
+      entryCount: json['entry_count'] as int,
+      totalAmount: _parseAmount(json['total_amount']),
+      affectedCustomers: json['affected_customers'] as int,
+    );
+  }
+}
+
+double _parseAmount(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  return double.parse(value as String);
+}
+
 abstract class PaymentsService {
   Future<void> recordCollection(RecordCollectionInput input);
 
@@ -86,6 +207,13 @@ abstract class PaymentsService {
     required String customerId,
     required BalanceAdjustmentInput input,
   });
+
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  });
+
+  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input);
 }
 
 class ApiPaymentsService implements PaymentsService {
@@ -112,6 +240,27 @@ class ApiPaymentsService implements PaymentsService {
   @override
   Future<void> recordCollection(RecordCollectionInput input) async {
     await _apiClient.post('/collections', body: input.toJson());
+  }
+
+  @override
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    final response = await _apiClient.get(
+      '/customers/collection-grid',
+      queryParameters: <String, String>{
+        'from_date': fromDate,
+        'to_date': toDate,
+      },
+    );
+    return CollectionGridData.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) async {
+    final response = await _apiClient.post('/customers/collection-batch', body: input.toJson());
+    return BatchCollectionResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 }
 

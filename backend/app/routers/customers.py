@@ -1,12 +1,23 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
 from app.schemas.auth import CurrentUserResponse
-from app.schemas.customer import BalanceAdjustmentRequest, OpeningBalanceRequest, CustomerCreateRequest, CustomerLedgerResponse, CustomerResponse, CustomerTransactionResponse, CustomerUpdateRequest
+from app.schemas.customer import (
+    BalanceAdjustmentRequest,
+    BatchCollectionRequest,
+    BatchCollectionResponse,
+    CollectionGridResponse,
+    OpeningBalanceRequest,
+    CustomerCreateRequest,
+    CustomerLedgerResponse,
+    CustomerResponse,
+    CustomerTransactionResponse,
+    CustomerUpdateRequest,
+)
 from app.services import customer_service
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -20,6 +31,25 @@ def create_customer(payload: CustomerCreateRequest, _: CurrentUserResponse = Dep
 @router.get("", response_model=list[CustomerResponse])
 def list_customers(_: CurrentUserResponse = Depends(get_current_user), session: Session = Depends(get_db)) -> list[CustomerResponse]:
     return [customer_service.build_customer_response(session, customer) for customer in customer_service.list_customers(session)]
+
+
+@router.get("/collection-grid", response_model=CollectionGridResponse)
+def get_collection_grid(
+    from_date: date = Query(..., alias="from_date"),
+    to_date: date = Query(..., alias="to_date"),
+    _: CurrentUserResponse = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> CollectionGridResponse:
+    return customer_service.get_collection_grid(session, from_date=from_date, to_date=to_date)
+
+
+@router.post("/collection-batch", response_model=BatchCollectionResponse, status_code=201)
+def create_collection_batch(
+    payload: BatchCollectionRequest,
+    current_user: CurrentUserResponse = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> BatchCollectionResponse:
+    return customer_service.create_collection_batch(session, payload, current_user)
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)

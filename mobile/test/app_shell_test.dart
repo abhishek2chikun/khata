@@ -229,6 +229,19 @@ class FakePaymentsService implements PaymentsService {
   Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
+  @override
+  Future<CollectionGridData> loadCollectionGrid({
+    required String fromDate,
+    required String toDate,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+    throw UnimplementedError();
+  }
+
 }
 
 class FakeInvoicesService implements InvoicesService {

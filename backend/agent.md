@@ -28,7 +28,7 @@ This backend serves a mobile-first internal billing and khata workflow. The live
 - buyers: CRUD-ish management, opening payable, purchase amounts, payments made, payable adjustments, payable ledger view
 - company profile: active company profile read/upsert
 - invoices: quote, create, list, detail, cancel
-- collections: top-level collection creation route backed by customer khata ledger logic
+- collections: top-level collection creation route backed by customer khata ledger logic; batch grid read/write at `/customers/collection-grid` and `/customers/collection-batch`
 - analytics: dashboard endpoint with revenue/profit breakdowns, top products, low stock, and balance summaries
 
 Important live behavior:
@@ -153,6 +153,7 @@ or is intentionally local-only:
 
 ## Progress
 
+- **2026-06-14:** Atomic seven-day customer collection batch at `GET /customers/collection-grid` and `POST /customers/collection-batch`; canonical entry hash, UUID5 per-row request IDs, batch notes idempotency marker, row locking, stale-balance rejection, all-or-nothing commit.
 - **2026-06-13:** Alembic `0009_invoice_gst_flags` adds `gst_flag` on company profiles and invoices; GST/non-GST invoice semantics with validation codes (`INVALID_GST_PROFILE`, `GST_INVOICE_NOT_ALLOWED`, `NON_GST_TAXABLE_LINES`); idempotency hash includes resolved `gst_flag`. Full PostgreSQL pytest suite blocked when DB unavailable (Stage 4 gate).
 - **2026-06-12:** Fixed buyer payment API path — mobile and tests now call `POST /buyers/{id}/payments-made` (was stale `collections-made`, causing 404 in API mode).
 - Auth, session rotation, and secure current-user lookup are live.

@@ -12,8 +12,8 @@ Current stage: `3-implementation`
 
 Stage status: `in_progress`
 
-Current task: `03-invoice-creation-and-pdfs` (complete)
-Current HEAD: `47c6700cceaff6df80237d7c821c4d4ef03c9210`
+Current task: `04-batch-khata-collections` (complete)
+Current HEAD: pending Task 04 commit
 
 ## Stage 1 Repair
 
@@ -31,7 +31,7 @@ Canonical worktree absolute path: `/Users/abhishek/python_venv/khata_app-upgrade
 
 Worktree baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
-Worktree status: `task-03-complete`
+Worktree status: `task-04-complete`
 
 Merge owner: Stage 5 persistent LLM
 
@@ -98,4 +98,4 @@ AC1-AC14 are fully mapped in `02-plan/00-plan-index.md`. Stage 3 records impleme
 - Stage 3 must verify branch/worktree identity and baseline before editing.
 - Stage 3 begins with Task 01 and must stop at its feasibility gate if package/platform requirements cannot be met without reopening design.
 
-Last updated: 2026-06-14 IST (Task 03 invoice entry/PDF complete)
+Last updated: 2026-06-14 IST (Task 04 batch collection grid complete)

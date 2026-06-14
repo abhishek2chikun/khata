@@ -3,7 +3,7 @@
 ## Workflow Summary
 
 Baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
-Current HEAD: `47c6700cceaff6df80237d7c821c4d4ef03c9210`
+Current HEAD: pending Task 04 commit
 Integration target branch: `main`
 Feature branch: `codex/khata-invoice-collections-backup-analytics`
 Worktree name/ID: `khata_app-upgrade`
@@ -18,7 +18,7 @@ Assigned tasks: 01-07 (full plan)
 | Platform feasibility | complete | Task 01 merged at `d12306c` | prior ladder green | none |
 | Contracts/migrations/catalog | complete | Task 02 merged at `d12306c` | prior ladder green | none |
 | Invoice creation/PDF | complete | searchable `ProductPicker`, Cash/Credit UX, compliant PDFs | 71 focused tests green; `flutter analyze` info-only | PDF text assertions use helper/metadata tests (compressed PDF bytes are not plain-text searchable) |
-| Batch collections | pending | pending | pending | none |
+| Batch collections | complete | atomic grid API/local/UI | 37 focused mobile tests + 55 pure tests | API integration tests require local Postgres on :55432 |
 | Drive backup | pending | pending | pending | External OAuth configuration cannot be committed |
 | Analytics | pending | pending | pending | none |
 | Integration/release | pending | pending | pending | Physical-device evidence depends on available configured device/account |
@@ -56,9 +56,32 @@ Result: **71 passed**, analyze info/warnings only (no new errors).
 - New: `mobile/lib/services/invoice_settlement.dart`, `mobile/test/widgets/product_picker_test.dart`
 - Updated: `product_picker.dart`, `create_invoice_screen.dart`, `invoice_draft_controller.dart`, `invoice_draft.dart`, `invoice_preview_screen.dart`, `invoice_detail_screen.dart`, `invoice_list_screen.dart`, `invoice_pdf_service.dart`, `invoice_detail.dart`, `local_invoices_service.dart`, 6 test files, this log, `STATE.md`
 
+**Files touched (summary)**
+- New: `mobile/lib/screens/daily_collections_screen.dart`, `backend/tests/api/test_customers_batch_collections_api.py`, `backend/tests/services/test_customer_batch_collections_service.py`, `mobile/test/local/local_customers_collections_batch_service_test.dart`, `mobile/test/widgets/daily_collections_screen_test.dart`
+- Updated: `backend/app/schemas/customer.py`, `backend/app/services/customer_service.py`, `backend/app/routers/customers.py`, `mobile/lib/services/payments_service.dart`, `mobile/lib/local/local_payments_service.dart`, `mobile/lib/screens/customer_list_screen.dart`, test fakes, this log, `STATE.md`
+
+### Task 04 — Atomic daily collection grid (2026-06-14)
+
+**Backend**
+- `GET /customers/collection-grid?from_date&to_date` returns active positive-balance customers with existing collection totals (max seven-day inclusive window, no future/older-than-six-days dates).
+- `POST /customers/collection-batch` accepts `{request_id, entries[]}`; canonical sorted-entry hash; row locks via `SELECT … FOR UPDATE`; all-or-nothing commit; idempotent retry via batch notes marker `__batch__|{request_id}|{hash}`; per-entry request IDs via UUID5.
+- Errors: `VALIDATION_ERROR`, `STALE_BALANCE`, `IDEMPOTENCY_CONFLICT`, `CUSTOMER_ARCHIVED`.
+
+**Mobile**
+- `PaymentsService.loadCollectionGrid` / `recordCollectionBatch` on API and local Drift paths.
+- `DailyCollectionsScreen`: seven-day grid (today default), search preserving controller state, existing totals + additional inputs, zero omission, confirmation summary, stale-balance reload preserving unsaved values.
+- Customers/Khata app bar action opens daily collections.
+
+**Focused verification (Task 04)**
+```bash
+PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
+(cd mobile && flutter test test/services/payments_service_test.dart test/local/local_customers_payments_service_test.dart test/local/local_customers_collections_service_test.dart test/local/local_customers_collections_batch_service_test.dart test/widgets/customer_list_screen_test.dart test/widgets/daily_collections_screen_test.dart)
+```
+Result: **55 pure + 37 mobile passed**. Postgres-backed API/service tests added but not executed here (Docker daemon unavailable).
+
 ## Acceptance Evidence
 
 | AC | Status | Evidence |
 |---|---|---|
 | AC5-AC8 (invoice entry/PDF/settlement) | complete | 71 focused tests; helper PDF layout tests; Cash/Credit label coverage |
-| AC1-AC4, AC9-AC14 | pending | later tasks |
+| AC9 batch collections | complete | 37 focused mobile tests; backend batch API/service tests added | API/service DB tests pending Postgres |
