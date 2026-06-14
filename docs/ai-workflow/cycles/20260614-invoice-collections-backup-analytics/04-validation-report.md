@@ -41,7 +41,7 @@ pass-with-minor-issues
 
 | Command | Result | Notes |
 |---|---|---|
-| `git status --short` | Clean at `c6139e5` | Untracked `.venv`, `02-plan/`, and top-level workflow refresh docs |
+| `git status --short` | Clean at `c07b3ef` | Untracked `.venv`, `02-plan/`, and top-level workflow refresh docs |
 | `git diff --check` | pass | No conflict markers |
 | `python3 tools/build_preinstalled_catalog.py` | pass | Only `generated_at` churn in catalog JSON |
 | `PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q` | **55 passed** | |

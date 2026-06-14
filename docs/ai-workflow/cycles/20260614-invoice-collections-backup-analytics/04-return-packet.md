@@ -17,7 +17,7 @@ Do not merge to `main` until Stage 5 authorization.
 - Worktree: `/Users/abhishek/python_venv/khata_app-upgrade`
 - Branch: `codex/khata-invoice-collections-backup-analytics`
 - Baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
-- Stage 3 HEAD: `c6139e5d88851175c0dad313a07146e8b89d78a4` (`docs(workflow): hand off khata upgrade validation`)
+- Stage 3 HEAD: `c07b3ef54e78ec6b9587bd7b16c7f0f30c84da2d` (`docs(workflow): hand off khata upgrade validation`)
 - Target: local-mode Android APK (`DATA_MODE=local`); API mode needs Postgres on `:55432`
 - Merge status: **not-started** (Stage 5 owner)
 
@@ -42,7 +42,7 @@ Do not merge to `main` until Stage 5 authorization.
 | `0bcfa3d` | 05 | Drive orchestration implementation |
 | `efd9a59` | 04 docs | Task 04 SHA record |
 | `ecf032c` | 05 docs | Task 05 SHA record |
-| `c6139e5` | 07 | Integration fixes + validation handoff |
+| `a69f093`, `c07b3ef` | 07 | Integration fixes + validation handoff |
 
 ## Acceptance Coverage Summary
 
