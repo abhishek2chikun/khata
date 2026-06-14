@@ -1,3 +1,4 @@
+import '../services/invoice_settlement.dart';
 import 'product.dart';
 import 'customer.dart';
 
@@ -13,7 +14,7 @@ class InvoiceDraft {
     this.gstFlag,
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
   })  : paymentState = paymentState,
-        paymentMode = paymentMode ?? paymentState;
+        paymentMode = paymentMode ?? settlementModeCredit;
 
   final Customer? customer;
   final String invoiceDate;
@@ -61,6 +62,7 @@ class InvoiceDraft {
       'customer_id': customer?.id,
       'invoice_date': invoiceDate,
       'payment_state': resolvedPaymentState,
+      'payment_mode': paymentMode,
       'paid_amount': paidAmount,
       'place_of_supply_state_code': _emptyToNull(placeOfSupplyStateCode),
       'notes': _emptyToNull(notes),
@@ -70,6 +72,15 @@ class InvoiceDraft {
   }
 
   String _resolvedPaymentState() {
+    if (paymentMode == settlementModeCash) {
+      return 'TOTAL_PAID';
+    }
+    if (paymentMode == settlementModeCredit) {
+      return resolveSettlementPaymentState(
+        settlementMode: paymentMode,
+        amountReceived: paidAmount,
+      );
+    }
     if (paymentMode == 'PAID') {
       return 'TOTAL_PAID';
     }

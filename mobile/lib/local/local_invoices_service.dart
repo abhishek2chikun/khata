@@ -9,8 +9,9 @@ import '../models/invoice_draft.dart';
 import '../models/invoice_quote.dart';
 import '../models/invoice_summary.dart';
 import '../services/invoices_service.dart';
-import '../services/money_validator.dart';
 import '../services/decimal_validators.dart';
+import '../services/invoice_settlement.dart';
+import '../services/money_validator.dart';
 import 'local_database.dart';
 import 'local_customers_service.dart';
 
@@ -87,7 +88,10 @@ class LocalInvoicesService implements InvoicesService {
                 status: 'ACTIVE',
                 paymentState: Value(prepared.paymentState),
                 paidAmount: Value(_normalizeDecimal(prepared.paidAmount)),
-                paymentMode: prepared.paymentState,
+                paymentMode: draft.paymentMode == settlementModeCash ||
+                        draft.paymentMode == settlementModeCredit
+                    ? draft.paymentMode
+                    : prepared.paymentState,
                 subtotal: _normalizeDecimal(prepared.totals.subtotal),
                 discountTotal: _normalizeDecimal(prepared.totals.discountTotal),
                 taxableTotal: _normalizeDecimal(prepared.totals.taxableTotal),
@@ -869,6 +873,7 @@ class LocalInvoicesService implements InvoicesService {
               productCategory: item.productCategory,
               productBuyerId: item.productBuyerId,
               productCompanyName: item.productCompanyName,
+              productHsnCode: item.productHsnCode,
               buyingPrice: double.parse(item.buyingPrice),
               sellingPrice: double.parse(item.sellingPrice),
               unit: item.unit,
@@ -991,6 +996,15 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   String _resolvePaymentState(InvoiceDraft draft) {
+    if (draft.paymentMode == settlementModeCash) {
+      return 'TOTAL_PAID';
+    }
+    if (draft.paymentMode == settlementModeCredit) {
+      return resolveSettlementPaymentState(
+        settlementMode: draft.paymentMode,
+        amountReceived: draft.paidAmount,
+      );
+    }
     if (draft.paymentMode == 'PAID') {
       return 'TOTAL_PAID';
     }

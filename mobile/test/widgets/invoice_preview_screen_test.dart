@@ -7,6 +7,7 @@ import 'package:internal_billing_khata_mobile/models/invoice_summary.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/screens/invoice_preview_screen.dart';
+import 'package:internal_billing_khata_mobile/services/invoice_settlement.dart';
 import 'package:internal_billing_khata_mobile/services/invoice_share_service.dart';
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/state/invoice_draft_controller.dart';
@@ -46,10 +47,10 @@ void main() {
     expect(find.byKey(const Key('grandTotal')), findsOneWidget);
   });
 
-  testWidgets('preview shows payment state and paid amount', (tester) async {
+  testWidgets('preview shows payment mode and amount received', (tester) async {
     final controller = await _makeController(
       quote: _quote,
-      paymentState: 'PARTIAL_PAID',
+      paymentMode: settlementModeCredit,
       paidAmount: 100,
     );
 
@@ -60,8 +61,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('paymentStateLabel')), findsOneWidget);
-    expect(find.byKey(const Key('paidAmountLabel')), findsOneWidget);
+    expect(find.byKey(const Key('paymentModeLabel')), findsOneWidget);
+    expect(find.byKey(const Key('amountReceivedLabel')), findsOneWidget);
   });
 
   testWidgets('preview hides internal cost buying price from invoice view',
@@ -80,8 +81,11 @@ void main() {
     expect(find.text('Buying price'), findsNothing);
   });
 
-  testWidgets('preview shows Credit payment state label', (tester) async {
-    final controller = await _makeController(quote: _quote, paymentState: 'CREDIT');
+  testWidgets('preview shows Credit payment mode label', (tester) async {
+    final controller = await _makeController(
+      quote: _quote,
+      paymentMode: settlementModeCredit,
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -90,15 +94,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('paymentStateLabel')), findsOneWidget);
+    expect(find.byKey(const Key('paymentModeLabel')), findsOneWidget);
     expect(find.textContaining('Credit'), findsOneWidget);
   });
 
-  testWidgets('preview shows Total Paid payment state without paid amount field',
+  testWidgets('preview shows Cash payment mode without amount received field',
       (tester) async {
     final controller = await _makeController(
       quote: _quote,
-      paymentState: 'TOTAL_PAID',
+      paymentMode: settlementModeCash,
       paidAmount: 236,
     );
 
@@ -109,8 +113,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('paymentStateLabel')), findsOneWidget);
-    expect(find.byKey(const Key('paidAmountLabel')), findsOneWidget);
+    expect(find.byKey(const Key('paymentModeLabel')), findsOneWidget);
+    expect(find.textContaining('Cash'), findsOneWidget);
+    expect(find.byKey(const Key('amountReceivedLabel')), findsNothing);
   });
 
   testWidgets('post-creation shows share buttons when invoice is created',
@@ -175,7 +180,7 @@ void main() {
 
 Future<InvoiceDraftController> _makeController({
   required InvoiceQuote quote,
-  String paymentState = 'CREDIT',
+  String paymentMode = settlementModeCredit,
   double paidAmount = 0,
 }) async {
   final service = _StaticInvoicesService(quoteResponse: quote);
@@ -194,9 +199,9 @@ Future<InvoiceDraftController> _makeController({
     invoicesService: service,
     initialCustomer: customer,
   );
-  controller.updatePaymentState(paymentState);
+  controller.updateSettlementMode(paymentMode);
   if (paidAmount > 0) {
-    controller.updatePaidAmount(paidAmount);
+    controller.updateAmountReceived(paidAmount);
   }
   controller.updateItemProduct(0, _product);
   await controller.requestQuote();

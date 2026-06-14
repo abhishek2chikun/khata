@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
@@ -14,6 +15,7 @@ import 'package:internal_billing_khata_mobile/screens/create_invoice_screen.dart
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
+import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 
 void main() {
   testWidgets(
@@ -42,8 +44,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -56,7 +61,7 @@ void main() {
     expect(find.text('Invoice preview'), findsOneWidget);
     expect(find.text('Blue Pen'), findsOneWidget);
     expect(find.text('Subtotal: 200.00'), findsOneWidget);
-    expect(find.text('Discount: 0.00'), findsOneWidget);
+    expect(find.text('Discount: 0.00'), findsNothing);
     expect(find.text('Taxable total: 200.00'), findsOneWidget);
     expect(find.text('GST total: 36.00'), findsOneWidget);
     expect(find.text('Grand total: 236.00'), findsOneWidget);
@@ -90,8 +95,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -406,8 +414,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -428,6 +439,7 @@ void main() {
           productsService: FakeProductsService(products: <Product>[_product]),
           customersService:
               FakeCustomersService(customers: <Customer>[_customer]),
+          companyProfileService: _GstCompanyProfileService(),
         ),
       ),
     );
@@ -438,8 +450,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -468,6 +483,7 @@ void main() {
               FakeProductsService(products: <Product>[_product, _product2]),
           customersService:
               FakeCustomersService(customers: <Customer>[_customer]),
+          companyProfileService: _GstCompanyProfileService(),
         ),
       ),
     );
@@ -478,8 +494,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -487,8 +506,11 @@ void main() {
     await tester.tap(find.byKey(const Key('addItemButton')));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-1')));
     await tester.tap(find.byKey(const Key('productPickerField-1')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Red');
+    await tester.pump();
     await tester.tap(find.text('Red Pen').last);
     await tester.pumpAndSettle();
 
@@ -519,6 +541,7 @@ void main() {
               FakeProductsService(products: <Product>[_product, _product2]),
           customersService:
               FakeCustomersService(customers: <Customer>[_customer]),
+          companyProfileService: _GstCompanyProfileService(),
         ),
       ),
     );
@@ -529,8 +552,11 @@ void main() {
     await tester.tap(find.text('ABC Stores').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
     await tester.tap(find.byKey(const Key('productPickerField-0')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
     await tester.tap(find.text('Blue Pen').last);
     await tester.pumpAndSettle();
 
@@ -538,8 +564,11 @@ void main() {
     await tester.tap(find.byKey(const Key('addItemButton')));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-1')));
     await tester.tap(find.byKey(const Key('productPickerField-1')));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Red');
+    await tester.pump();
     await tester.tap(find.text('Red Pen').last);
     await tester.pumpAndSettle();
 
@@ -559,9 +588,7 @@ void main() {
     expect(tester.widget<TextField>(gstField1).controller?.text, isEmpty);
   });
 
-  testWidgets(
-      'payment state selection shows Credit Total Paid Partial Paid options',
-      (tester) async {
+  testWidgets('payment mode control shows Cash and Credit options', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
@@ -574,20 +601,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final paymentStateDropdown = find.byKey(const Key('paymentStateField'));
-    expect(paymentStateDropdown, findsOneWidget);
-
-    await tester.tap(paymentStateDropdown);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Credit'), findsWidgets);
-    expect(find.text('Total Paid'), findsOneWidget);
-    expect(find.text('Partial Paid'), findsOneWidget);
+    expect(find.byKey(const Key('paymentModeField')), findsOneWidget);
+    expect(find.text('Cash'), findsOneWidget);
+    expect(find.text('Credit'), findsOneWidget);
   });
 
-  testWidgets(
-      'partial paid amount field appears only when Partial Paid is selected',
-      (tester) async {
+  testWidgets('amount received field appears only for Credit', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CreateInvoiceScreen(
@@ -600,14 +619,62 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('paidAmountField')), findsNothing);
+    expect(find.byKey(const Key('amountReceivedField')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('paymentStateField')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Partial Paid').last);
+    await tester.tap(find.text('Cash').last);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('paidAmountField')), findsOneWidget);
+    expect(find.byKey(const Key('amountReceivedField')), findsNothing);
+  });
+
+  testWidgets('non-gst invoice hides gst controls and clears overrides on switch',
+      (tester) async {
+    final invoicesService = FakeInvoicesService(quoteResponse: _quote);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CreateInvoiceScreen(
+          invoicesService: invoicesService,
+          productsService: FakeProductsService(products: <Product>[_product]),
+          customersService:
+              FakeCustomersService(customers: <Customer>[_customer]),
+          companyProfileService: _GstCompanyProfileService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('customerPickerField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ABC Stores').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
+    await tester.tap(find.byKey(const Key('productPickerField-0')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+    await tester.pump();
+    await tester.tap(find.text('Blue Pen').last);
+    await tester.pumpAndSettle();
+
+    final gstRateField = find.byKey(const Key('gstRateField-0'));
+    expect(gstRateField, findsOneWidget);
+    await tester.enterText(gstRateField, '12');
+    await tester.pump();
+
+    await tester.ensureVisible(find.byKey(const Key('invoiceGstFlagSwitch')));
+    await tester.tap(find.byKey(const Key('invoiceGstFlagSwitch')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gstRateField-0')), findsNothing);
+    expect(find.byKey(const Key('applyGstToAllField')), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('invoiceGstFlagSwitch')));
+    await tester.tap(find.byKey(const Key('invoiceGstFlagSwitch')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('gstRateField-0')), findsOneWidget);
+    expect(find.byKey(const Key('applyGstToAllField')), findsOneWidget);
   });
 
   testWidgets('invoice date is initialized from datetime defaulting to now',
@@ -728,8 +795,11 @@ Future<void> _fillDraft(WidgetTester tester) async {
   await tester.tap(find.text('ABC Stores').last);
   await tester.pumpAndSettle();
 
+  await tester.ensureVisible(find.byKey(const Key('productPickerField-0')));
   await tester.tap(find.byKey(const Key('productPickerField-0')));
   await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('productSearchField')), 'Blue');
+  await tester.pump();
   await tester.tap(find.text('Blue Pen').last);
   await tester.pumpAndSettle();
 
@@ -1072,6 +1142,36 @@ class FakeCustomersService implements CustomersService {
   @override
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate}) {
+    throw UnimplementedError();
+  }
+}
+
+class _GstCompanyProfileService implements CompanyProfileService {
+  @override
+  Future<CompanyProfile> fetchCompanyProfile() async {
+    return const CompanyProfile(
+      id: 'company-1',
+      name: 'Khata Co',
+      address: 'Main Road',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      stateCode: '27',
+      gstin: '27ABCDE1234F1Z5',
+      gstFlag: true,
+      phone: null,
+      email: null,
+      bankName: null,
+      bankAccount: null,
+      bankIfsc: null,
+      bankBranch: null,
+      jurisdiction: null,
+      isActive: true,
+    );
+  }
+
+  @override
+  Future<CompanyProfile> upsertCompanyProfile(
+      UpsertCompanyProfileInput input) {
     throw UnimplementedError();
   }
 }

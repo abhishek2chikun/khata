@@ -5,6 +5,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/invoice_detail.dart';
+import 'decimal_validators.dart';
+import 'invoice_settlement.dart';
 
 PdfPageFormat invoicePdfPageFormatForItemCount(int itemCount) {
   return itemCount <= 15 ? PdfPageFormat.a5 : PdfPageFormat.a4;
@@ -20,6 +22,39 @@ bool invoicePdfShowsCanceledBanner({required String status}) =>
     status == 'CANCELED';
 
 bool invoicePdfShowsTaxableTotal({required bool gstFlag}) => gstFlag;
+
+bool invoicePdfShowsHistoricalDiscount(double discountTotal) =>
+    discountTotal > 0;
+
+String invoicePdfFormatQuantity(double quantity) =>
+    formatInvoiceQuantity(quantity);
+
+String invoicePdfFormatUnitPrice(double price) => canonicalUnitPriceString(price);
+
+List<String> invoicePdfTableHeaders({
+  required bool gstFlag,
+  required bool isInterState,
+}) {
+  if (!gstFlag) {
+    return <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Total'];
+  }
+  final headers = <String>[
+    '#',
+    'Item',
+    'HSN',
+    'Qty',
+    'Rate',
+    'Taxable',
+    'GST%',
+  ];
+  if (isInterState) {
+    headers.add('IGST');
+  } else {
+    headers.addAll(<String>['CGST', 'SGST']);
+  }
+  headers.add('Total');
+  return headers;
+}
 
 class InvoicePdfService {
   InvoicePdfService._(this._outputDirectory);
@@ -170,8 +205,12 @@ class InvoicePdfService {
               children: <pw.Widget>[
                 _compactText('Invoice #${invoice.invoiceNumber}', bold: true),
                 _compactText('Date: ${invoice.invoiceDate}'),
-                _compactText('Status: ${invoice.status}'),
-                _compactText('Payment: ${invoice.paymentState}'),
+                _compactText(
+                  'Payment: ${invoiceSettlementLabel(
+                    paymentMode: invoice.paymentMode,
+                    paymentState: invoice.paymentState,
+                  )}',
+                ),
               ],
             ),
           ),
@@ -207,40 +246,30 @@ class InvoicePdfService {
         border: pw.Border.all(color: PdfColors.grey400),
       ),
       child: _compactText(
-        'Place of Supply: ${invoice.placeOfSupplyState} (${invoice.placeOfSupplyStateCode})  |  Tax Regime: ${invoice.taxRegime}',
+        'Place of Supply: ${invoice.placeOfSupplyState} (${invoice.placeOfSupplyStateCode})',
       ),
     );
   }
 
   pw.Widget _buildCompactItemTable(InvoiceDetail invoice, bool isGst) {
     final isInterState = invoice.taxRegime == 'INTER_STATE';
-    final headers = isGst
-        ? <String>[
-            '#',
-            'Item',
-            'Code',
-            'Qty',
-            'Rate',
-            'Disc',
-            'Taxable',
-            'GST%',
-            if (isInterState) 'IGST' else ...<String>['CGST', 'SGST'],
-            'Total',
-          ]
-        : <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Disc', 'Total'];
+    final headers = invoicePdfTableHeaders(
+      gstFlag: isGst,
+      isInterState: isInterState,
+    );
     final rows = <List<String>>[];
     for (var index = 0; index < invoice.items.length; index += 1) {
       final item = invoice.items[index];
+      final itemName = item.productItemName.isNotEmpty
+          ? item.productItemName
+          : item.productName;
       rows.add(isGst
           ? <String>[
               '${index + 1}',
-              item.productItemName.isNotEmpty
-                  ? item.productItemName
-                  : item.productName,
-              item.productItemNumber,
-              item.quantity.toStringAsFixed(2),
-              item.unitPriceExclTax.toStringAsFixed(2),
-              item.discountPercent.toStringAsFixed(1),
+              itemName,
+              item.productHsnCode ?? '',
+              invoicePdfFormatQuantity(item.quantity),
+              invoicePdfFormatUnitPrice(item.unitPriceExclTax),
               item.taxableAmount.toStringAsFixed(2),
               item.gstRate.toStringAsFixed(1),
               if (isInterState)
@@ -253,13 +282,10 @@ class InvoicePdfService {
             ]
           : <String>[
               '${index + 1}',
-              item.productItemName.isNotEmpty
-                  ? item.productItemName
-                  : item.productName,
+              itemName,
               item.productItemNumber,
-              item.quantity.toStringAsFixed(2),
-              item.unitPriceInclTax.toStringAsFixed(2),
-              item.discountPercent.toStringAsFixed(1),
+              invoicePdfFormatQuantity(item.quantity),
+              invoicePdfFormatUnitPrice(item.unitPriceInclTax),
               item.lineTotal.toStringAsFixed(2),
             ]);
     }
@@ -273,14 +299,21 @@ class InvoicePdfService {
       headerPadding: const pw.EdgeInsets.all(1.5),
       cellPadding: const pw.EdgeInsets.all(1.5),
       cellAlignment: pw.Alignment.centerRight,
-      cellAlignments: <int, pw.Alignment>{1: pw.Alignment.centerLeft},
+      cellAlignments: <int, pw.Alignment>{
+        0: pw.Alignment.center,
+        1: pw.Alignment.centerLeft,
+      },
+      columnWidths: _compactColumnWidths(
+        isGst: isGst,
+        isInterState: isInterState,
+      ),
     );
   }
 
   pw.Widget _buildCompactTotals(InvoiceDetail invoice, bool isGst) {
     final parts = <String>[
       'Subtotal: ${invoice.subtotal.toStringAsFixed(2)}',
-      if (invoice.discountTotal > 0)
+      if (invoicePdfShowsHistoricalDiscount(invoice.discountTotal))
         'Discount: ${invoice.discountTotal.toStringAsFixed(2)}',
       if (isGst) 'Taxable: ${invoice.taxableTotal.toStringAsFixed(2)}',
       if (isGst) 'GST: ${invoice.gstTotal.toStringAsFixed(2)}',
@@ -325,7 +358,10 @@ class InvoicePdfService {
             fontSize: fontSize,
           ),
           _compactText(
-            'Payment: ${invoice.paymentState}${invoice.paidAmount > 0 ? ' | Paid: ${invoice.paidAmount.toStringAsFixed(2)} | Balance: ${(invoice.grandTotal - invoice.paidAmount).toStringAsFixed(2)}' : ''}',
+            'Payment: ${invoiceSettlementLabel(
+              paymentMode: invoice.paymentMode,
+              paymentState: invoice.paymentState,
+            )}${invoice.paidAmount > 0 ? ' | Paid: ${invoice.paidAmount.toStringAsFixed(2)} | Balance: ${(invoice.grandTotal - invoice.paidAmount).toStringAsFixed(2)}' : ''}',
             fontSize: fontSize,
           ),
           if (bankParts.isNotEmpty)
@@ -434,6 +470,13 @@ class InvoicePdfService {
               children: <pw.Widget>[
                 _infoRow('Invoice No:', '#${invoice.invoiceNumber}'),
                 _infoRow('Date:', invoice.invoiceDate),
+                _infoRow(
+                  'Payment:',
+                  invoiceSettlementLabel(
+                    paymentMode: invoice.paymentMode,
+                    paymentState: invoice.paymentState,
+                  ),
+                ),
               ],
             ),
           ),
@@ -441,10 +484,11 @@ class InvoicePdfService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: <pw.Widget>[
-                _infoRow('Status:', invoice.status),
-                _infoRow('Payment:', invoice.paymentState),
-                if (invoice.paymentMode.isNotEmpty)
-                  _infoRow('Mode:', invoice.paymentMode),
+                if (invoice.paidAmount > 0)
+                  _infoRow(
+                    'Received:',
+                    invoice.paidAmount.toStringAsFixed(2),
+                  ),
               ],
             ),
           ),
@@ -546,138 +590,102 @@ class InvoicePdfService {
               style: pw.TextStyle(fontSize: 9),
             ),
           ),
-          pw.Expanded(
-            child: pw.Text(
-              'Tax Regime: ${invoice.taxRegime}',
-              style: pw.TextStyle(fontSize: 9),
-            ),
-          ),
         ],
       ),
     );
   }
 
   pw.Widget _buildItemTable(InvoiceDetail invoice, bool isGst) {
-    if (!isGst) {
-      final headers = <String>[
-        '#',
-        'Item',
-        'Code',
-        'Qty',
-        'Rate',
-        'Disc%',
-        'Total'
-      ];
-      final headerWidgets = headers
-          .map((h) => pw.Padding(
-                padding: const pw.EdgeInsets.all(2.5),
-                child: pw.Text(
-                  h,
-                  style:
-                      pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
-                ),
-              ))
-          .toList();
-      final rows = <List<pw.Widget>>[];
-      for (var i = 0; i < invoice.items.length; i++) {
-        final item = invoice.items[i];
-        rows.add(<pw.Widget>[
-          _cell('${i + 1}', align: pw.Alignment.centerRight),
-          _cell(item.productItemName.isNotEmpty
-              ? item.productItemName
-              : item.productName),
-          _cell(item.productItemNumber),
-          _cell(item.quantity.toStringAsFixed(2),
-              align: pw.Alignment.centerRight),
-          _cell(item.unitPriceInclTax.toStringAsFixed(2),
-              align: pw.Alignment.centerRight),
-          _cell(item.discountPercent.toStringAsFixed(1),
-              align: pw.Alignment.centerRight),
-          _cell(item.lineTotal.toStringAsFixed(2),
-              align: pw.Alignment.centerRight),
-        ]);
-      }
-      return pw.Table(
-        border: pw.TableBorder.all(color: PdfColors.grey400),
-        columnWidths: <int, pw.FlexColumnWidth>{
-          for (var i = 0; i < headers.length; i++)
-            i: const pw.FlexColumnWidth(2),
-        },
-        children: <pw.TableRow>[
-          pw.TableRow(
-            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-            children: headerWidgets,
-          ),
-          ...rows.map((row) => pw.TableRow(children: row)),
-        ],
-      );
-    }
-
     final isInterState = invoice.taxRegime == 'INTER_STATE';
-    final headers = <String>[
-      '#',
-      'Item',
-      'HSN',
-      'Qty',
-      'Rate',
-      'Disc%',
-      'Taxable',
-      'GST%',
-    ];
-    if (!isInterState) {
-      headers.addAll(['CGST', 'SGST']);
-    } else {
-      headers.add('IGST');
-    }
-    headers.add('Total');
-
+    final headers = invoicePdfTableHeaders(
+      gstFlag: isGst,
+      isInterState: isInterState,
+    );
     final headerWidgets = headers
-        .map((h) => pw.Padding(
-              padding: const pw.EdgeInsets.all(2.5),
-              child: pw.Text(
-                h,
-                style:
-                    pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
-              ),
-            ))
+        .map(
+          (header) => pw.Padding(
+            padding: const pw.EdgeInsets.all(2.5),
+            child: pw.Text(
+              header,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
+            ),
+          ),
+        )
         .toList();
-
     final rows = <List<pw.Widget>>[];
-    for (var i = 0; i < invoice.items.length; i++) {
-      final item = invoice.items[i];
+    for (var index = 0; index < invoice.items.length; index += 1) {
+      final item = invoice.items[index];
+      final itemName = item.productItemName.isNotEmpty
+          ? item.productItemName
+          : item.productName;
+      if (!isGst) {
+        rows.add(<pw.Widget>[
+          _serialCell('${index + 1}'),
+          _cell(itemName),
+          _cell(item.productItemNumber),
+          _cell(
+            invoicePdfFormatQuantity(item.quantity),
+            align: pw.Alignment.centerRight,
+          ),
+          _cell(
+            invoicePdfFormatUnitPrice(item.unitPriceInclTax),
+            align: pw.Alignment.centerRight,
+          ),
+          _cell(
+            item.lineTotal.toStringAsFixed(2),
+            align: pw.Alignment.centerRight,
+          ),
+        ]);
+        continue;
+      }
       final row = <pw.Widget>[
-        _cell('${i + 1}', align: pw.Alignment.centerRight),
-        _cell(item.productItemName.isNotEmpty
-            ? item.productItemName
-            : item.productName),
-        _cell(item.productItemNumber),
-        _cell(item.quantity.toStringAsFixed(2),
-            align: pw.Alignment.centerRight),
-        _cell(item.unitPriceExclTax.toStringAsFixed(2),
-            align: pw.Alignment.centerRight),
-        _cell(item.discountPercent.toStringAsFixed(1),
-            align: pw.Alignment.centerRight),
-        _cell(item.taxableAmount.toStringAsFixed(2),
-            align: pw.Alignment.centerRight),
-        _cell(item.gstRate.toStringAsFixed(1), align: pw.Alignment.centerRight),
+        _serialCell('${index + 1}'),
+        _cell(itemName),
+        _cell(item.productHsnCode ?? ''),
+        _cell(
+          invoicePdfFormatQuantity(item.quantity),
+          align: pw.Alignment.centerRight,
+        ),
+        _cell(
+          invoicePdfFormatUnitPrice(item.unitPriceExclTax),
+          align: pw.Alignment.centerRight,
+        ),
+        _cell(
+          item.taxableAmount.toStringAsFixed(2),
+          align: pw.Alignment.centerRight,
+        ),
+        _cell(
+          item.gstRate.toStringAsFixed(1),
+          align: pw.Alignment.centerRight,
+        ),
       ];
       if (!isInterState) {
-        row.add(_cell(item.cgstAmount.toStringAsFixed(2),
-            align: pw.Alignment.centerRight));
-        row.add(_cell(item.sgstAmount.toStringAsFixed(2),
-            align: pw.Alignment.centerRight));
+        row.add(_cell(
+          item.cgstAmount.toStringAsFixed(2),
+          align: pw.Alignment.centerRight,
+        ));
+        row.add(_cell(
+          item.sgstAmount.toStringAsFixed(2),
+          align: pw.Alignment.centerRight,
+        ));
       } else {
-        row.add(_cell(item.igstAmount.toStringAsFixed(2),
-            align: pw.Alignment.centerRight));
+        row.add(_cell(
+          item.igstAmount.toStringAsFixed(2),
+          align: pw.Alignment.centerRight,
+        ));
       }
-      row.add(_cell(item.lineTotal.toStringAsFixed(2),
-          align: pw.Alignment.centerRight));
+      row.add(_cell(
+        item.lineTotal.toStringAsFixed(2),
+        align: pw.Alignment.centerRight,
+      ));
       rows.add(row);
     }
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400),
-      columnWidths: _buildColumnWidths(isInterState),
+      columnWidths: isGst
+          ? _buildColumnWidths(isInterState)
+          : _buildNonGstColumnWidths(),
       children: <pw.TableRow>[
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
@@ -688,24 +696,68 @@ class InvoicePdfService {
     );
   }
 
-  Map<int, pw.FlexColumnWidth> _buildColumnWidths(bool isInterState) {
-    final widths = <int, pw.FlexColumnWidth>{
-      0: const pw.FlexColumnWidth(1.2),
-      1: const pw.FlexColumnWidth(4),
+  Map<int, pw.TableColumnWidth> _compactColumnWidths({
+    required bool isGst,
+    required bool isInterState,
+  }) {
+    if (!isGst) {
+      return <int, pw.TableColumnWidth>{
+        0: const pw.FixedColumnWidth(18),
+        1: const pw.FlexColumnWidth(4),
+        2: const pw.FlexColumnWidth(2),
+        3: const pw.FlexColumnWidth(1.5),
+        4: const pw.FlexColumnWidth(2),
+        5: const pw.FlexColumnWidth(2),
+      };
+    }
+    final widths = <int, pw.TableColumnWidth>{
+      0: const pw.FixedColumnWidth(18),
+      1: const pw.FlexColumnWidth(3.5),
       2: const pw.FlexColumnWidth(2),
-      3: const pw.FlexColumnWidth(2),
+      3: const pw.FlexColumnWidth(1.5),
       4: const pw.FlexColumnWidth(2),
-      5: const pw.FlexColumnWidth(1.5),
-      6: const pw.FlexColumnWidth(2),
-      7: const pw.FlexColumnWidth(1.5),
+      5: const pw.FlexColumnWidth(2),
+      6: const pw.FlexColumnWidth(1.5),
     };
     if (!isInterState) {
-      widths[8] = const pw.FlexColumnWidth(2);
-      widths[9] = const pw.FlexColumnWidth(2);
-      widths[10] = const pw.FlexColumnWidth(2.5);
+      widths[7] = const pw.FlexColumnWidth(1.8);
+      widths[8] = const pw.FlexColumnWidth(1.8);
+      widths[9] = const pw.FlexColumnWidth(2.2);
     } else {
+      widths[7] = const pw.FlexColumnWidth(2);
+      widths[8] = const pw.FlexColumnWidth(2.2);
+    }
+    return widths;
+  }
+
+  Map<int, pw.FlexColumnWidth> _buildNonGstColumnWidths() {
+    return <int, pw.FlexColumnWidth>{
+      0: const pw.FlexColumnWidth(1.8),
+      1: const pw.FlexColumnWidth(4),
+      2: const pw.FlexColumnWidth(2),
+      3: const pw.FlexColumnWidth(1.5),
+      4: const pw.FlexColumnWidth(2.2),
+      5: const pw.FlexColumnWidth(2.2),
+    };
+  }
+
+  Map<int, pw.FlexColumnWidth> _buildColumnWidths(bool isInterState) {
+    final widths = <int, pw.FlexColumnWidth>{
+      0: const pw.FlexColumnWidth(1.8),
+      1: const pw.FlexColumnWidth(4),
+      2: const pw.FlexColumnWidth(2),
+      3: const pw.FlexColumnWidth(1.5),
+      4: const pw.FlexColumnWidth(2.2),
+      5: const pw.FlexColumnWidth(2),
+      6: const pw.FlexColumnWidth(1.5),
+    };
+    if (!isInterState) {
+      widths[7] = const pw.FlexColumnWidth(2);
       widths[8] = const pw.FlexColumnWidth(2);
       widths[9] = const pw.FlexColumnWidth(2.5);
+    } else {
+      widths[7] = const pw.FlexColumnWidth(2);
+      widths[8] = const pw.FlexColumnWidth(2.5);
     }
     return widths;
   }
@@ -718,9 +770,11 @@ class InvoicePdfService {
         child: pw.Column(
           children: <pw.Widget>[
             _totalRow('Subtotal:', invoice.subtotal.toStringAsFixed(2)),
-            if (invoice.discountTotal > 0)
+            if (invoicePdfShowsHistoricalDiscount(invoice.discountTotal))
               _totalRow(
-                  'Discount:', '-${invoice.discountTotal.toStringAsFixed(2)}'),
+                'Discount:',
+                '-${invoice.discountTotal.toStringAsFixed(2)}',
+              ),
             if (invoicePdfShowsTaxableTotal(gstFlag: isGst))
               _totalRow('Taxable:', invoice.taxableTotal.toStringAsFixed(2)),
             if (isGst) _totalRow('GST:', invoice.gstTotal.toStringAsFixed(2)),
@@ -792,6 +846,23 @@ class InvoicePdfService {
       child: pw.Align(
         alignment: align ?? pw.Alignment.centerLeft,
         child: pw.Text(text, style: pw.TextStyle(fontSize: 7)),
+      ),
+    );
+  }
+
+  pw.Widget _serialCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(2.5),
+      child: pw.SizedBox(
+        width: 18,
+        child: pw.Align(
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            text,
+            maxLines: 1,
+            style: pw.TextStyle(fontSize: 7),
+          ),
+        ),
       ),
     );
   }

@@ -373,6 +373,10 @@ void main() {
   test('gst invoice includes tax invoice title and gst columns', () {
     expect(invoicePdfDocumentTitle(gstFlag: true), 'TAX INVOICE');
     expect(invoicePdfIncludesGstSupplySection(gstFlag: true), isTrue);
+    expect(
+      invoicePdfTableHeaders(gstFlag: true, isInterState: false),
+      contains('HSN'),
+    );
   });
 
   test('non-gst invoice omits gst-specific content', () {
@@ -380,6 +384,91 @@ void main() {
     expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);
     expect(invoicePdfShowsTaxableTotal(gstFlag: false), isFalse);
     expect(invoicePdfShowsTaxableTotal(gstFlag: true), isTrue);
+    final headers = invoicePdfTableHeaders(gstFlag: false, isInterState: false);
+    expect(headers, isNot(contains('HSN')));
+    expect(headers, isNot(contains('GST%')));
+  });
+
+  test('pdf helpers format integer quantity and three-decimal price', () {
+    expect(invoicePdfFormatQuantity(2), '2');
+    expect(invoicePdfFormatQuantity(2.5), '2.5');
+    expect(invoicePdfFormatUnitPrice(12.3), '12.300');
+  });
+
+  test('historical discount summary remains when discount_total is positive', () {
+    expect(invoicePdfShowsHistoricalDiscount(10), isTrue);
+    expect(invoicePdfShowsHistoricalDiscount(0), isFalse);
+  });
+
+  test('gst pdf table uses hsn snapshot in headers and row formatting', () {
+    final headers =
+        invoicePdfTableHeaders(gstFlag: true, isInterState: false);
+    expect(headers, contains('HSN'));
+    expect(headers, isNot(contains('Disc')));
+
+    expect(
+      invoicePdfFormatUnitPrice(100),
+      '100.000',
+    );
+    expect(invoicePdfFormatQuantity(10), '10');
+    expect(invoicePdfFormatQuantity(11), '11');
+  });
+
+  test('non-gst pdf table omits hsn and gst columns', () {
+    final headers =
+        invoicePdfTableHeaders(gstFlag: false, isInterState: false);
+    expect(headers, isNot(contains('HSN')));
+    expect(headers, isNot(contains('GST%')));
+    expect(headers, contains('Code'));
+  });
+
+  test('legacy discounted invoice keeps compact discount summary', () async {
+    expect(invoicePdfShowsHistoricalDiscount(23.6), isTrue);
+    final base = _sampleInvoice(
+      grandTotal: 212.4,
+      items: [
+        InvoiceDetailItem(
+          productId: 'prod-1',
+          productName: 'Blue Pen',
+          productItemNumber: 'PEN-1',
+          productItemName: 'Blue Pen',
+          productHsnCode: '960810',
+          unit: 'pcs',
+          quantity: 2,
+          unitPriceExclTax: 100,
+          unitPriceInclTax: 118,
+          gstRate: 18,
+          discountPercent: 10,
+          discountAmount: 23.6,
+          taxableAmount: 180,
+          cgstAmount: 16.2,
+          sgstAmount: 16.2,
+          gstAmount: 32.4,
+          lineTotal: 212.4,
+        ),
+      ],
+    );
+    final invoice = InvoiceDetail(
+      id: base.id,
+      customerId: base.customerId,
+      invoiceNumber: base.invoiceNumber,
+      status: base.status,
+      paymentState: base.paymentState,
+      paymentMode: base.paymentMode,
+      customerName: base.customerName,
+      invoiceDate: base.invoiceDate,
+      grandTotal: 212.4,
+      discountTotal: 23.6,
+      taxableTotal: 180,
+      gstTotal: 32.4,
+      subtotal: 200,
+      notes: base.notes,
+      cancelReason: base.cancelReason,
+      items: base.items,
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final file = File(path);
+    expect(await file.exists(), isTrue);
   });
 
   test('canceled invoice shows canceled marker', () {

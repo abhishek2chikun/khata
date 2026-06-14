@@ -8,6 +8,8 @@ import '../models/invoice_draft.dart';
 import '../models/invoice_quote.dart';
 import '../models/product.dart';
 import '../models/customer.dart';
+import '../services/decimal_validators.dart';
+import '../services/invoice_settlement.dart';
 import '../services/invoices_service.dart';
 import '../services/payments_service.dart';
 
@@ -27,6 +29,7 @@ class InvoiceDraftController extends ChangeNotifier {
   bool _isSubmitting = false;
   String? _quoteErrorMessage;
   String? _submitErrorMessage;
+  String? _amountReceivedError;
   String? _requestId;
 
   InvoiceDraft get draft => _draft;
@@ -37,6 +40,7 @@ class InvoiceDraftController extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   String? get quoteErrorMessage => _quoteErrorMessage;
   String? get submitErrorMessage => _submitErrorMessage;
+  String? get amountReceivedError => _amountReceivedError;
   String? get requestId => _requestId;
 
   void updateCustomer(Customer? customer) {
@@ -48,7 +52,34 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   void updatePaymentMode(String paymentMode) {
-    _updateDraft(_draft.copyWith(paymentMode: paymentMode));
+    _updateDraft(
+      _draft.copyWith(
+        paymentMode: paymentMode,
+        paymentState: paymentMode == settlementModeCash
+            ? 'TOTAL_PAID'
+            : paymentMode == settlementModeCredit
+                ? 'CREDIT'
+                : paymentMode,
+        paidAmount: paymentMode == settlementModeCash ? 0 : _draft.paidAmount,
+      ),
+    );
+    if (paymentMode == settlementModeCash) {
+      _amountReceivedError = null;
+    }
+  }
+
+  void updateSettlementMode(String settlementMode) {
+    updatePaymentMode(settlementMode);
+  }
+
+  void updateAmountReceived(double amount) {
+    final error = validateCreditAmountReceived(
+      amount: amount,
+      grandTotal: _quote?.totals.grandTotal,
+    );
+    _amountReceivedError = error;
+    _updateDraft(_draft.copyWith(paidAmount: amount));
+    notifyListeners();
   }
 
   void updatePlaceOfSupplyStateCode(String value) {
@@ -82,7 +113,12 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   void updateItemQuantity(int index, double quantity) {
-    _updateItem(index, _draft.items[index].copyWith(quantity: quantity));
+    _updateItem(
+      index,
+      _draft.items[index].copyWith(
+        quantity: validatePositiveIntegralQuantity(quantity),
+      ),
+    );
   }
 
   void updateItemPricingMode(int index, String pricingMode) {
@@ -92,8 +128,10 @@ class InvoiceDraftController extends ChangeNotifier {
   void updateItemUnitPrice(int index, double? unitPrice) {
     _updateItem(
       index,
-      _draft.items[index]
-          .copyWith(unitPrice: unitPrice, clearUnitPrice: unitPrice == null),
+      _draft.items[index].copyWith(
+        unitPrice: unitPrice == null ? null : validateUnitPrice(unitPrice),
+        clearUnitPrice: unitPrice == null,
+      ),
     );
   }
 
@@ -122,7 +160,14 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   void setGstFlag(bool value) {
-    _updateDraft(_draft.copyWith(gstFlag: value));
+    final items = _draft.items
+        .map(
+          (item) => value
+              ? item
+              : item.copyWith(gstRate: 0, clearGstRate: false),
+        )
+        .toList();
+    _updateDraft(_draft.copyWith(gstFlag: value, items: items));
   }
 
   void initializeGstFlag(bool value) {
@@ -132,12 +177,19 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   void updatePaymentState(String paymentState) {
+    final settlementMode = paymentState == 'TOTAL_PAID'
+        ? settlementModeCash
+        : settlementModeCredit;
     _updateDraft(
-        _draft.copyWith(paymentState: paymentState, paymentMode: paymentState));
+      _draft.copyWith(
+        paymentState: paymentState,
+        paymentMode: settlementMode,
+      ),
+    );
   }
 
   void updatePaidAmount(double paidAmount) {
-    _updateDraft(_draft.copyWith(paidAmount: paidAmount));
+    updateAmountReceived(paidAmount);
   }
 
   void applyGstToAllLines(double? gstRate) {
@@ -151,12 +203,34 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   Future<bool> requestQuote() async {
+    if (_amountReceivedError != null) {
+      _quoteErrorMessage = _amountReceivedError;
+      notifyListeners();
+      return false;
+    }
     _isQuoting = true;
     _quoteErrorMessage = null;
     notifyListeners();
 
     try {
       _quote = await _invoicesService.quoteInvoice(_draft);
+      if (_draft.paymentMode == settlementModeCash) {
+        _draft = _draft.copyWith(
+          paidAmount: _quote!.totals.grandTotal,
+          paymentState: 'TOTAL_PAID',
+        );
+      } else {
+        final error = validateCreditAmountReceived(
+          amount: _draft.paidAmount,
+          grandTotal: _quote!.totals.grandTotal,
+        );
+        _amountReceivedError = error;
+        if (error != null) {
+          _quoteErrorMessage = error;
+          return false;
+        }
+      }
+      notifyListeners();
       return true;
     } on Object catch (error) {
       _quoteErrorMessage = _messageForError(error, forSubmit: false);
@@ -168,6 +242,17 @@ class InvoiceDraftController extends ChangeNotifier {
   }
 
   Future<bool> submitInvoice() async {
+    if (_amountReceivedError != null) {
+      _submitErrorMessage = _amountReceivedError;
+      notifyListeners();
+      return false;
+    }
+    if (_quote != null && _draft.paymentMode == settlementModeCash) {
+      _draft = _draft.copyWith(
+        paidAmount: _quote!.totals.grandTotal,
+        paymentState: 'TOTAL_PAID',
+      );
+    }
     _isSubmitting = true;
     _submitErrorMessage = null;
     _createdInvoice = null;
@@ -206,6 +291,9 @@ class InvoiceDraftController extends ChangeNotifier {
       if (_submitErrorMessage != null || _requestId != null) {
         _submitErrorMessage = null;
         _requestId = null;
+      }
+      if (_draft.paymentMode == settlementModeCredit) {
+        _amountReceivedError = null;
       }
     }
     notifyListeners();

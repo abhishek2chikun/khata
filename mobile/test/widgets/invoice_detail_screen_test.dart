@@ -9,6 +9,23 @@ import 'package:internal_billing_khata_mobile/services/invoice_share_service.dar
 import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 
 void main() {
+  testWidgets('invoice detail shows Cash/Credit settlement label', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoiceDetailScreen(
+          invoiceId: 'inv-1',
+          invoicesService: _FakeInvoicesService(
+            invoice: _sampleInvoice(customerPhone: '9876543210'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Payment: Credit'), findsOneWidget);
+    expect(find.textContaining('Payment mode:'), findsNothing);
+  });
+
   testWidgets('share pdf button is visible when invoice is loaded',
       (tester) async {
     await tester.pumpWidget(

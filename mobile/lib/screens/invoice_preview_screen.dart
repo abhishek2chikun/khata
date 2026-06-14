@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/invoice_detail.dart';
 import '../models/invoice_quote.dart';
 import '../services/invoice_pdf_service.dart';
+import '../services/decimal_validators.dart';
+import '../services/invoice_settlement.dart';
 import '../services/invoice_share_service.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
@@ -51,7 +53,7 @@ class InvoicePreviewScreen extends StatelessWidget {
                         'Place of supply: ${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})'),
                   ],
                   const SizedBox(height: 8),
-                  _buildPaymentStateSection(context),
+                  _buildPaymentModeSection(context),
                   const SizedBox(height: 12),
                   ...quote.warnings.map(
                     (warning) => Padding(
@@ -116,33 +118,26 @@ class InvoicePreviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentStateSection(BuildContext context) {
-    final state = controller.draft.paymentState;
-    final paidAmount = controller.draft.paidAmount;
-    final label = _paymentStateLabel(state);
+  Widget _buildPaymentModeSection(BuildContext context) {
+    final draft = controller.draft;
+    final label = invoiceSettlementLabel(
+      paymentMode: draft.paymentMode,
+      paymentState: draft.paymentState,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(key: const Key('paymentStateLabel'), 'Payment: $label'),
-        if (state != 'CREDIT')
+        Text(key: const Key('paymentModeLabel'), 'Payment: $label'),
+        if (draft.paymentMode == settlementModeCredit &&
+            draft.paidAmount > 0) ...<Widget>[
           Text(
-            key: const Key('paidAmountLabel'),
-            'Paid: ${paidAmount.toStringAsFixed(2)}',
+            key: const Key('amountReceivedLabel'),
+            'Received: ${draft.paidAmount.toStringAsFixed(2)}',
           ),
+        ],
       ],
     );
-  }
-
-  String _paymentStateLabel(String state) {
-    switch (state) {
-      case 'TOTAL_PAID':
-        return 'Total Paid';
-      case 'PARTIAL_PAID':
-        return 'Partial Paid';
-      default:
-        return 'Credit';
-    }
   }
 
   Widget _buildItemsTable(BuildContext context, InvoiceQuote quote) {
@@ -199,7 +194,7 @@ class InvoicePreviewScreen extends StatelessWidget {
               const SizedBox(width: 16),
               Text(
                   key: Key('pricePerUnit-$index'),
-                  '@ ${item.enteredUnitPrice.toStringAsFixed(2)}'),
+                  '@ ${canonicalUnitPriceString(item.enteredUnitPrice)}'),
             ],
           ),
         ],
@@ -212,7 +207,8 @@ class InvoicePreviewScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         Text('Subtotal: ${quote.totals.subtotal.toStringAsFixed(2)}'),
-        Text('Discount: ${quote.totals.discountTotal.toStringAsFixed(2)}'),
+        if (quote.totals.discountTotal > 0)
+          Text('Discount: ${quote.totals.discountTotal.toStringAsFixed(2)}'),
         Text('Taxable total: ${quote.totals.taxableTotal.toStringAsFixed(2)}'),
         if (quote.gstFlag)
           Text(

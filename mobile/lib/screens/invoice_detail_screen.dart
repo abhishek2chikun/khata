@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/api_error.dart';
 import '../models/invoice_detail.dart';
+import '../services/decimal_validators.dart';
+import '../services/invoice_settlement.dart';
 import '../services/invoice_pdf_service.dart';
 import '../services/invoice_share_service.dart';
 import '../services/invoices_service.dart';
@@ -62,7 +64,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     Text('Customer: ${invoice.customerName}'),
                     Text('Date: ${invoice.invoiceDate}'),
                     Text('Status: ${invoice.status}'),
-                    Text('Payment mode: ${invoice.paymentMode}'),
+                    Text(
+                      'Payment: ${invoiceSettlementLabel(
+                        paymentMode: invoice.paymentMode,
+                        paymentState: invoice.paymentState,
+                      )}',
+                    ),
                     Text(
                         'Grand total: ${invoice.grandTotal.toStringAsFixed(2)}'),
                     if ((invoice.notes ?? '').isNotEmpty)
@@ -128,8 +135,8 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       (item) => Card(
                         child: ListTile(
                           title: Text(item.productName),
-                          subtitle:
-                              Text('Qty ${item.quantity.toStringAsFixed(3)}'),
+                          subtitle: Text(
+                              'Qty ${formatInvoiceQuantity(item.quantity)}'),
                           trailing: Text(item.lineTotal.toStringAsFixed(2)),
                         ),
                       ),

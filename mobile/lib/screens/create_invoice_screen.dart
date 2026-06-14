@@ -6,8 +6,10 @@ import '../models/api_error.dart';
 import '../models/company_profile.dart';
 import '../models/product.dart';
 import '../models/customer.dart';
+import '../services/decimal_validators.dart';
 import '../services/company_profile_service.dart';
 import '../services/invoices_service.dart';
+import '../services/invoice_settlement.dart';
 import '../services/invoice_share_service.dart';
 import '../services/products_service.dart';
 import '../services/customers_service.dart';
@@ -98,7 +100,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       if (_unitPriceControllers[i].text.isEmpty && item.unitPrice != null) {
-        _unitPriceControllers[i].text = item.unitPrice!.toStringAsFixed(2);
+        _unitPriceControllers[i].text =
+            canonicalUnitPriceString(item.unitPrice!);
       }
       if (_gstRateControllers[i].text.isEmpty && item.gstRate != null) {
         _gstRateControllers[i].text = item.gstRate!.toStringAsFixed(2);
@@ -155,7 +158,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       const SizedBox(height: 12),
                       _buildDateField(),
                       const SizedBox(height: 12),
-                      _buildPaymentStateSection(),
+                      _buildPaymentModeSection(),
                       const SizedBox(height: 12),
                       TextField(
                         key: const Key('placeOfSupplyStateCodeField'),
@@ -178,8 +181,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       const SizedBox(height: 16),
                       _buildItemsSection(),
                       const SizedBox(height: 16),
-                      _buildApplyGstToAll(),
-                      const SizedBox(height: 16),
+                      if (_showGstControls) ...<Widget>[
+                        _buildApplyGstToAll(),
+                        const SizedBox(height: 16),
+                      ],
                       FilledButton(
                         key: const Key('previewInvoiceButton'),
                         onPressed: _controller.isQuoting || _isLoading
@@ -293,36 +298,56 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     _controller.updateInvoiceDate(formatted);
   }
 
-  Widget _buildPaymentStateSection() {
+  bool get _showGstControls {
+    final profile = _sellerProfile;
+    if (profile == null || !profile.gstFlag) {
+      return false;
+    }
+    return _controller.draft.gstFlag ?? true;
+  }
+
+  Widget _buildPaymentModeSection() {
+    final settlementMode = _controller.draft.paymentMode;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        DropdownButtonFormField<String>(
-          key: const Key('paymentStateField'),
-          value: _controller.draft.paymentState,
-          onChanged: (value) {
-            if (value != null) {
-              _controller.updatePaymentState(value);
+        SegmentedButton<String>(
+          key: const Key('paymentModeField'),
+          segments: const <ButtonSegment<String>>[
+            ButtonSegment<String>(
+              value: settlementModeCash,
+              label: Text('Cash'),
+            ),
+            ButtonSegment<String>(
+              value: settlementModeCredit,
+              label: Text('Credit'),
+            ),
+          ],
+          selected: <String>{settlementMode},
+          onSelectionChanged: (selection) {
+            _controller.updateSettlementMode(selection.first);
+            if (selection.first == settlementModeCash) {
+              _paidAmountController.clear();
             }
           },
-          items: const <DropdownMenuItem<String>>[
-            DropdownMenuItem(value: 'CREDIT', child: Text('Credit')),
-            DropdownMenuItem(value: 'TOTAL_PAID', child: Text('Total Paid')),
-            DropdownMenuItem(value: 'PARTIAL_PAID', child: Text('Partial Paid')),
-          ],
-          decoration: const InputDecoration(
-            labelText: 'Payment state',
-            border: OutlineInputBorder(),
-          ),
         ),
-        if (_controller.draft.paymentState == 'PARTIAL_PAID') ...<Widget>[
+        if (settlementMode == settlementModeCredit) ...<Widget>[
           const SizedBox(height: 12),
           MoneyTextField(
-            fieldKey: const Key('paidAmountField'),
+            fieldKey: const Key('amountReceivedField'),
             controller: _paidAmountController,
-            label: 'Paid amount',
+            label: 'Amount received',
             onChanged: (value) =>
-                _controller.updatePaidAmount(_parseNumber(value) ?? 0),
+                _controller.updateAmountReceived(_parseNumber(value) ?? 0),
           ),
+          if (_controller.amountReceivedError != null) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              key: const Key('amountReceivedError'),
+              _controller.amountReceivedError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
         ],
       ],
     );
@@ -380,9 +405,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     onSelected: (product) {
                       _controller.updateItemProduct(index, product);
                       _unitPriceControllers[index].text =
-                          product.sellingPrice.toStringAsFixed(2);
-                      _gstRateControllers[index].text =
-                          product.gstRate.toStringAsFixed(2);
+                          canonicalUnitPriceString(product.sellingPrice);
+                      if (_showGstControls) {
+                        _gstRateControllers[index].text =
+                            product.gstRate.toStringAsFixed(2);
+                      }
                     },
                   ),
                 ),
@@ -410,14 +437,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               onChanged: (value) =>
                   _controller.updateItemUnitPrice(index, _parseNumber(value)),
             ),
-            const SizedBox(height: 8),
-            MoneyTextField(
-              fieldKey: Key('gstRateField-$index'),
-              controller: _gstRateControllers[index],
-              label: 'GST rate',
-              onChanged: (value) =>
-                  _controller.updateItemGstRate(index, _parseNumber(value)),
-            ),
+            if (_showGstControls) ...<Widget>[
+              const SizedBox(height: 8),
+              MoneyTextField(
+                fieldKey: Key('gstRateField-$index'),
+                controller: _gstRateControllers[index],
+                label: 'GST rate',
+                onChanged: (value) =>
+                    _controller.updateItemGstRate(index, _parseNumber(value)),
+              ),
+            ],
           ],
         ),
       ),

@@ -206,6 +206,7 @@ class InvoiceDetailItem {
     this.productCategory = '',
     this.productBuyerId,
     this.productCompanyName = '',
+    this.productHsnCode,
     this.buyingPrice = 0,
     this.sellingPrice = 0,
     this.unit,
@@ -234,6 +235,7 @@ class InvoiceDetailItem {
   final String productCategory;
   final String? productBuyerId;
   final String productCompanyName;
+  final String? productHsnCode;
   final double buyingPrice;
   final double sellingPrice;
   final String? unit;
@@ -263,6 +265,7 @@ class InvoiceDetailItem {
       productCategory: json['product_category'] as String? ?? '',
       productBuyerId: json['product_buyer_id']?.toString(),
       productCompanyName: json['product_company_name'] as String? ?? '',
+      productHsnCode: json['product_hsn_code'] as String?,
       buyingPrice: _toDouble(json['buying_price']),
       sellingPrice: _toDouble(json['selling_price']),
       unit: json['unit'] as String?,

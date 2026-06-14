@@ -15,8 +15,7 @@ import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
-  testWidgets('invoice list shows payment state and applies status filter',
-      (tester) async {
+  testWidgets('invoice list shows Cash/Credit settlement label', (tester) async {
     final invoices = _InvoicesService();
     await tester.pumpWidget(
       MaterialApp(
@@ -30,7 +29,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('PARTIAL_PAID'), findsOneWidget);
+    expect(find.textContaining('Credit'), findsOneWidget);
+    expect(find.textContaining('PARTIAL_PAID'), findsNothing);
     await tester.tap(find.text('Canceled'));
     await tester.pumpAndSettle();
     expect(invoices.statusRequests.last, 'CANCELED');
@@ -73,7 +73,7 @@ class _InvoicesService implements InvoicesService {
         invoiceDate: '2026-06-13',
         status: 'ACTIVE',
         paymentState: 'PARTIAL_PAID',
-        paymentMode: 'CASH',
+        paymentMode: 'CREDIT',
         grandTotal: 118,
       ),
     ];
