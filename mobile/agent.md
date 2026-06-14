@@ -8,7 +8,7 @@ Role: Flutter client for login, inventory, customer khata ledger, buyer payable 
 - **Customer**: a retail customer/shop. Customers have a receivable ledger (opening balance, collections, balance adjustments, invoice debits).
 - **Product**: inventory item with V2 fields: `buyer_id`, `company_name`, `buying_price`, `selling_price` (GST-inclusive).
 - **Invoice**: sale document with multi-line items, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), stock/ledger side effects.
-- **Analytics**: dashboard aggregating revenue/profit by buyer, company, customer; top products; low-stock; khata balances. Available in both API and local modes.
+- **Analytics**: owner dashboard with KPI totals (revenue, profit, receivables, payables, active invoice count, average invoice value), zero-filled daily trend, ranked products/customers, date presets (Today/7d/30d/Month/Custom). Low-stock remains in API/local payloads for compatibility but is excluded from UI and `hasData`.
 
 ## How to use this system
 
@@ -227,6 +227,7 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
+- **2026-06-14:** Owner analytics dashboard — backend/local KPI + `daily_trend` fields, `fl_chart` revenue/profit trend, date presets, low-stock removed from UI; parity fixture + 18 focused analytics tests green.
 - **2026-06-13:** Preinstalled local product catalog — 1,199 products + 30 buyers bundled as JSON asset, seeded idempotently on local-mode startup; build script at `tools/build_preinstalled_catalog.py`.
 - **2026-06-13:** Stage 3 GST invoicing — Drift/backup schema **9**, seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing; **372** mobile tests passing.
 - **2026-06-12:** `ApiBuyersService.addPaymentMade` now posts to `/payments-made` (was `/collections-made`, 404 against live backend).

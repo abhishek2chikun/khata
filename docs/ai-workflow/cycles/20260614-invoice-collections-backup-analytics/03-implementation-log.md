@@ -20,7 +20,7 @@ Assigned tasks: 01-07 (full plan)
 | Invoice creation/PDF | complete | searchable `ProductPicker`, Cash/Credit UX, compliant PDFs | 71 focused tests green; `flutter analyze` info-only | PDF text assertions use helper/metadata tests (compressed PDF bytes are not plain-text searchable) |
 | Batch collections | complete | atomic grid API/local/UI | 37 focused mobile tests + 55 pure tests | API integration tests require local Postgres on :55432 |
 | Drive backup | pending | pending | pending | External OAuth configuration cannot be committed |
-| Analytics | pending | pending | pending | none |
+| Analytics | complete | owner KPIs, zero-filled trend, redesigned screen | 19 backend pure + 18 mobile analytics tests green | Postgres parity/API tests need :55432 DB |
 | Integration/release | pending | pending | pending | Physical-device evidence depends on available configured device/account |
 
 ### Task 03 — Invoice creation and PDFs (2026-06-14)
@@ -79,9 +79,33 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 ```
 Result: **55 pure + 37 mobile passed**. Postgres-backed API/service tests added but not executed here (Docker daemon unavailable).
 
+### Task 06 — Owner analytics dashboard (2026-06-14)
+
+**Backend / local parity**
+- Additive dashboard fields: `total_revenue`, `total_profit`, `customer_receivables`, `buyer_payables`, `active_invoice_count`, `average_invoice_value`, `daily_trend[{date,revenue,profit}]`.
+- Revenue/profit from active invoice item snapshots only; average uses invoice `grand_total`; receivables/payables sum ledger breakdown lists; trend zero-fills inclusive date range when both bounds provided.
+- Shared parity fixture (`backend/tests/fixtures/analytics_owner_parity.py`) covers GST/non-GST lines, cash/credit/partial, canceled invoice exclusion, two invoice dates, receivable/payable ledgers, product/customer rankings.
+
+**Mobile**
+- Redesigned `AnalyticsScreen`: responsive KPI grid, `fl_chart` trend with semantic summary, ranked product/customer cards, receivables/payables summary, presets (Today, 7d, 30d default, Month, Custom with from<=to validation).
+- `Dashboard.hasData` ignores `low_stock`; low-stock section removed from UI while API/local still populate the field.
+
+**KPI formulas (parity fixture, 2026-04-01..2026-04-03)**
+- Total revenue **350.00** (200 + 150 item revenue; canceled invoice excluded)
+- Total profit **140.00**; active invoices **2**; average invoice **175.00**
+- Customer receivables **150.00** (200 opening − 50 collection); buyer payables **500.00** (700 − 200 payment)
+- Daily trend: Apr 1 **0/0**, Apr 2 **200/80**, Apr 3 **150/60**
+
+**Focused verification (Task 06)**
+```bash
+PYTHONPATH=backend .venv/bin/python -m pytest backend/tests/services/test_analytics_pure.py -q
+(cd mobile && flutter test test/local/local_analytics_service_test.dart test/widgets/analytics_screen_test.dart test/models/analytics_test.dart)
+```
+Result: **19 backend pure passed**, **18 mobile analytics passed**. Postgres-backed parity/API tests require `BILLING_DATABASE_URL=postgresql+psycopg://khata:khata@localhost:55432/internal_billing_test`.
+
 ## Acceptance Evidence
 
 | AC | Status | Evidence |
 |---|---|---|
 | AC5-AC8 (invoice entry/PDF/settlement) | complete | 71 focused tests; helper PDF layout tests; Cash/Credit label coverage |
-| AC9 batch collections | complete | 37 focused mobile tests; backend batch API/service tests added | API/service DB tests pending Postgres |
+| AC12 owner analytics | complete | 19 pure + 18 mobile analytics tests; parity fixture documented | Postgres API/parity test pending local DB |

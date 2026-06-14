@@ -12,41 +12,81 @@ from app.schemas.analytics import (
     TopProductRevenue,
     TopProductProfit,
     LowStockEntry,
+    DailyTrendEntry,
 )
+
+
+def _empty_dashboard_kwargs(**overrides):
+    base = {
+        "total_revenue": Decimal("0"),
+        "total_profit": Decimal("0"),
+        "customer_receivables": Decimal("0"),
+        "buyer_payables": Decimal("0"),
+        "active_invoice_count": 0,
+        "average_invoice_value": Decimal("0"),
+        "daily_trend": [],
+        "revenue_by_buyer": [],
+        "profit_by_buyer": [],
+        "revenue_by_company": [],
+        "profit_by_company": [],
+        "revenue_by_customer": [],
+        "customer_khata_balances": [],
+        "buyer_pending_payables": [],
+        "top_products_by_quantity": [],
+        "top_products_by_revenue": [],
+        "top_products_by_profit": [],
+        "low_stock": [],
+    }
+    base.update(overrides)
+    return base
+
+
+def _empty_dashboard_execute_side_effect(*args, **kwargs):
+    from unittest.mock import MagicMock
+
+    result = MagicMock()
+    result.all.return_value = []
+    result.one.return_value = (Decimal("0"), Decimal("0"))
+    return result
 
 
 @pytest.mark.no_db
 class TestAnalyticsSchemas:
     def test_dashboard_response_allows_empty_lists(self):
-        resp = DashboardResponse(
-            revenue_by_buyer=[],
-            profit_by_buyer=[],
-            revenue_by_company=[],
-            profit_by_company=[],
-            revenue_by_customer=[],
-            customer_khata_balances=[],
-            buyer_pending_payables=[],
-            top_products_by_quantity=[],
-            top_products_by_revenue=[],
-            top_products_by_profit=[],
-            low_stock=[],
-        )
+        resp = DashboardResponse(**_empty_dashboard_kwargs())
         assert resp.revenue_by_buyer == []
         assert resp.low_stock == []
+        assert resp.total_revenue == Decimal("0")
+        assert resp.daily_trend == []
 
     def test_dashboard_response_accepts_populated_data(self):
         resp = DashboardResponse(
-            revenue_by_buyer=[RevenueByEntry(name="Buyer A", revenue=Decimal("100.00"))],
-            profit_by_buyer=[ProfitByEntry(name="Buyer A", profit=Decimal("50.00"))],
-            revenue_by_company=[RevenueByEntry(name="Acme Corp", revenue=Decimal("100.00"))],
-            profit_by_company=[ProfitByEntry(name="Acme Corp", profit=Decimal("50.00"))],
-            revenue_by_customer=[RevenueByEntry(name="Customer A", revenue=Decimal("200.00"))],
-            customer_khata_balances=[CustomerKhataBalance(customer_name="Customer A", balance=Decimal("150.00"))],
-            buyer_pending_payables=[BuyerPayable(buyer_name="Buyer A", payable=Decimal("300.00"))],
-            top_products_by_quantity=[TopProduct(product_name="Prod X", quantity=Decimal("5.000"))],
-            top_products_by_revenue=[TopProductRevenue(product_name="Prod X", revenue=Decimal("500.00"))],
-            top_products_by_profit=[TopProductProfit(product_name="Prod X", profit=Decimal("250.00"))],
-            low_stock=[LowStockEntry(product_name="Prod X", quantity_on_hand=Decimal("1.000"), low_stock_threshold=Decimal("5.000"))],
+            **_empty_dashboard_kwargs(
+                total_revenue=Decimal("500.00"),
+                total_profit=Decimal("250.00"),
+                customer_receivables=Decimal("150.00"),
+                buyer_payables=Decimal("300.00"),
+                active_invoice_count=2,
+                average_invoice_value=Decimal("250.00"),
+                daily_trend=[
+                    DailyTrendEntry(
+                        date=date(2026, 4, 1),
+                        revenue=Decimal("500.00"),
+                        profit=Decimal("250.00"),
+                    )
+                ],
+                revenue_by_buyer=[RevenueByEntry(name="Buyer A", revenue=Decimal("100.00"))],
+                profit_by_buyer=[ProfitByEntry(name="Buyer A", profit=Decimal("50.00"))],
+                revenue_by_company=[RevenueByEntry(name="Acme Corp", revenue=Decimal("100.00"))],
+                profit_by_company=[ProfitByEntry(name="Acme Corp", profit=Decimal("50.00"))],
+                revenue_by_customer=[RevenueByEntry(name="Customer A", revenue=Decimal("200.00"))],
+                customer_khata_balances=[CustomerKhataBalance(customer_name="Customer A", balance=Decimal("150.00"))],
+                buyer_pending_payables=[BuyerPayable(buyer_name="Buyer A", payable=Decimal("300.00"))],
+                top_products_by_quantity=[TopProduct(product_name="Prod X", quantity=Decimal("5.000"))],
+                top_products_by_revenue=[TopProductRevenue(product_name="Prod X", revenue=Decimal("500.00"))],
+                top_products_by_profit=[TopProductProfit(product_name="Prod X", profit=Decimal("250.00"))],
+                low_stock=[LowStockEntry(product_name="Prod X", quantity_on_hand=Decimal("1.000"), low_stock_threshold=Decimal("5.000"))],
+            )
         )
         assert resp.revenue_by_buyer[0].name == "Buyer A"
         assert resp.revenue_by_buyer[0].revenue == Decimal("100.00")
@@ -56,22 +96,12 @@ class TestAnalyticsSchemas:
         assert resp.low_stock[0].quantity_on_hand == Decimal("1.000")
 
     def test_dashboard_response_serializes_to_json(self):
-        resp = DashboardResponse(
-            revenue_by_buyer=[],
-            profit_by_buyer=[],
-            revenue_by_company=[],
-            profit_by_company=[],
-            revenue_by_customer=[],
-            customer_khata_balances=[],
-            buyer_pending_payables=[],
-            top_products_by_quantity=[],
-            top_products_by_revenue=[],
-            top_products_by_profit=[],
-            low_stock=[],
-        )
+        resp = DashboardResponse(**_empty_dashboard_kwargs())
         data = resp.model_dump()
         assert data["revenue_by_buyer"] == []
         assert data["low_stock"] == []
+        assert data["total_revenue"] == Decimal("0")
+        assert data["daily_trend"] == []
 
     def test_revenue_by_entry_preserves_decimal_precision(self):
         entry = RevenueByEntry(name="Buyer A", revenue=Decimal("12345.67"))
@@ -104,12 +134,13 @@ class TestAnalyticsServiceFunctionSignature:
         from app.services.analytics_service import get_dashboard
 
         mock_session = MagicMock()
-        mock_session.execute.return_value = MagicMock(all=MagicMock(return_value=[]))
-        mock_session.scalar.return_value = []
+        mock_session.execute.side_effect = _empty_dashboard_execute_side_effect
 
         result = get_dashboard(mock_session)
 
         expected_keys = [
+            "total_revenue", "total_profit", "customer_receivables", "buyer_payables",
+            "active_invoice_count", "average_invoice_value", "daily_trend",
             "revenue_by_buyer", "profit_by_buyer",
             "revenue_by_company", "profit_by_company",
             "revenue_by_customer", "customer_khata_balances",
@@ -125,7 +156,7 @@ class TestAnalyticsServiceFunctionSignature:
         from app.services.analytics_service import get_dashboard
 
         mock_session = MagicMock()
-        mock_session.execute.return_value = MagicMock(all=MagicMock(return_value=[]))
+        mock_session.execute.side_effect = _empty_dashboard_execute_side_effect
 
         result = get_dashboard(mock_session)
 
@@ -142,11 +173,11 @@ class TestAnalyticsServiceFunctionSignature:
         assert result["low_stock"] == []
 
     def test_get_dashboard_with_date_filters(self):
-        from unittest.mock import MagicMock, call
+        from unittest.mock import MagicMock
         from app.services.analytics_service import get_dashboard
 
         mock_session = MagicMock()
-        mock_session.execute.return_value = MagicMock(all=MagicMock(return_value=[]))
+        mock_session.execute.side_effect = _empty_dashboard_execute_side_effect
 
         result = get_dashboard(
             mock_session,
@@ -203,11 +234,16 @@ class TestServiceSchemaKeyAlignment:
         low_stock_row.Product.low_stock_threshold = Decimal("5.000")
 
         row_sequences = [
-            [buyer_row], [buyer_row],
-            [company_row], [company_row],
-            [customer_rev_row],
             [customer_khata_row],
             [buyer_payable_row],
+            (Decimal("100.00"), Decimal("50.00")),
+            (1, Decimal("100.00")),
+            [],
+            [buyer_row],
+            [buyer_row],
+            [company_row],
+            [company_row],
+            [customer_rev_row],
             [product_qty_row],
             [product_rev_row],
             [product_profit_row],
@@ -221,7 +257,12 @@ class TestServiceSchemaKeyAlignment:
             nonlocal call_count
             seq = row_sequences[call_count] if call_count < len(row_sequences) else []
             call_count += 1
-            return MagicMock(all=MagicMock(return_value=seq))
+            result = MagicMock()
+            if isinstance(seq, tuple):
+                result.one.return_value = seq
+            else:
+                result.all.return_value = seq
+            return result
 
         mock_session.execute = mock_execute
 
@@ -242,6 +283,8 @@ class TestServiceSchemaKeyAlignment:
         assert resp.top_products_by_revenue[0].revenue == Decimal("250.00")
         assert resp.top_products_by_profit[0].profit == Decimal("100.00")
         assert resp.low_stock[0].quantity_on_hand == Decimal("1.000")
+        assert resp.total_revenue == Decimal("100.00")
+        assert resp.active_invoice_count == 1
 
     def test_revenue_by_buyer_dicts_use_name_key(self):
         self._assert_section_key("revenue_by_buyer", "name", "revenue", "Buyer A", Decimal("99.00"))
@@ -262,16 +305,7 @@ class TestServiceSchemaKeyAlignment:
     def _assert_section_key(section, name_key, value_key, name_val, value_val):
         from app.schemas.analytics import DashboardResponse
         entry = {name_key: name_val, value_key: str(value_val)}
-        kwargs = {
-            "revenue_by_buyer": [], "profit_by_buyer": [],
-            "revenue_by_company": [], "profit_by_company": [],
-            "revenue_by_customer": [], "customer_khata_balances": [],
-            "buyer_pending_payables": [], "top_products_by_quantity": [],
-            "top_products_by_revenue": [], "top_products_by_profit": [],
-            "low_stock": [],
-        }
-        kwargs[section] = [entry]
-        resp = DashboardResponse(**kwargs)
+        resp = DashboardResponse(**_empty_dashboard_kwargs(**{section: [entry]}))
         items = getattr(resp, section)
         assert len(items) == 1
         assert items[0].model_dump()[name_key] == name_val

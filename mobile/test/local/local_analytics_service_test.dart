@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/local/local_analytics_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart';
 
+const parityFromDate = '2026-04-01';
+const parityToDate = '2026-04-03';
+
 void main() {
   late LocalDatabase database;
   late LocalAnalyticsService service;
@@ -92,6 +95,38 @@ void main() {
     expect(totalRevenue, closeTo(200, 0.01));
   });
 
+  test('kpis and zero-filled daily trend match backend parity fixture', () async {
+    await _seedOwnerParity(database);
+
+    final dashboard = await service.getDashboard(
+      fromDate: parityFromDate,
+      toDate: parityToDate,
+    );
+
+    expect(dashboard.totalRevenue, closeTo(350, 0.01));
+    expect(dashboard.totalProfit, closeTo(140, 0.01));
+    expect(dashboard.activeInvoiceCount, 2);
+    expect(dashboard.averageInvoiceValue, closeTo(175, 0.01));
+    expect(dashboard.customerReceivables, closeTo(150, 0.01));
+    expect(dashboard.buyerPayables, closeTo(500, 0.01));
+
+    expect(dashboard.dailyTrend, hasLength(3));
+    expect(dashboard.dailyTrend[0].date, '2026-04-01');
+    expect(dashboard.dailyTrend[0].revenue, closeTo(0, 0.01));
+    expect(dashboard.dailyTrend[1].revenue, closeTo(200, 0.01));
+    expect(dashboard.dailyTrend[1].profit, closeTo(80, 0.01));
+    expect(dashboard.dailyTrend[2].revenue, closeTo(150, 0.01));
+
+    final trendRevenue = dashboard.dailyTrend.fold<double>(
+      0,
+      (sum, point) => sum + point.revenue,
+    );
+    expect(trendRevenue, closeTo(dashboard.totalRevenue, 0.01));
+
+    expect(dashboard.topProductsByRevenue.first.productName, 'Plain Widget');
+    expect(dashboard.topProductsByRevenue.first.revenue, closeTo(250, 0.01));
+  });
+
   test('empty database returns empty dashboard', () async {
     final dashboard = await service.getDashboard();
 
@@ -101,7 +136,311 @@ void main() {
     expect(dashboard.buyerPendingPayables, isEmpty);
     expect(dashboard.topProductsByQuantity, isEmpty);
     expect(dashboard.lowStock, isEmpty);
+    expect(dashboard.totalRevenue, 0);
+    expect(dashboard.activeInvoiceCount, 0);
+    expect(dashboard.dailyTrend, isEmpty);
   });
+}
+
+Future<void> _seedOwnerParity(LocalDatabase db) async {
+  final now = DateTime.now().toUtc().toIso8601String();
+  const systemUser = 'local-system-user';
+
+  await db.into(db.localUsers).insert(
+        LocalUsersCompanion.insert(
+          id: systemUser,
+          username: 'system',
+          passwordHash: 'x',
+          salt: 'x',
+          passwordHashVersion: 1,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+  await db.into(db.customers).insert(
+        CustomersCompanion.insert(
+          id: 'parity-customer',
+          name: 'Parity Customer',
+          address: 'Market',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+  await db.into(db.buyers).insert(
+        BuyersCompanion.insert(
+          id: 'parity-buyer',
+          name: 'Parity Buyer',
+          address: 'Market',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+  await db.into(db.products).insert(
+        ProductsCompanion.insert(
+          id: 'prod-gst',
+          itemNumber: 'GST-1',
+          itemName: 'GST Widget',
+          category: 'Cat',
+          companyName: 'ParityCo',
+          buyingPrice: '40',
+          sellingPrice: '100',
+          gstRate: '18',
+          quantityOnHand: '10',
+          lowStockThreshold: '5',
+          buyerId: const Value('parity-buyer'),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+  await db.into(db.products).insert(
+        ProductsCompanion.insert(
+          id: 'prod-plain',
+          itemNumber: 'NG-1',
+          itemName: 'Plain Widget',
+          category: 'Cat',
+          companyName: 'ParityCo',
+          buyingPrice: '30',
+          sellingPrice: '75',
+          gstRate: '0',
+          quantityOnHand: '10',
+          lowStockThreshold: '5',
+          buyerId: const Value('parity-buyer'),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+  await _insertParityInvoice(
+    db,
+    id: 'inv-active-1',
+    invoiceNumber: 5001,
+    invoiceDate: '2026-04-02',
+    grandTotal: '200',
+    status: 'ACTIVE',
+    items: const [
+      _ParityItem(
+        id: 'ii-1',
+        productId: 'prod-plain',
+        itemName: 'Plain Widget',
+        quantity: '1',
+        revenue: '100',
+        buying: '30',
+        profit: '70',
+      ),
+      _ParityItem(
+        id: 'ii-2',
+        productId: 'prod-gst',
+        itemName: 'GST Widget',
+        lineNumber: 2,
+        quantity: '1',
+        revenue: '100',
+        buying: '40',
+        profit: '10',
+      ),
+    ],
+    now: now,
+    systemUser: systemUser,
+  );
+  await _insertParityInvoice(
+    db,
+    id: 'inv-active-2',
+    invoiceNumber: 5002,
+    invoiceDate: '2026-04-03',
+    grandTotal: '150',
+    status: 'ACTIVE',
+    items: const [
+      _ParityItem(
+        id: 'ii-3',
+        productId: 'prod-plain',
+        itemName: 'Plain Widget',
+        quantity: '2',
+        revenue: '150',
+        buying: '60',
+        profit: '60',
+      ),
+    ],
+    now: now,
+    systemUser: systemUser,
+  );
+  await _insertParityInvoice(
+    db,
+    id: 'inv-canceled',
+    invoiceNumber: 5003,
+    invoiceDate: '2026-04-02',
+    grandTotal: '80',
+    status: 'CANCELED',
+    items: const [
+      _ParityItem(
+        id: 'ii-4',
+        productId: 'prod-plain',
+        itemName: 'Plain Widget',
+        quantity: '1',
+        revenue: '80',
+        buying: '30',
+        profit: '50',
+      ),
+    ],
+    now: now,
+    systemUser: systemUser,
+  );
+
+  await db.into(db.customerTransactions).insert(
+        CustomerTransactionsCompanion.insert(
+          id: 'ct-open',
+          customerId: 'parity-customer',
+          entryType: 'OPENING_BALANCE',
+          amount: '200',
+          occurredOn: '2026-04-01',
+          createdByUserId: systemUser,
+          createdAt: now,
+        ),
+      );
+  await db.into(db.customerTransactions).insert(
+        CustomerTransactionsCompanion.insert(
+          id: 'ct-collect',
+          customerId: 'parity-customer',
+          entryType: 'COLLECTION',
+          amount: '50',
+          occurredOn: '2026-04-02',
+          createdByUserId: systemUser,
+          createdAt: now,
+        ),
+      );
+  await db.into(db.buyerTransactions).insert(
+        BuyerTransactionsCompanion.insert(
+          id: 'bt-open',
+          buyerId: 'parity-buyer',
+          requestId: const Value('req-bt-open'),
+          requestHash: const Value('rh-bt-open'),
+          entryType: 'OPENING_PAYABLE',
+          amount: '700',
+          occurredAt: '2026-04-01T00:00:00.000Z',
+          createdByUserId: systemUser,
+          createdAt: now,
+        ),
+      );
+  await db.into(db.buyerTransactions).insert(
+        BuyerTransactionsCompanion.insert(
+          id: 'bt-pay',
+          buyerId: 'parity-buyer',
+          requestId: const Value('req-bt-pay'),
+          requestHash: const Value('rh-bt-pay'),
+          entryType: 'PAYMENT_MADE',
+          amount: '200',
+          occurredAt: '2026-04-02T00:00:00.000Z',
+          createdByUserId: systemUser,
+          createdAt: now,
+        ),
+      );
+}
+
+class _ParityItem {
+  const _ParityItem({
+    required this.id,
+    required this.productId,
+    required this.itemName,
+    required this.quantity,
+    required this.revenue,
+    required this.buying,
+    required this.profit,
+    this.lineNumber = 1,
+  });
+
+  final String id;
+  final String productId;
+  final String itemName;
+  final String quantity;
+  final String revenue;
+  final String buying;
+  final String profit;
+  final int lineNumber;
+}
+
+Future<void> _insertParityInvoice(
+  LocalDatabase db, {
+  required String id,
+  required int invoiceNumber,
+  required String invoiceDate,
+  required String grandTotal,
+  required String status,
+  required List<_ParityItem> items,
+  required String now,
+  required String systemUser,
+}) async {
+  await db.into(db.invoices).insert(
+        InvoicesCompanion.insert(
+          id: id,
+          requestId: 'req-$id',
+          requestHash: 'hash-$id',
+          invoiceNumber: invoiceNumber,
+          customerId: 'parity-customer',
+          customerName: 'Parity Customer',
+          customerAddress: 'Market',
+          placeOfSupplyState: 'Maharashtra',
+          placeOfSupplyStateCode: '27',
+          companyName: 'Parity Co',
+          companyAddress: 'Addr',
+          companyCity: 'Mumbai',
+          companyState: 'Maharashtra',
+          companyStateCode: '27',
+          invoiceDate: invoiceDate,
+          invoiceDatetime: Value('${invoiceDate}T00:00:00.000Z'),
+          taxRegime: 'INTRA_STATE',
+          status: status,
+          paymentMode: '',
+          subtotal: grandTotal,
+          discountTotal: '0',
+          taxableTotal: grandTotal,
+          gstTotal: '0',
+          grandTotal: grandTotal,
+          createdByUserId: systemUser,
+          createdAt: now,
+        ),
+      );
+
+  for (final item in items) {
+    await db.into(db.invoiceItems).insert(
+          InvoiceItemsCompanion.insert(
+            id: item.id,
+            invoiceId: id,
+            productId: item.productId,
+            lineNumber: item.lineNumber,
+            productName: item.itemName,
+            productCode: item.productId,
+            productItemNumber: Value(item.productId),
+            productItemName: Value(item.itemName),
+            productCategory: const Value('Cat'),
+            productCompanyName: const Value('ParityCo'),
+            productBuyerId: const Value('parity-buyer'),
+            buyingPrice: Value(item.buying),
+            sellingPrice: const Value('100'),
+            company: 'ParityCo',
+            category: 'Cat',
+            quantity: item.quantity,
+            pricingMode: 'TAX_INCLUSIVE',
+            enteredUnitPrice: '100',
+            unitPriceExclTax: '100',
+            unitPriceInclTax: '100',
+            gstRate: '0',
+            cgstRate: '0',
+            sgstRate: '0',
+            igstRate: '0',
+            discountPercent: '0',
+            discountAmount: '0',
+            taxableAmount: item.revenue,
+            gstAmount: '0',
+            cgstAmount: '0',
+            sgstAmount: '0',
+            igstAmount: '0',
+            lineTotal: item.revenue,
+            revenueAmount: Value(item.revenue),
+            buyingAmount: Value(item.buying),
+            profitAmount: Value(item.profit),
+          ),
+        );
+  }
 }
 
 Future<void> _seedFullSetup(LocalDatabase db) async {

@@ -66,6 +66,13 @@ def test_analytics_endpoint_returns_all_dashboard_sections(client, auth_headers)
 
     data = response.json()
     expected_keys = [
+        "total_revenue",
+        "total_profit",
+        "customer_receivables",
+        "buyer_payables",
+        "active_invoice_count",
+        "average_invoice_value",
+        "daily_trend",
         "revenue_by_buyer",
         "profit_by_buyer",
         "revenue_by_company",
@@ -121,3 +128,6 @@ def test_analytics_empty_data_returns_zeros_and_empty_lists(client, auth_headers
     assert data["top_products_by_revenue"] == []
     assert data["top_products_by_profit"] == []
     assert data["low_stock"] == []
+    assert data["total_revenue"] == "0" or data["total_revenue"] == 0
+    assert data["active_invoice_count"] == 0
+    assert data["daily_trend"] == []

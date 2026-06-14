@@ -45,7 +45,20 @@ class LowStockEntry(BaseModel):
     low_stock_threshold: Decimal
 
 
+class DailyTrendEntry(BaseModel):
+    date: date
+    revenue: Decimal
+    profit: Decimal
+
+
 class DashboardResponse(BaseModel):
+    total_revenue: Decimal
+    total_profit: Decimal
+    customer_receivables: Decimal
+    buyer_payables: Decimal
+    active_invoice_count: int
+    average_invoice_value: Decimal
+    daily_trend: list[DailyTrendEntry]
     revenue_by_buyer: list[RevenueByEntry]
     profit_by_buyer: list[ProfitByEntry]
     revenue_by_company: list[RevenueByEntry]

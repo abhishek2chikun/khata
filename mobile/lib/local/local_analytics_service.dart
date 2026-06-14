@@ -16,13 +16,50 @@ class LocalAnalyticsService implements AnalyticsService {
       fromDate: fromDate,
       toDate: toDate,
     );
+    final activeInvoices = await _activeInvoices(
+      invoiceIds: activeInvoiceIds,
+    );
+    final items = await _invoiceItems(activeInvoiceIds);
+    final customerKhataBalances = await _customerKhataBalances();
+    final buyerPendingPayables = await _buyerPendingPayables();
+
+    final totalRevenue = _sumItemField(items, (item) => item.revenueAmount);
+    final totalProfit = _sumItemField(items, (item) => item.profitAmount);
+    final activeInvoiceCount = activeInvoices.length;
+    final grandTotal = activeInvoices.fold<double>(
+      0,
+      (sum, invoice) => sum + (double.tryParse(invoice.grandTotal) ?? 0.0),
+    );
+    final averageInvoiceValue =
+        activeInvoiceCount == 0 ? 0.0 : grandTotal / activeInvoiceCount;
 
     return Dashboard(
-      revenueByCompany: await _revenueByCompany(activeInvoiceIds),
-      profitByCompany: await _profitByCompany(activeInvoiceIds),
-      customerKhataBalances: await _customerKhataBalances(),
-      buyerPendingPayables: await _buyerPendingPayables(),
-      topProductsByQuantity: await _topProductsByQuantity(activeInvoiceIds),
+      totalRevenue: totalRevenue,
+      totalProfit: totalProfit,
+      customerReceivables: customerKhataBalances.fold(
+        0.0,
+        (sum, entry) => sum + entry.balance,
+      ),
+      buyerPayables: buyerPendingPayables.fold(
+        0.0,
+        (sum, entry) => sum + entry.payable,
+      ),
+      activeInvoiceCount: activeInvoiceCount,
+      averageInvoiceValue: averageInvoiceValue,
+      dailyTrend: _dailyTrend(
+        activeInvoices: activeInvoices,
+        items: items,
+        fromDate: fromDate,
+        toDate: toDate,
+      ),
+      revenueByCompany: _revenueByCompany(items),
+      profitByCompany: _profitByCompany(items),
+      revenueByCustomer: _revenueByCustomer(activeInvoices),
+      customerKhataBalances: customerKhataBalances,
+      buyerPendingPayables: buyerPendingPayables,
+      topProductsByQuantity: _topProductsByQuantity(items),
+      topProductsByRevenue: _topProductsByRevenue(items),
+      topProductsByProfit: _topProductsByProfit(items),
       lowStock: await _lowStock(),
     );
   }
@@ -45,16 +82,94 @@ class LocalAnalyticsService implements AnalyticsService {
     return invoices.map((invoice) => invoice.id).toSet();
   }
 
-  Future<List<RevenueByEntry>> _revenueByCompany(Set<String> invoiceIds) async {
+  Future<List<Invoice>> _activeInvoices({required Set<String> invoiceIds}) async {
     if (invoiceIds.isEmpty) return [];
-    final items = await (_database.select(_database.invoiceItems)
+    return (_database.select(_database.invoices)
+          ..where((invoice) => invoice.id.isIn(invoiceIds.toList())))
+        .get();
+  }
+
+  Future<List<InvoiceItem>> _invoiceItems(Set<String> invoiceIds) async {
+    if (invoiceIds.isEmpty) return [];
+    return (_database.select(_database.invoiceItems)
           ..where((item) => item.invoiceId.isIn(invoiceIds.toList())))
         .get();
+  }
+
+  double _sumItemField(
+    List<InvoiceItem> items,
+    String? Function(InvoiceItem item) field,
+  ) {
+    return items.fold<double>(
+      0,
+      (sum, item) => sum + (double.tryParse(field(item) ?? '') ?? 0.0),
+    );
+  }
+
+  List<DailyTrendPoint> _dailyTrend({
+    required List<Invoice> activeInvoices,
+    required List<InvoiceItem> items,
+    String? fromDate,
+    String? toDate,
+  }) {
+    final revenueByDate = <String, double>{};
+    final profitByDate = <String, double>{};
+    final invoiceDates = {
+      for (final invoice in activeInvoices) invoice.id: invoice.invoiceDate,
+    };
+
+    for (final item in items) {
+      final date = invoiceDates[item.invoiceId];
+      if (date == null) continue;
+      revenueByDate[date] = (revenueByDate[date] ?? 0.0) +
+          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
+      profitByDate[date] = (profitByDate[date] ?? 0.0) +
+          (double.tryParse(item.profitAmount ?? '') ?? 0.0);
+    }
+
+    if (fromDate != null && toDate != null) {
+      final points = <DailyTrendPoint>[];
+      var current = DateTime.parse(fromDate);
+      final end = DateTime.parse(toDate);
+      while (!current.isAfter(end)) {
+        final key = _formatDate(current);
+        points.add(
+          DailyTrendPoint(
+            date: key,
+            revenue: revenueByDate[key] ?? 0.0,
+            profit: profitByDate[key] ?? 0.0,
+          ),
+        );
+        current = current.add(const Duration(days: 1));
+      }
+      return points;
+    }
+
+    final dates = revenueByDate.keys.toList()..sort();
+    return dates
+        .map(
+          (date) => DailyTrendPoint(
+            date: date,
+            revenue: revenueByDate[date] ?? 0.0,
+            profit: profitByDate[date] ?? 0.0,
+          ),
+        )
+        .toList();
+  }
+
+  String _formatDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  List<RevenueByEntry> _revenueByCompany(List<InvoiceItem> items) {
+    if (items.isEmpty) return [];
     final aggregated = <String, double>{};
     for (final item in items) {
       final company = item.productCompanyName;
       aggregated[company] = (aggregated[company] ?? 0.0) +
-          (double.tryParse(item.revenueAmount) ?? 0.0);
+          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
@@ -63,21 +178,33 @@ class LocalAnalyticsService implements AnalyticsService {
         .toList();
   }
 
-  Future<List<ProfitByEntry>> _profitByCompany(Set<String> invoiceIds) async {
-    if (invoiceIds.isEmpty) return [];
-    final items = await (_database.select(_database.invoiceItems)
-          ..where((item) => item.invoiceId.isIn(invoiceIds.toList())))
-        .get();
+  List<ProfitByEntry> _profitByCompany(List<InvoiceItem> items) {
+    if (items.isEmpty) return [];
     final aggregated = <String, double>{};
     for (final item in items) {
       final company = item.productCompanyName;
-      final profit = double.tryParse(item.profitAmount) ?? 0.0;
+      final profit = double.tryParse(item.profitAmount ?? '') ?? 0.0;
       aggregated[company] = (aggregated[company] ?? 0.0) + profit;
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return entries
         .map((e) => ProfitByEntry(name: e.key, profit: e.value))
+        .toList();
+  }
+
+  List<RevenueByEntry> _revenueByCustomer(List<Invoice> invoices) {
+    if (invoices.isEmpty) return [];
+    final aggregated = <String, double>{};
+    for (final invoice in invoices) {
+      aggregated[invoice.customerName] =
+          (aggregated[invoice.customerName] ?? 0.0) +
+              (double.tryParse(invoice.grandTotal) ?? 0.0);
+    }
+    final entries = aggregated.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return entries
+        .map((e) => RevenueByEntry(name: e.key, revenue: e.value))
         .toList();
   }
 
@@ -91,10 +218,9 @@ class LocalAnalyticsService implements AnalyticsService {
     final transactions =
         await _database.select(_database.customerTransactions).get();
     final customers = await _database.select(_database.customers).get();
-    final customerNames = <String, String>{};
-    for (final c in customers) {
-      customerNames[c.id] = c.name;
-    }
+    final customerNames = <String, String>{
+      for (final customer in customers) customer.id: customer.name,
+    };
     final balances = <String, double>{};
     for (final txn in transactions) {
       final isCredit = creditTypes.contains(txn.entryType);
@@ -123,10 +249,9 @@ class LocalAnalyticsService implements AnalyticsService {
     final transactions =
         await _database.select(_database.buyerTransactions).get();
     final buyers = await _database.select(_database.buyers).get();
-    final buyerNames = <String, String>{};
-    for (final b in buyers) {
-      buyerNames[b.id] = b.name;
-    }
+    final buyerNames = <String, String>{
+      for (final buyer in buyers) buyer.id: buyer.name,
+    };
     final payables = <String, double>{};
     for (final txn in transactions) {
       final isIncrease = increaseTypes.contains(txn.entryType);
@@ -146,12 +271,8 @@ class LocalAnalyticsService implements AnalyticsService {
         .toList();
   }
 
-  Future<List<TopProduct>> _topProductsByQuantity(
-      Set<String> invoiceIds) async {
-    if (invoiceIds.isEmpty) return [];
-    final items = await (_database.select(_database.invoiceItems)
-          ..where((item) => item.invoiceId.isIn(invoiceIds.toList())))
-        .get();
+  List<TopProduct> _topProductsByQuantity(List<InvoiceItem> items) {
+    if (items.isEmpty) return [];
     final aggregated = <String, double>{};
     for (final item in items) {
       final name = item.productItemName;
@@ -162,6 +283,36 @@ class LocalAnalyticsService implements AnalyticsService {
       ..sort((a, b) => b.value.compareTo(a.value));
     return entries
         .map((e) => TopProduct(productName: e.key, quantity: e.value))
+        .toList();
+  }
+
+  List<TopProductRevenue> _topProductsByRevenue(List<InvoiceItem> items) {
+    if (items.isEmpty) return [];
+    final aggregated = <String, double>{};
+    for (final item in items) {
+      final name = item.productItemName;
+      aggregated[name] = (aggregated[name] ?? 0.0) +
+          (double.tryParse(item.revenueAmount ?? '') ?? 0.0);
+    }
+    final entries = aggregated.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries
+        .map((e) => TopProductRevenue(productName: e.key, revenue: e.value))
+        .toList();
+  }
+
+  List<TopProductProfit> _topProductsByProfit(List<InvoiceItem> items) {
+    if (items.isEmpty) return [];
+    final aggregated = <String, double>{};
+    for (final item in items) {
+      final name = item.productItemName;
+      aggregated[name] = (aggregated[name] ?? 0.0) +
+          (double.tryParse(item.profitAmount ?? '') ?? 0.0);
+    }
+    final entries = aggregated.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries
+        .map((e) => TopProductProfit(productName: e.key, profit: e.value))
         .toList();
   }
 
