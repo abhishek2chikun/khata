@@ -139,3 +139,14 @@ class InvalidBackupPayloadException implements Exception {
   @override
   String toString() => 'InvalidBackupPayloadException: $message';
 }
+
+/// Redacts sensitive tokens/passwords from backup failure messages before persistence.
+String redactBackupFailureMessage(Object error) {
+  final message = error.toString();
+  if (message.contains('password') ||
+      message.contains('token') ||
+      message.contains('Authorization')) {
+    return 'Backup operation failed.';
+  }
+  return message.replaceFirst(RegExp(r'^[^:]+:\s*'), '');
+}

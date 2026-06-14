@@ -92,7 +92,7 @@ class EncryptedDriveBackupOrchestrator {
       await _recordEvent(
         eventType: eventType,
         status: 'failure',
-        message: _redactFailureMessage(error),
+        message: redactBackupFailureMessage(error),
         at: now,
       );
       rethrow;
@@ -147,7 +147,7 @@ class EncryptedDriveBackupOrchestrator {
       await _recordEvent(
         eventType: 'drive_restore',
         status: 'failure',
-        message: _redactFailureMessage(error),
+        message: redactBackupFailureMessage(error),
         at: now,
       );
       rethrow;
@@ -227,15 +227,5 @@ class EncryptedDriveBackupOrchestrator {
 
   static String _sha256Hex(List<int> bytes) {
     return sha256.convert(bytes).toString();
-  }
-
-  static String _redactFailureMessage(Object error) {
-    final message = error.toString();
-    if (message.contains('password') ||
-        message.contains('token') ||
-        message.contains('Authorization')) {
-      return 'Backup operation failed.';
-    }
-    return message.replaceFirst(RegExp(r'^[^:]+:\s*'), '');
   }
 }

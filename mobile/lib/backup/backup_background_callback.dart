@@ -3,6 +3,7 @@ import 'package:googleapis_auth/googleapis_auth.dart' as auth;
 import 'package:workmanager/workmanager.dart';
 
 import '../local/local_database.dart';
+import 'backup_models.dart';
 import 'backup_scheduler.dart';
 import 'drive_backup_service.dart';
 import 'drive_platform.dart';
@@ -93,10 +94,10 @@ Future<BackupBackgroundResult> _defaultBackgroundRunner() async {
   } on Object catch (error) {
     if (database != null) {
       await LocalBackupEventRecorder(database: database).recordBackupFailure(
-        error.toString(),
+        redactBackupFailureMessage(error),
       );
     }
-    return BackupBackgroundResult.failure(error.toString());
+    return BackupBackgroundResult.failure(redactBackupFailureMessage(error));
   } finally {
     authClient?.close();
     await database?.close();

@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_background_callback.dart';
+import 'package:internal_billing_khata_mobile/backup/backup_models.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_platform.dart';
 import 'package:internal_billing_khata_mobile/backup/workmanager_schedule_adapter.dart';
@@ -141,6 +142,17 @@ void main() {
 
       expect(result.actionRequired, isTrue);
       expect(result.message, contains('Sign in'));
+    });
+
+    test('redacts sensitive backup failure messages', () {
+      expect(
+        redactBackupFailureMessage(Exception('invalid password for token xyz')),
+        'Backup operation failed.',
+      );
+      expect(
+        redactBackupFailureMessage(const DriveTransportException('upload failed')),
+        'upload failed',
+      );
     });
 
     test('fl_chart compiles for analytics feasibility', () {

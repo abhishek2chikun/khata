@@ -330,6 +330,7 @@ def _insert_invoice_items(session: Session, invoice: Invoice, prepared: Prepared
             line_number=line.line_number,
             product_item_number=line.product.item_number,
             product_item_name=line.product.item_name,
+            product_hsn_code=normalize_hsn_code(line.product.hsn_code),
             product_category=line.product.category,
             product_buyer_id=line.product.buyer_id,
             product_company_name=line.product.company_name,

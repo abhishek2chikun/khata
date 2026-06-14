@@ -187,6 +187,47 @@ void main() {
     expect(find.text('Collection total exceeds current pending balance'), findsOneWidget);
     expect(tester.widget<TextField>(find.byKey(Key('additionalAmount-customer-1-$today'))).controller?.text, '40');
   });
+
+  testWidgets('idempotency conflict reloads grid while preserving inputs', (tester) async {
+    final today = _todayString();
+    final service = _FakePaymentsService(
+      grid: CollectionGridData(
+        fromDate: today,
+        toDate: today,
+        dates: <String>[today],
+        customers: <CollectionGridCustomerRow>[
+          CollectionGridCustomerRow(
+            id: 'customer-1',
+            name: 'ABC Stores',
+            pendingBalance: 500,
+            existingTotals: const <String, double>{},
+          ),
+        ],
+      ),
+      batchError: const ApiError(
+        code: 'IDEMPOTENCY_CONFLICT',
+        message: 'Batch request ID already used with different payload',
+        statusCode: 409,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyCollectionsScreen(paymentsService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(Key('additionalAmount-customer-1-$today')), '40');
+    await tester.tap(find.byKey(const Key('saveDailyCollectionsButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmDailyCollectionsButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Batch request ID already used with different payload'), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(Key('additionalAmount-customer-1-$today'))).controller?.text, '40');
+    expect(service.loadCount, greaterThan(1));
+  });
 }
 
 class _FakePaymentsService implements PaymentsService {

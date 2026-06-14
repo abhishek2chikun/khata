@@ -238,3 +238,9 @@ def _invoice_v2_migration_text() -> str:
     from pathlib import Path
 
     return (Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0008_invoice_v2.py").read_text()
+
+
+def test_insert_invoice_items_persists_product_hsn_snapshot():
+    source = inspect.getsource(invoice_service._insert_invoice_items)
+
+    assert "product_hsn_code=normalize_hsn_code(line.product.hsn_code)" in source

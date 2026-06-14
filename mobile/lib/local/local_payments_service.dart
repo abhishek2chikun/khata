@@ -389,11 +389,13 @@ class LocalPaymentsService implements PaymentsService {
       });
     final canonical = sorted
         .map(
-          (entry) => <String, String>{
-            'customer_id': entry.customerId,
-            'occurred_on': entry.occurredOn,
-            'amount': _normalizeDecimal(entry.amount),
-          },
+          (entry) => Map<String, String>.fromEntries(
+            <MapEntry<String, String>>[
+              MapEntry('amount', _normalizeDecimal(entry.amount)),
+              MapEntry('customer_id', entry.customerId),
+              MapEntry('occurred_on', entry.occurredOn),
+            ]..sort((left, right) => left.key.compareTo(right.key)),
+          ),
         )
         .toList();
     return sha256.convert(utf8.encode(jsonEncode(canonical))).toString();

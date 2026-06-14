@@ -330,7 +330,7 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
           _batchRequestId = null;
         }
       });
-      if (error.code == 'STALE_BALANCE') {
+      if (error.code == 'STALE_BALANCE' || error.code == 'IDEMPOTENCY_CONFLICT') {
         await _loadGrid(preserveInputs: true, preserveMessages: true);
       }
     } on Object catch (error) {
@@ -430,6 +430,7 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       _selectedDates = <String>[..._selectedDates, previousString]..sort();
       _errorMessage = null;
     });
+    _invalidateBatchRequestId();
     _loadGrid(preserveInputs: true);
   }
 
@@ -444,6 +445,7 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
     for (final customer in _allCustomers) {
       _amountControllers.remove(_cellKey(customer.id, oldest))?.dispose();
     }
+    _invalidateBatchRequestId();
     _loadGrid(preserveInputs: true);
   }
 

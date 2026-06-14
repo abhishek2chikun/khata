@@ -1,3 +1,5 @@
+import 'backup_models.dart';
+
 class BackupTimeOfDay {
   const BackupTimeOfDay({required this.hour, required this.minute})
       : assert(hour >= 0 && hour < 24),
@@ -152,7 +154,7 @@ class BackupScheduler {
     try {
       await _runBackup();
     } on Object catch (error) {
-      await _eventRecorder.recordBackupFailure(error.toString());
+      await _eventRecorder.recordBackupFailure(redactBackupFailureMessage(error));
       rethrow;
     }
     return true;
