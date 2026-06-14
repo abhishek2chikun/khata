@@ -8,13 +8,15 @@ Objective: Upgrade product/HSN and invoice contracts, invoice entry/PDF UX, batc
 
 Workflow schema: five-stage-v1
 
-Current stage: `4-validation`
+Current stage: `5-final-review`
 
-Stage status: `complete`
+Stage status: `returned-to-stage-3`
 
-Current task: Stage 4 independent validation (complete)
+Current task: Repair collection concurrency and revalidate with PostgreSQL
 
-Current HEAD: `2399faecff7f594378a6d41dd2d41264de2bd5f0`
+Current artifact HEAD at Stage 5 intake: `f25e5cadc9b6db16a71032ed6003aa6e8ea2e435`
+
+Final reviewed code SHA: `5b6616502efdb511352e3124894ffcb643842535`
 
 ## Stage 1 Repair
 
@@ -34,15 +36,17 @@ Worktree baseline SHA: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
 
 Stage 3 ending SHA: `49cec2c630fed1add8db110c9001fab4f060e9f9`
 
-Stage 4 final SHA: `2399faecff7f594378a6d41dd2d41264de2bd5f0` (code fixes in `5b66165`)
+Stage 4 reviewed code SHA: `5b6616502efdb511352e3124894ffcb643842535`
 
-Worktree status: `stage-4-complete-clean`
+Stage 4 validation artifact commit: `2399faecff7f594378a6d41dd2d41264de2bd5f0`; post-validation SHA-label correction: `f25e5cadc9b6db16a71032ed6003aa6e8ea2e435`
+
+Worktree status: `stage-5-artifacts-dirty`; untracked `.venv` and rolling workflow files are present
 
 Merge owner: Stage 5 persistent LLM
 
 Merge authorization: required (not recorded)
 
-Merge status: not-started
+Merge status: not-started (not merge-eligible)
 
 Untracked outside cycle folder: `.venv`, `docs/ai-workflow/INDEX.md`, `docs/ai-workflow/PROJECT_CONTEXT.md`
 
@@ -73,7 +77,7 @@ Primary checkout `/Users/abhishek/python_venv/khata_app` must remain untouched.
 6. Analytics contracts and dashboard UI.
 7. Full verification, artifacts, and handoff.
 
-All seven tasks complete. Stage 4 validation complete.
+All seven implementation tasks were attempted. Task 04 is returned to Stage 3 because its API concurrency contract is incomplete.
 
 ## High-Risk Gates
 
@@ -88,7 +92,11 @@ All seven tasks complete. Stage 4 validation complete.
 
 AC1-AC14 mapped in `03-implementation-log.md` and `04-validation-report.md`.
 
-Stage 4 verdict: **pass-with-minor-issues**
+Stage 4 verdict: **pass-with-minor-issues** (overruled by Stage 5)
+
+Stage 5 verdict: **fix-required**
+
+Stage 5 artifact: `05-final-review.md`
 
 Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 
@@ -111,25 +119,40 @@ Stage 4 artifacts: `04-validation-report.md`, `04-return-packet.md`
 | `pg_isready -h localhost -p 55432` | fail (Docker daemon unavailable) |
 | `pytest backend/tests -q` | blocked |
 
-### Remaining blockers for Stage 5
+### Stage 5 Blocking Findings
 
-1. Start PostgreSQL on `:55432`; run Alembic upgrade/downgrade + full `backend/tests`.
-2. AC10/AC11 physical Drive matrix or explicit waiver.
-3. Optional: manual PDF visual review; Drive restore download SHA-256 hardening.
+1. `create_collection_batch` has no durable batch-level lock/unique identity, so concurrent conflicting payloads using the same batch request ID can both commit.
+2. `create_collection` does not share the customer lock used by batch writes, so concurrent single and batch collections can violate the no-overpayment invariant.
+3. PostgreSQL on `:55432` remains unavailable; Alembic and full backend integration evidence is missing.
+4. AC10 and physical AC11 Drive evidence remain unverified.
+
+### Fresh Stage 5 Evidence
+
+| Check | Result |
+|---|---|
+| `pytest backend/pure_tests -q` | 56 passed |
+| focused collection/backup/PDF/cross-slice Flutter tests | 42 passed |
+| `pg_isready -h localhost -p 55432` | no response |
+| Docker Desktop recovery wait | daemon remained unavailable |
+| collection transaction code review | AC9 concurrency contradicted |
 
 ## Context Topology
 
-- Persistent LLM lane: `paused-after-stage-4`
+- Persistent LLM lane: `resumed-stage-5`
 - Current owner: `Stage 5 persistent LLM`
-- Next owner: `Stage 5 persistent LLM`
-- Minimum read set: this file, `02-llm-review-anchor.md`, `04-return-packet.md`
+- Next owner: `Stage 3 fresh SLM`
+- Minimum read set: this file, `05-final-review.md`, Task 04, `customer_service.py`, and batch service/API tests
 - Merge owner/status: `Stage 5 persistent LLM` / `not-started`
 
 ## Integration Preflight
 
 - Merge-base with `main`: `837ccbc` (no upstream divergence)
-- Feature commits ahead: 12 (`837ccbc..5b66165`)
+- Feature code commits ahead: 12 (`837ccbc..5b66165`); artifact commits at Stage 5 intake: 14 (`837ccbc..f25e5ca`)
 - Likely merge conflicts: low (README/docs content merges only)
 - Post-merge checks: Alembic 0010, `pytest backend/tests -q`, mobile suite, APK smoke
 
-Last updated: 2026-06-14 IST (Stage 4 independent validation complete)
+## Exact Next Action
+
+Start a fresh Stage 3 SLM in `/Users/abhishek/python_venv/khata_app-upgrade`. Verify branch `codex/khata-invoice-collections-backup-analytics`, read `STATE.md`, `05-final-review.md`, and `02-plan/04-batch-khata-collections.md`, then implement shared PostgreSQL serialization for single and batch collection writes with real concurrent regression tests. Do not merge.
+
+Last updated: 2026-06-14 IST (Stage 5 returned to Stage 3)
