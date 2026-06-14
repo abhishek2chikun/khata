@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/invoice_detail.dart';
 import '../models/invoice_quote.dart';
-import '../models/product.dart';
 import '../services/invoice_pdf_service.dart';
 import '../services/invoice_share_service.dart';
 import '../state/invoice_draft_controller.dart';
@@ -95,8 +94,7 @@ class InvoicePreviewScreen extends StatelessWidget {
                     onPressed: controller.isSubmitting
                         ? null
                         : () async {
-                            final created =
-                                await controller.submitInvoice();
+                            final created = await controller.submitInvoice();
                             if (!context.mounted || !created) {
                               return;
                             }
@@ -166,8 +164,10 @@ class InvoicePreviewScreen extends StatelessWidget {
         .where((di) => di.product?.id == item.productId)
         .firstOrNull;
     final productName = draftItem?.product?.itemName ?? item.productItemName;
-    final productItemNumber = draftItem?.product?.itemNumber ?? item.productItemNumber;
-    final productCategory = draftItem?.product?.category ?? item.productCategory;
+    final productItemNumber =
+        draftItem?.product?.itemNumber ?? item.productItemNumber;
+    final productCategory =
+        draftItem?.product?.category ?? item.productCategory;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -193,9 +193,13 @@ class InvoicePreviewScreen extends StatelessWidget {
           Text('$productItemNumber | $productCategory'),
           Row(
             children: <Widget>[
-              Text(key: Key('quantity-$index'), '${item.unit ?? 'PCS'} x ${item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 2)}'),
+              Text(
+                  key: Key('quantity-$index'),
+                  '${item.unit ?? 'PCS'} x ${item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 2)}'),
               const SizedBox(width: 16),
-              Text(key: Key('pricePerUnit-$index'), '@ ${item.enteredUnitPrice.toStringAsFixed(2)}'),
+              Text(
+                  key: Key('pricePerUnit-$index'),
+                  '@ ${item.enteredUnitPrice.toStringAsFixed(2)}'),
             ],
           ),
         ],

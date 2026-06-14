@@ -23,7 +23,7 @@ The smallest complete version is an end-to-end seller/invoice GST mode with immu
 - Seller-level `gst_flag` in company profile and immutable invoice-level `gst_flag`.
 - GST/non-GST quote and create behavior in API and local modes.
 - Date-only mobile invoice flow while preserving legacy backend datetime compatibility.
-- GST/non-GST PDF templates with A5 for at most 10 lines and A4 for more than 10 lines.
+- GST/non-GST PDF templates with A5 as the paper-saving candidate for at most 15 lines; retain A5 only when the complete invoice fits one page, otherwise use A4. More than 15 lines uses A4 directly.
 - Attached invoice PDF plus formatted caption via the system share sheet.
 - Individual customer receivable sharing and current-day all-due-customer summary sharing.
 - Backend/local schema alignment, migrations, backup version bump, tests, and operational docs.
@@ -124,7 +124,7 @@ Extend the existing invoice domain with one boolean policy field rather than for
 | GST seller selects non-GST with zero-rate lines | Zero-tax non-GST invoice succeeds | API/local integration tests | Yes |
 | Date-only request | Persist UTC-midnight compatibility datetime; no timezone error | API/local request tests | Yes |
 | Legacy aware datetime request | Still accepted when date matches | Backend compatibility test | Yes |
-| 10/11 line invoice | A5/A4 respectively | Parsed PDF page-size tests | Yes |
+| Standard 15/16 line invoice | One-page A5/A4 respectively; verbose <=15-line content falls back to A4 | Parsed PDF dimensions/page count plus rendered review | Yes |
 | PDF share | Attachment and formatted caption reach share handler | Share service/widget tests | Yes |
 | Individual balance | Current ledger-derived balance included | Formatter/widget tests | Yes |
 | Daily balances | Positive balances only, sorted, accurate total | API/local-backed formatter tests | Yes |
@@ -138,7 +138,7 @@ Extend the existing invoice domain with one boolean policy field rather than for
 | AC-GST-01 | Seller defaults and allowed invoice modes match the policy in both modes | Backend API/service and Flutter local/widget tests | Yes |
 | AC-GST-02 | Non-GST invoices have zero tax and omit GST-specific PDF content | Calculation assertions plus parsed PDF text | Yes |
 | AC-DATE-01 | Mobile date-only quote/create never triggers timezone validation | API/local/service/widget tests | Yes |
-| AC-PDF-01 | 10 lines use A5 and 11 use A4 for both tax modes | PDF page dimension assertions | Yes |
+| AC-PDF-01 | Standard 15-line invoices use one-page A5, 16-line invoices use one-page A4, and overflowing <=15-line invoices fall back to A4 in both tax modes | PDF page dimension/page-count assertions | Yes |
 | AC-PDF-02 | Four variants are readable and contain correct totals/status | PDF text/layout tests and manual rendered review | Yes |
 | AC-SHARE-01 | Invoice sharing sends PDF and formatted caption through OS sharing | Handler and widget tests plus Android runtime | Yes |
 | AC-BAL-01 | Individual message equals canonical customer pending balance | Formatter and customer-detail widget tests | Yes |
@@ -152,7 +152,7 @@ Extend the existing invoice domain with one boolean policy field rather than for
 | Tax distinction | Calculation-level `gst_flag` | Prevent misleading documents/accounting | Template-only toggle |
 | Seller policy | Non-GST cannot issue GST; GST non-GST only zero-rate | Approved safety/legal boundary | Arbitrary tax suppression |
 | Date | Date-only mobile; legacy datetime retained | Removes blocker without destructive migration | Drop datetime column now |
-| PDF size | `items.length <= 10` A5, otherwise A4 | Matches explicit requirement deterministically | Quantity/page-fit heuristics |
+| PDF size | `items.length <= 15` starts as A5 and remains A5 only if the complete document is one page; otherwise A4 | Saves half-sheet paper while preserving readable, complete invoices | Fixed 10/11 threshold; forcing dense A5 content; quantity-only selection |
 | WhatsApp | Attached PDF via OS share sheet | Direct `wa.me` cannot attach local PDF | Chat-only deep link |
 | Balance target | Customer receivables | Matches app terminology and approval | Buyer/supplier payables |
 | Daily summary | All positive customer balances as of current local date | Useful collection list | One-customer daily statement |

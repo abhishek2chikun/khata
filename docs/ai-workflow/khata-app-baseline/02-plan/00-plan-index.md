@@ -15,7 +15,7 @@ Locked decisions:
 - Non-GST seller forces zero effective tax and cannot issue GST invoices.
 - GST seller may issue non-GST only when every line resolves to 0% GST.
 - Mobile is date-only; backend retains aware `invoice_datetime` compatibility and persists UTC midnight for date-only requests.
-- At most 10 item rows is A5; more than 10 is A4.
+- At most 15 item rows is an A5 candidate; retain A5 only when the complete invoice fits one page. Overflowing candidates and more than 15 rows use A4.
 - Invoice PDF is shared with a caption through the OS share sheet.
 - Balance sharing covers individual customer receivables and an all-positive-balances daily summary.
 
@@ -36,7 +36,7 @@ Execution model: fresh SLM context per task. Execute sequentially because later 
 | AC-GST-01 | 01, 02, 03 | migration, API/local service, profile/draft widget tests |
 | AC-GST-02 | 02, 04 | zero-tax calculation plus PDF text assertions |
 | AC-DATE-01 | 03 | API compatibility, mobile payload, local service and widget tests |
-| AC-PDF-01 | 04 | parsed first-page dimensions for 10/11 lines in both modes |
+| AC-PDF-01 | 04 | parsed dimensions/page counts for standard 15/16 lines plus verbose <=15-row A4 fallback in both modes |
 | AC-PDF-02 | 04 | parsed text/amount/status tests and manual rendering |
 | AC-SHARE-01 | 05 | handler/widget tests and Android share-sheet smoke |
 | AC-BAL-01 | 06 | formatter and customer-detail widget tests |
@@ -82,7 +82,7 @@ If PostgreSQL is unavailable, record the exact failure and run no-DB migration c
 3. Run focused tests after every task, then full `flutter test test` and backend `pytest backend/tests -q`.
 4. Run `flutter analyze`; known missing `flutter_lints` dependency is an upstream baseline defect, not permission for new analyzer errors.
 5. Build local release APK with `flutter build apk --release --dart-define=DATA_MODE=local`.
-6. On Android local mode, create and share GST/non-GST invoices with 10 and 11 rows; verify date-only creation, page size, attachment, captions, individual balance, daily summary, empty state, and canceled watermark.
+6. On Android local mode, create and share GST/non-GST invoices with 15 and 16 rows plus a verbose <=15-row invoice; verify date-only creation, adaptive page size, attachment, captions, individual balance, daily summary, empty state, and canceled watermark.
 
 ## Rollout/Rollback
 - API mode: deploy backend migration/code first, then mobile. Old clients continue because omitted `gst_flag` resolves from profile and aware datetimes remain accepted.
@@ -108,4 +108,3 @@ If PostgreSQL is unavailable, record the exact failure and run no-DB migration c
 - Decision completeness: no consequential tax, date, layout, sharing, migration, or rollback choice remains for the SLM.
 - Negative behavior: invalid modes, legacy compatibility, empty reports, canceled invoices, failures, and idempotency are explicit.
 - Context size: each packet is bounded to one coherent fresh-context slice.
-

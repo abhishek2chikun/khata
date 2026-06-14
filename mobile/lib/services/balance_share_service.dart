@@ -23,7 +23,7 @@ String formatDailyBalanceShareMessage({
   required List<Customer> customers,
 }) {
   final dueCustomers = customers
-      .where((customer) => customer.pendingBalance > 0)
+      .where((customer) => customer.isActive && customer.pendingBalance > 0)
       .toList()
     ..sort(
       (left, right) =>
@@ -40,7 +40,8 @@ String formatDailyBalanceShareMessage({
   ];
   var total = 0.0;
   for (final customer in dueCustomers) {
-    lines.add('${customer.name}: ${customer.pendingBalance.toStringAsFixed(2)}');
+    lines
+        .add('${customer.name}: ${customer.pendingBalance.toStringAsFixed(2)}');
     total += customer.pendingBalance;
   }
   lines.add('Total: ${total.toStringAsFixed(2)}');
@@ -65,7 +66,8 @@ class _ProductionBalanceShareService implements BalanceShareService {
 }
 
 class _HandlerBalanceShareService implements BalanceShareService {
-  _HandlerBalanceShareService({required Future<void> Function(String) shareText})
+  _HandlerBalanceShareService(
+      {required Future<void> Function(String) shareText})
       : _shareText = shareText;
 
   final Future<void> Function(String message) _shareText;

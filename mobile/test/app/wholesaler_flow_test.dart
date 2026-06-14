@@ -23,13 +23,10 @@ import 'package:internal_billing_khata_mobile/local/local_database.dart';
 import 'package:internal_billing_khata_mobile/local/local_invoices_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
-import 'package:internal_billing_khata_mobile/models/analytics.dart';
-import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/services/buyers_service.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
-import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
@@ -154,37 +151,38 @@ void main() {
         .firstWhere((p) => p.id == product.id);
     expect(updatedProduct.quantityOnHand, 47);
 
-    final ledger =
-        await customersService.fetchCustomerLedger(customer.id);
+    final ledger = await customersService.fetchCustomerLedger(customer.id);
     expect(ledger.customer.pendingBalance, closeTo(240, 0.01));
 
-    final creditSale = ledger.transactions
-        .where((t) => t.entryType == 'CREDIT_SALE')
-        .toList();
+    final creditSale =
+        ledger.transactions.where((t) => t.entryType == 'CREDIT_SALE').toList();
     expect(creditSale, hasLength(1));
     expect(creditSale.single.amount, closeTo(390, 0.01));
 
-    final collection = ledger.transactions
-        .where((t) => t.entryType == 'COLLECTION')
-        .toList();
+    final collection =
+        ledger.transactions.where((t) => t.entryType == 'COLLECTION').toList();
     expect(collection, hasLength(1));
     expect(collection.single.amount, 150);
 
     final dashboard = await analyticsService.getDashboard();
 
     expect(dashboard.revenueByCompany, isNotEmpty);
-    final camlinRevenue = dashboard.revenueByCompany
-        .where((e) => e.name == 'Camlin')
-        .toList();
+    final camlinRevenue =
+        dashboard.revenueByCompany.where((e) => e.name == 'Camlin').toList();
     expect(camlinRevenue, hasLength(1));
-    expect(camlinRevenue.single.revenue, closeTo(390, 0.01));
+    expect(
+      camlinRevenue.single.revenue,
+      closeTo(quote.totals.taxableTotal, 0.01),
+    );
 
     expect(dashboard.profitByCompany, isNotEmpty);
-    final camlinProfit = dashboard.profitByCompany
-        .where((e) => e.name == 'Camlin')
-        .toList();
+    final camlinProfit =
+        dashboard.profitByCompany.where((e) => e.name == 'Camlin').toList();
     expect(camlinProfit, hasLength(1));
-    expect(camlinProfit.single.profit, closeTo(390 - (80 * 3), 0.01));
+    expect(
+      camlinProfit.single.profit,
+      closeTo(quote.totals.taxableTotal - (80 * 3), 0.01),
+    );
 
     expect(dashboard.customerKhataBalances, isNotEmpty);
     final abcBalance = dashboard.customerKhataBalances
@@ -204,17 +202,14 @@ void main() {
 
     final ledgerAfterCollection =
         await customersService.fetchCustomerLedger(customer.id);
-    expect(
-        ledgerAfterCollection.customer.pendingBalance, closeTo(140, 0.01));
+    expect(ledgerAfterCollection.customer.pendingBalance, closeTo(140, 0.01));
 
-    final entryTypes = ledgerAfterCollection.transactions
-        .map((t) => t.entryType)
-        .toList();
+    final entryTypes =
+        ledgerAfterCollection.transactions.map((t) => t.entryType).toList();
     expect(entryTypes, contains('CREDIT_SALE'));
     expect(entryTypes.where((t) => t == 'COLLECTION').length, 2);
 
-    final invoiceList =
-        await invoicesService.listInvoices(status: 'ACTIVE');
+    final invoiceList = await invoicesService.listInvoices(status: 'ACTIVE');
     expect(invoiceList, hasLength(1));
     expect(invoiceList.single.customerName, 'ABC Stores');
     expect(invoiceList.single.grandTotal, closeTo(390, 0.01));

@@ -10,7 +10,6 @@ import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/services/company_profile_service.dart';
-import 'package:internal_billing_khata_mobile/services/invoices_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
@@ -975,8 +974,7 @@ void main() {
     final transactionsBefore =
         await database.select(database.customerTransactions).get();
     expect(
-      transactionsBefore
-          .map((t) => (t.entryType, t.amount)),
+      transactionsBefore.map((t) => (t.entryType, t.amount)),
       <(String, String)>[
         ('CREDIT_SALE', '236'),
         ('COLLECTION', '100'),
@@ -989,8 +987,7 @@ void main() {
       closeTo(136, 0.001),
     );
 
-    final invoices =
-        await database.select(database.invoices).get();
+    final invoices = await database.select(database.invoices).get();
     await invoicesService.cancelInvoice(
       invoiceId: invoices.single.id,
       reason: 'Customer canceled order',
@@ -1017,8 +1014,7 @@ void main() {
       requestId: _uuid(41),
     );
 
-    final storedItem =
-        await database.select(database.invoiceItems).getSingle();
+    final storedItem = await database.select(database.invoiceItems).getSingle();
     expect(storedItem.revenueAmount, '200.00');
     expect(storedItem.buyingAmount, '160.00');
     expect(storedItem.profitAmount, '40.00');
@@ -1048,8 +1044,7 @@ void main() {
       requestId: _uuid(43),
     );
 
-    final storedInvoice =
-        await database.select(database.invoices).getSingle();
+    final storedInvoice = await database.select(database.invoices).getSingle();
 
     final second = await invoicesService.createInvoice(
       draft: _draft(customer: customer, product: product, quantity: 2),
@@ -1099,7 +1094,8 @@ void main() {
     );
     await expectLater(
       invoicesService.createInvoice(
-        draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+        draft: _draft(
+            customer: customer, product: product, quantity: 1, gstFlag: true),
         requestId: _uuid(51),
       ),
       throwsA(_apiError(code: 'GST_INVOICE_NOT_ALLOWED', statusCode: 400)),
@@ -1109,18 +1105,21 @@ void main() {
 
   test('idempotency_hash_includes_gst_flag', () async {
     final first = await invoicesService.createInvoice(
-      draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+      draft: _draft(
+          customer: customer, product: product, quantity: 1, gstFlag: true),
       requestId: _uuid(52),
     );
     final replay = await invoicesService.createInvoice(
-      draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: true),
+      draft: _draft(
+          customer: customer, product: product, quantity: 1, gstFlag: true),
       requestId: _uuid(52),
     );
     expect(replay.invoice.id, first.invoice.id);
 
     await expectLater(
       invoicesService.createInvoice(
-        draft: _draft(customer: customer, product: product, quantity: 1, gstFlag: false),
+        draft: _draft(
+            customer: customer, product: product, quantity: 1, gstFlag: false),
         requestId: _uuid(52),
       ),
       throwsA(_apiError(code: 'IDEMPOTENCY_CONFLICT', statusCode: 409)),

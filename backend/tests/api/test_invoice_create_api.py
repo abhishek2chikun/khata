@@ -10,7 +10,6 @@ def _company_payload(state: str = "Maharashtra", state_code: str = "27") -> dict
         "state_code": state_code,
         "gstin": "27AAAAA0000A1Z5",
         "gst_flag": True,
-        "gst_flag": True,
         "phone": "9999999999",
         "email": "owner@example.com",
         "bank_name": "ABC Bank",

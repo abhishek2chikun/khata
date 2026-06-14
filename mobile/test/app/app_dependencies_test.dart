@@ -88,7 +88,13 @@ void main() {
 
   test('local dependencies create local auth and local data services',
       () async {
-    final dependencies = await AppDependencies.create(mode: DataMode.local);
+    final database = db.LocalDatabase.memory();
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.local,
+      localDatabase: database,
+      loadCatalogJson: () async =>
+          '{"catalog_version":1,"buyers":[],"products":[]}',
+    );
 
     expect(dependencies.mode, DataMode.local);
     expect(dependencies.controller, isA<AuthController>());

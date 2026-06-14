@@ -136,6 +136,12 @@ On a fresh local database, the app shows `Set up local user`. Create the first
 local username/password there, then log in. Local mode uses the same main flows
 as API mode but persists data through Drift/SQLite on the device.
 
+**Preinstalled catalog:** release/local builds bundle ~1,199 products and 30
+buyers from `data/source/products.xlsx` (compiled to
+`assets/catalog/preinstalled_catalog.json`). `AppDependencies` seeds missing
+catalog rows on startup via `LocalProductCatalogSeeder`; seeded inventory is
+fully editable. Rebuild with `python3 tools/build_preinstalled_catalog.py`.
+
 The local database schema mirrors backend concepts for future migration:
 products, customers, company profiles, invoices, invoice items, stock movements,
 customer transactions, users, sessions, backup settings, and backup events. IDs,
@@ -221,6 +227,7 @@ adb reverse tcp:8010 tcp:8010
 
 ## Progress
 
+- **2026-06-13:** Preinstalled local product catalog — 1,199 products + 30 buyers bundled as JSON asset, seeded idempotently on local-mode startup; build script at `tools/build_preinstalled_catalog.py`.
 - **2026-06-13:** Stage 3 GST invoicing — Drift/backup schema **9**, seller `gst_flag`, GST/non-GST tax semantics, date-only mobile invoices, adaptive PDFs, PDF+caption share, customer balance sharing; **372** mobile tests passing.
 - **2026-06-12:** `ApiBuyersService.addPaymentMade` now posts to `/payments-made` (was `/collections-made`, 404 against live backend).
 - Login is working against the current local backend setup.

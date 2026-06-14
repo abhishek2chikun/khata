@@ -7,7 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../models/invoice_detail.dart';
 
 PdfPageFormat invoicePdfPageFormatForItemCount(int itemCount) {
-  return itemCount <= 10 ? PdfPageFormat.a5 : PdfPageFormat.a4;
+  return itemCount <= 15 ? PdfPageFormat.a5 : PdfPageFormat.a4;
 }
 
 String invoicePdfDocumentTitle({required bool gstFlag}) {
@@ -18,6 +18,8 @@ bool invoicePdfIncludesGstSupplySection({required bool gstFlag}) => gstFlag;
 
 bool invoicePdfShowsCanceledBanner({required String status}) =>
     status == 'CANCELED';
+
+bool invoicePdfShowsTaxableTotal({required bool gstFlag}) => gstFlag;
 
 class InvoicePdfService {
   InvoicePdfService._(this._outputDirectory);
@@ -37,6 +39,21 @@ class InvoicePdfService {
   }
 
   Future<String> generateInvoicePdf(InvoiceDetail invoice) async {
+    var pageFormat = invoicePdfPageFormatForItemCount(invoice.items.length);
+    var pdf = _buildPdf(invoice, pageFormat);
+    if (pageFormat == PdfPageFormat.a5 &&
+        pdf.document.pdfPageList.pages.length > 1) {
+      pageFormat = PdfPageFormat.a4;
+      pdf = _buildPdf(invoice, pageFormat);
+    }
+
+    final dir = await _outputDirectory();
+    final file = File('$dir/invoice_${invoice.invoiceNumber}.pdf');
+    await file.writeAsBytes(await pdf.save());
+    return file.path;
+  }
+
+  pw.Document _buildPdf(InvoiceDetail invoice, PdfPageFormat pageFormat) {
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: pw.Font.helvetica(),
@@ -44,50 +61,294 @@ class InvoicePdfService {
       ),
     );
     final isGst = invoice.gstFlag;
-    final pageFormat = invoicePdfPageFormatForItemCount(invoice.items.length);
-    final margin = invoice.items.length <= 10 ? 28.0 : 36.0;
+    final isA5 = pageFormat == PdfPageFormat.a5;
+    final margin = isA5 ? 18.0 : 24.0;
+    final smallGap = isA5 ? 4.0 : 4.0;
+    final sectionGap = isA5 ? 6.0 : 6.0;
+    final majorGap = isA5 ? 8.0 : 8.0;
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: pageFormat,
         margin: pw.EdgeInsets.all(margin),
         header: (context) => _buildPageHeader(invoice),
-        build: (context) => <pw.Widget>[
-          _buildDocumentHeader(invoice, isGst),
-          pw.SizedBox(height: 16),
-          _buildInvoiceInfo(invoice),
-          pw.SizedBox(height: 12),
-          _buildPartyInfo(invoice, isGst),
-          if (isGst) ...<pw.Widget>[
-            pw.SizedBox(height: 12),
-            _buildGstSupplyInfo(invoice),
+        build: (context) => isA5
+            ? _buildCompactA5Content(invoice, isGst)
+            : <pw.Widget>[
+                _buildDocumentHeader(invoice, isGst),
+                pw.SizedBox(height: majorGap),
+                _buildInvoiceInfo(invoice),
+                pw.SizedBox(height: sectionGap),
+                _buildPartyInfo(invoice, isGst),
+                if (isGst) ...<pw.Widget>[
+                  pw.SizedBox(height: sectionGap),
+                  _buildGstSupplyInfo(invoice),
+                ],
+                pw.SizedBox(height: majorGap),
+                _buildItemTable(invoice, isGst),
+                pw.SizedBox(height: smallGap),
+                _buildTotals(invoice, isGst),
+                pw.SizedBox(height: sectionGap),
+                _buildCompactSettlement(invoice, fontSize: 8),
+                pw.SizedBox(height: 8),
+                _buildSignatureSpace(invoice, compact: false),
+                pw.SizedBox(height: 8),
+                _buildFooter(),
+              ],
+      ),
+    );
+    return pdf;
+  }
+
+  List<pw.Widget> _buildCompactA5Content(InvoiceDetail invoice, bool isGst) {
+    return <pw.Widget>[
+      _buildCompactHeader(invoice, isGst),
+      pw.SizedBox(height: 4),
+      _buildCompactInvoiceAndPartyInfo(invoice, isGst),
+      if (isGst) ...<pw.Widget>[
+        pw.SizedBox(height: 3),
+        _buildCompactSupplyInfo(invoice),
+      ],
+      pw.SizedBox(height: 4),
+      _buildCompactItemTable(invoice, isGst),
+      pw.SizedBox(height: 4),
+      _buildCompactTotals(invoice, isGst),
+      pw.SizedBox(height: 4),
+      _buildCompactSettlement(invoice),
+      pw.SizedBox(height: 5),
+      _buildSignatureSpace(invoice, compact: true),
+      pw.SizedBox(height: 3),
+      _buildFooter(),
+    ];
+  }
+
+  pw.Widget _buildCompactHeader(InvoiceDetail invoice, bool isGst) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: <pw.Widget>[
+        pw.Text(
+          invoicePdfDocumentTitle(gstFlag: isGst),
+          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: <pw.Widget>[
+            pw.Text(invoice.companyName,
+                style:
+                    pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              _joinNonEmpty(<String?>[
+                invoice.companyAddress,
+                invoice.companyCity,
+                invoice.companyState,
+              ]),
+              style: pw.TextStyle(fontSize: 6.5),
+            ),
+            if (isGst && (invoice.companyGstin ?? '').isNotEmpty)
+              pw.Text('GSTIN: ${invoice.companyGstin}',
+                  style: pw.TextStyle(fontSize: 6.5)),
           ],
-          pw.SizedBox(height: 16),
-          _buildItemTable(invoice, isGst),
-          pw.SizedBox(height: 8),
-          _buildTotals(invoice, isGst),
-          pw.SizedBox(height: 12),
-          _buildAmountInWords(invoice),
-          pw.SizedBox(height: 12),
-          _buildPaymentInfo(invoice),
-          if (_hasBankDetails(invoice)) ...<pw.Widget>[
-            pw.SizedBox(height: 12),
-            _buildBankDetails(invoice),
-          ],
-          if ((invoice.notes ?? '').isNotEmpty) ...<pw.Widget>[
-            pw.SizedBox(height: 12),
-            _buildNotes(invoice),
-          ],
-          pw.SizedBox(height: 24),
-          _buildFooter(),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildCompactInvoiceAndPartyInfo(
+      InvoiceDetail invoice, bool isGst) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(4),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: <pw.Widget>[
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: <pw.Widget>[
+                _compactText('Invoice #${invoice.invoiceNumber}', bold: true),
+                _compactText('Date: ${invoice.invoiceDate}'),
+                _compactText('Status: ${invoice.status}'),
+                _compactText('Payment: ${invoice.paymentState}'),
+              ],
+            ),
+          ),
+          pw.SizedBox(width: 6),
+          pw.Expanded(
+            flex: 2,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: <pw.Widget>[
+                _compactText('Bill To: ${invoice.customerName}', bold: true),
+                if (invoice.customerAddress.isNotEmpty)
+                  _compactText(invoice.customerAddress),
+                if ((invoice.customerState ?? '').isNotEmpty)
+                  _compactText(
+                      '${invoice.customerState} (${invoice.customerStateCode ?? ''})'),
+                if (isGst && (invoice.customerGstin ?? '').isNotEmpty)
+                  _compactText('GSTIN: ${invoice.customerGstin}'),
+                if ((invoice.customerPhone ?? '').isNotEmpty)
+                  _compactText('Phone: ${invoice.customerPhone}'),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
 
-    final dir = await _outputDirectory();
-    final file = File('$dir/invoice_${invoice.invoiceNumber}.pdf');
-    await file.writeAsBytes(await pdf.save());
-    return file.path;
+  pw.Widget _buildCompactSupplyInfo(InvoiceDetail invoice) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: _compactText(
+        'Place of Supply: ${invoice.placeOfSupplyState} (${invoice.placeOfSupplyStateCode})  |  Tax Regime: ${invoice.taxRegime}',
+      ),
+    );
+  }
+
+  pw.Widget _buildCompactItemTable(InvoiceDetail invoice, bool isGst) {
+    final isInterState = invoice.taxRegime == 'INTER_STATE';
+    final headers = isGst
+        ? <String>[
+            '#',
+            'Item',
+            'Code',
+            'Qty',
+            'Rate',
+            'Disc',
+            'Taxable',
+            'GST%',
+            if (isInterState) 'IGST' else ...<String>['CGST', 'SGST'],
+            'Total',
+          ]
+        : <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Disc', 'Total'];
+    final rows = <List<String>>[];
+    for (var index = 0; index < invoice.items.length; index += 1) {
+      final item = invoice.items[index];
+      rows.add(isGst
+          ? <String>[
+              '${index + 1}',
+              item.productItemName.isNotEmpty
+                  ? item.productItemName
+                  : item.productName,
+              item.productItemNumber,
+              item.quantity.toStringAsFixed(2),
+              item.unitPriceExclTax.toStringAsFixed(2),
+              item.discountPercent.toStringAsFixed(1),
+              item.taxableAmount.toStringAsFixed(2),
+              item.gstRate.toStringAsFixed(1),
+              if (isInterState)
+                item.igstAmount.toStringAsFixed(2)
+              else ...<String>[
+                item.cgstAmount.toStringAsFixed(2),
+                item.sgstAmount.toStringAsFixed(2),
+              ],
+              item.lineTotal.toStringAsFixed(2),
+            ]
+          : <String>[
+              '${index + 1}',
+              item.productItemName.isNotEmpty
+                  ? item.productItemName
+                  : item.productName,
+              item.productItemNumber,
+              item.quantity.toStringAsFixed(2),
+              item.unitPriceInclTax.toStringAsFixed(2),
+              item.discountPercent.toStringAsFixed(1),
+              item.lineTotal.toStringAsFixed(2),
+            ]);
+    }
+    return pw.TableHelper.fromTextArray(
+      headers: headers,
+      data: rows,
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+      headerStyle: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+      cellStyle: pw.TextStyle(fontSize: 6),
+      headerPadding: const pw.EdgeInsets.all(1.5),
+      cellPadding: const pw.EdgeInsets.all(1.5),
+      cellAlignment: pw.Alignment.centerRight,
+      cellAlignments: <int, pw.Alignment>{1: pw.Alignment.centerLeft},
+    );
+  }
+
+  pw.Widget _buildCompactTotals(InvoiceDetail invoice, bool isGst) {
+    final parts = <String>[
+      'Subtotal: ${invoice.subtotal.toStringAsFixed(2)}',
+      if (invoice.discountTotal > 0)
+        'Discount: ${invoice.discountTotal.toStringAsFixed(2)}',
+      if (isGst) 'Taxable: ${invoice.taxableTotal.toStringAsFixed(2)}',
+      if (isGst) 'GST: ${invoice.gstTotal.toStringAsFixed(2)}',
+      'Grand Total: ${invoice.grandTotal.toStringAsFixed(2)}',
+    ];
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: pw.Text(
+        parts.join('   |   '),
+        textAlign: pw.TextAlign.right,
+        style: pw.TextStyle(fontSize: 6.2, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  pw.Widget _buildCompactSettlement(
+    InvoiceDetail invoice, {
+    double fontSize = 6.5,
+  }) {
+    final bankParts = <String>[
+      if ((invoice.companyBankName ?? '').isNotEmpty) invoice.companyBankName!,
+      if ((invoice.companyBankAccount ?? '').isNotEmpty)
+        'A/c ${invoice.companyBankAccount}',
+      if ((invoice.companyBankIfsc ?? '').isNotEmpty)
+        'IFSC ${invoice.companyBankIfsc}',
+    ];
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(4),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: <pw.Widget>[
+          _compactText(
+            'Amount in words: ${_numberToWords(invoice.grandTotal)}',
+            fontSize: fontSize,
+          ),
+          _compactText(
+            'Payment: ${invoice.paymentState}${invoice.paidAmount > 0 ? ' | Paid: ${invoice.paidAmount.toStringAsFixed(2)} | Balance: ${(invoice.grandTotal - invoice.paidAmount).toStringAsFixed(2)}' : ''}',
+            fontSize: fontSize,
+          ),
+          if (bankParts.isNotEmpty)
+            _compactText('Bank: ${bankParts.join(' | ')}', fontSize: fontSize),
+          if ((invoice.notes ?? '').isNotEmpty)
+            _compactText('Notes: ${invoice.notes}', fontSize: fontSize),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _compactText(
+    String value, {
+    bool bold = false,
+    double fontSize = 6.5,
+  }) {
+    return pw.Text(
+      value,
+      style: pw.TextStyle(
+        fontSize: fontSize,
+        fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+    );
   }
 
   pw.Widget _buildPageHeader(InvoiceDetail invoice) {
@@ -146,10 +407,6 @@ class InvoicePdfService {
     );
   }
 
-  pw.Widget _buildHeader(InvoiceDetail invoice) {
-    return _buildDocumentHeader(invoice, invoice.gstFlag);
-  }
-
   pw.Widget _buildPartyInfo(InvoiceDetail invoice, bool isGst) {
     return _buildCustomerAndCompanyInfo(invoice, isGst);
   }
@@ -159,7 +416,7 @@ class InvoicePdfService {
   }
 
   pw.Widget _buildTotals(InvoiceDetail invoice, bool isGst) {
-    return _buildTotalsTable(invoice, isGst);
+    return pw.Inseparable(child: _buildTotalsTable(invoice, isGst));
   }
 
   pw.Widget _buildInvoiceInfo(InvoiceDetail invoice) {
@@ -210,13 +467,14 @@ class InvoicePdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: <pw.Widget>[
                 pw.Text('Bill To',
-                    style:
-                        pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 10)),
                 pw.SizedBox(height: 4),
                 pw.Text(invoice.customerName,
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                 if (invoice.customerAddress.isNotEmpty)
-                  pw.Text(invoice.customerAddress, style: pw.TextStyle(fontSize: 9)),
+                  pw.Text(invoice.customerAddress,
+                      style: pw.TextStyle(fontSize: 9)),
                 if (invoice.customerState != null &&
                     invoice.customerState!.isNotEmpty)
                   pw.Text(
@@ -247,13 +505,14 @@ class InvoicePdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: <pw.Widget>[
                 pw.Text('Seller',
-                    style:
-                        pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold, fontSize: 10)),
                 pw.SizedBox(height: 4),
                 pw.Text(invoice.companyName,
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                 if (invoice.companyAddress.isNotEmpty)
-                  pw.Text(invoice.companyAddress, style: pw.TextStyle(fontSize: 9)),
+                  pw.Text(invoice.companyAddress,
+                      style: pw.TextStyle(fontSize: 9)),
                 if (invoice.companyCity.isNotEmpty ||
                     invoice.companyState.isNotEmpty)
                   pw.Text(
@@ -300,14 +559,22 @@ class InvoicePdfService {
 
   pw.Widget _buildItemTable(InvoiceDetail invoice, bool isGst) {
     if (!isGst) {
-      final headers = <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Disc%', 'Total'];
+      final headers = <String>[
+        '#',
+        'Item',
+        'Code',
+        'Qty',
+        'Rate',
+        'Disc%',
+        'Total'
+      ];
       final headerWidgets = headers
           .map((h) => pw.Padding(
-                padding: const pw.EdgeInsets.all(4),
+                padding: const pw.EdgeInsets.all(2.5),
                 child: pw.Text(
                   h,
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 7),
+                  style:
+                      pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
                 ),
               ))
           .toList();
@@ -366,11 +633,11 @@ class InvoicePdfService {
 
     final headerWidgets = headers
         .map((h) => pw.Padding(
-              padding: const pw.EdgeInsets.all(4),
+              padding: const pw.EdgeInsets.all(2.5),
               child: pw.Text(
                 h,
-                style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold, fontSize: 7),
+                style:
+                    pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
               ),
             ))
         .toList();
@@ -384,7 +651,8 @@ class InvoicePdfService {
             ? item.productItemName
             : item.productName),
         _cell(item.productItemNumber),
-        _cell(item.quantity.toStringAsFixed(2), align: pw.Alignment.centerRight),
+        _cell(item.quantity.toStringAsFixed(2),
+            align: pw.Alignment.centerRight),
         _cell(item.unitPriceExclTax.toStringAsFixed(2),
             align: pw.Alignment.centerRight),
         _cell(item.discountPercent.toStringAsFixed(1),
@@ -453,12 +721,11 @@ class InvoicePdfService {
             if (invoice.discountTotal > 0)
               _totalRow(
                   'Discount:', '-${invoice.discountTotal.toStringAsFixed(2)}'),
-            _totalRow('Taxable:', invoice.taxableTotal.toStringAsFixed(2)),
-            if (isGst)
-              _totalRow('GST:', invoice.gstTotal.toStringAsFixed(2)),
+            if (invoicePdfShowsTaxableTotal(gstFlag: isGst))
+              _totalRow('Taxable:', invoice.taxableTotal.toStringAsFixed(2)),
+            if (isGst) _totalRow('GST:', invoice.gstTotal.toStringAsFixed(2)),
             pw.Divider(),
-            _totalRow(
-                'Grand Total:', invoice.grandTotal.toStringAsFixed(2),
+            _totalRow('Grand Total:', invoice.grandTotal.toStringAsFixed(2),
                 bold: true),
           ],
         ),
@@ -466,101 +733,25 @@ class InvoicePdfService {
     );
   }
 
-  pw.Widget _buildAmountInWords(InvoiceDetail invoice) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Text(
-        'Amount in words: ${_numberToWords(invoice.grandTotal)}',
-        style: pw.TextStyle(fontSize: 9),
-      ),
-    );
-  }
-
-  pw.Widget _buildPaymentInfo(InvoiceDetail invoice) {
-    final children = <pw.Widget>[
-      pw.Expanded(
-        child: pw.Text(
-          'Payment: ${invoice.paymentState}',
-          style: pw.TextStyle(fontSize: 9),
+  pw.Widget _buildSignatureSpace(InvoiceDetail invoice,
+      {required bool compact}) {
+    return pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.SizedBox(
+        width: 180,
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: <pw.Widget>[
+            pw.Text(
+              'For ${invoice.companyName}',
+              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: compact ? 18 : 32),
+            pw.Container(height: 1, color: PdfColors.grey500),
+            pw.SizedBox(height: 4),
+            pw.Text('Authorized Signatory', style: pw.TextStyle(fontSize: 8)),
+          ],
         ),
-      ),
-    ];
-    if (invoice.paidAmount > 0) {
-      children.add(pw.Expanded(
-        child: pw.Text(
-          'Amount Paid: ${invoice.paidAmount.toStringAsFixed(2)}',
-          style: pw.TextStyle(fontSize: 9),
-        ),
-      ));
-    }
-    if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.grandTotal) {
-      children.add(pw.Expanded(
-        child: pw.Text(
-          'Balance Due: ${(invoice.grandTotal - invoice.paidAmount).toStringAsFixed(2)}',
-          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-        ),
-      ));
-    }
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Row(children: children),
-    );
-  }
-
-  bool _hasBankDetails(InvoiceDetail invoice) {
-    return (invoice.companyBankName ?? '').isNotEmpty ||
-        (invoice.companyBankAccount ?? '').isNotEmpty;
-  }
-
-  pw.Widget _buildBankDetails(InvoiceDetail invoice) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: <pw.Widget>[
-          pw.Text('Bank Details',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-          pw.SizedBox(height: 4),
-          if (invoice.companyBankName != null &&
-              invoice.companyBankName!.isNotEmpty)
-            _infoRow('Bank:', invoice.companyBankName!),
-          if (invoice.companyBankAccount != null &&
-              invoice.companyBankAccount!.isNotEmpty)
-            _infoRow('Account:', invoice.companyBankAccount!),
-          if (invoice.companyBankIfsc != null &&
-              invoice.companyBankIfsc!.isNotEmpty)
-            _infoRow('IFSC:', invoice.companyBankIfsc!),
-          if (invoice.companyBankBranch != null &&
-              invoice.companyBankBranch!.isNotEmpty)
-            _infoRow('Branch:', invoice.companyBankBranch!),
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _buildNotes(InvoiceDetail invoice) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: <pw.Widget>[
-          pw.Text('Notes',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-          pw.SizedBox(height: 4),
-          pw.Text(invoice.notes!, style: pw.TextStyle(fontSize: 9)),
-        ],
       ),
     );
   }
@@ -597,7 +788,7 @@ class InvoicePdfService {
 
   pw.Widget _cell(String text, {pw.Alignment? align}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.all(4),
+      padding: const pw.EdgeInsets.all(2.5),
       child: pw.Align(
         alignment: align ?? pw.Alignment.centerLeft,
         child: pw.Text(text, style: pw.TextStyle(fontSize: 7)),
@@ -649,13 +840,38 @@ class InvoicePdfService {
     if (number < 0) return 'minus ${_convert(-number)}';
 
     const below20 = <String>[
-      '', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
-      'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen',
-      'sixteen', 'seventeen', 'eighteen', 'nineteen',
+      '',
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+      'six',
+      'seven',
+      'eight',
+      'nine',
+      'ten',
+      'eleven',
+      'twelve',
+      'thirteen',
+      'fourteen',
+      'fifteen',
+      'sixteen',
+      'seventeen',
+      'eighteen',
+      'nineteen',
     ];
     const tens = <String>[
-      '', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy',
-      'eighty', 'ninety',
+      '',
+      '',
+      'twenty',
+      'thirty',
+      'forty',
+      'fifty',
+      'sixty',
+      'seventy',
+      'eighty',
+      'ninety',
     ];
 
     var words = '';

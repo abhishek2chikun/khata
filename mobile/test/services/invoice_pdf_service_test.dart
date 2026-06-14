@@ -17,12 +17,18 @@ import 'package:pdf/pdf.dart';
   return (text, width, height);
 }
 
-InvoiceDetailItem _lineItem({int index = 1}) {
+int _readPdfPageCount(File file) {
+  final text = latin1.decode(file.readAsBytesSync(), allowInvalid: true);
+  final count = RegExp(r'/Count\s+(\d+)').firstMatch(text);
+  return count == null ? 0 : int.parse(count.group(1)!);
+}
+
+InvoiceDetailItem _lineItem({int index = 1, String? itemName}) {
   return InvoiceDetailItem(
     productId: 'prod-$index',
-    productName: 'Item $index',
+    productName: itemName ?? 'Item $index',
     productItemNumber: 'SKU-$index',
-    productItemName: 'Item $index',
+    productItemName: itemName ?? 'Item $index',
     productCategory: 'General',
     productCompanyName: 'Acme',
     buyingPrice: 80,
@@ -52,9 +58,7 @@ void main() {
   late String tempDir;
 
   setUp(() async {
-    tempDir = Directory.systemTemp
-        .createTempSync('invoice_pdf_test_')
-        .path;
+    tempDir = Directory.systemTemp.createTempSync('invoice_pdf_test_').path;
     service = InvoicePdfService.withDirectory(tempDir);
   });
 
@@ -72,6 +76,9 @@ void main() {
     String taxRegime = 'INTRA_STATE',
     bool gstFlag = true,
     String status = 'ACTIVE',
+    String customerAddress = '1 Market Road',
+    String companyAddress = '10 Market Road',
+    String? notes = 'Thank you for your business',
     List<InvoiceDetailItem>? items,
   }) {
     return InvoiceDetail(
@@ -84,7 +91,7 @@ void main() {
       paidAmount: 0,
       gstFlag: gstFlag,
       customerName: customerName,
-      customerAddress: '1 Market Road',
+      customerAddress: customerAddress,
       customerState: 'Maharashtra',
       customerStateCode: '27',
       customerGstin: '27ABCDE1234F1Z5',
@@ -100,7 +107,7 @@ void main() {
       placeOfSupplyState: 'Maharashtra',
       placeOfSupplyStateCode: '27',
       companyName: 'Khata Traders',
-      companyAddress: '10 Market Road',
+      companyAddress: companyAddress,
       companyCity: 'Mumbai',
       companyState: 'Maharashtra',
       companyStateCode: '27',
@@ -111,7 +118,7 @@ void main() {
       companyBankAccount: '1234567890',
       companyBankIfsc: 'SBIN0001234',
       companyBankBranch: 'Mumbai Main',
-      notes: 'Thank you for your business',
+      notes: notes,
       cancelReason: null,
       items: items ??
           [
@@ -275,9 +282,10 @@ void main() {
     expect(await file.exists(), isTrue);
   });
 
-  test('uses A5 page format for up to 10 line items', () async {
+  test('uses A5 when the complete GST invoice fits on one half page', () async {
     final invoice = _sampleInvoice(
-      items: List<InvoiceDetailItem>.generate(10, (i) => _lineItem(index: i + 1)),
+      items:
+          List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
     );
     final path = await service.generateInvoicePdf(invoice);
     final (_, width, height) = _readPdfMeta(File(path));
@@ -286,15 +294,80 @@ void main() {
     expect(height, closeTo(595, 5));
   });
 
-  test('uses A4 page format for more than 10 line items', () async {
+  test('uses A5 when the complete non-GST invoice fits on one half page',
+      () async {
     final invoice = _sampleInvoice(
-      items: List<InvoiceDetailItem>.generate(11, (i) => _lineItem(index: i + 1)),
+      gstFlag: false,
+      items:
+          List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(420, 5));
+    expect(height, closeTo(595, 5));
+  });
+
+  test('uses A5 for a standard 15-row GST invoice',
+      () async {
+    final invoice = _sampleInvoice(
+      items:
+          List<InvoiceDetailItem>.generate(15, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(420, 5));
+    expect(height, closeTo(595, 5));
+  });
+
+  test('uses A5 for a standard 15-row non-GST invoice',
+      () async {
+    final invoice = _sampleInvoice(
+      gstFlag: false,
+      items:
+          List<InvoiceDetailItem>.generate(15, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(420, 5));
+    expect(height, closeTo(595, 5));
+  });
+
+  test('falls back to A4 when verbose content does not fit one A5 page',
+      () async {
+    final longText = List<String>.filled(
+      20,
+      'extra descriptive product and delivery information',
+    ).join(' ');
+    final invoice = _sampleInvoice(
+      customerAddress: longText,
+      companyAddress: longText,
+      notes: longText,
+      items: List<InvoiceDetailItem>.generate(
+        15,
+        (i) => _lineItem(index: i + 1, itemName: '$longText ${i + 1}'),
+      ),
     );
     final path = await service.generateInvoicePdf(invoice);
     final (_, width, height) = _readPdfMeta(File(path));
 
     expect(width, closeTo(595, 5));
     expect(height, closeTo(842, 5));
+  });
+
+  test('uses A4 directly for more than 15 line items', () async {
+    final invoice = _sampleInvoice(
+      items:
+          List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, height) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(595, 5));
+    expect(height, closeTo(842, 5));
+    expect(_readPdfPageCount(File(path)), 1);
   });
 
   test('gst invoice includes tax invoice title and gst columns', () {
@@ -305,6 +378,8 @@ void main() {
   test('non-gst invoice omits gst-specific content', () {
     expect(invoicePdfDocumentTitle(gstFlag: false), 'INVOICE');
     expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);
+    expect(invoicePdfShowsTaxableTotal(gstFlag: false), isFalse);
+    expect(invoicePdfShowsTaxableTotal(gstFlag: true), isTrue);
   });
 
   test('canceled invoice shows canceled marker', () {
@@ -312,13 +387,13 @@ void main() {
     expect(invoicePdfShowsCanceledBanner(status: 'ACTIVE'), isFalse);
   });
 
-  test('page format helper selects a5 and a4 at threshold', () {
+  test('page format helper caps A5 candidates at 15 rows', () {
     expect(
-      invoicePdfPageFormatForItemCount(10),
+      invoicePdfPageFormatForItemCount(15),
       PdfPageFormat.a5,
     );
     expect(
-      invoicePdfPageFormatForItemCount(11),
+      invoicePdfPageFormatForItemCount(16),
       PdfPageFormat.a4,
     );
   });

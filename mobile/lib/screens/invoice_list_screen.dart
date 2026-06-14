@@ -9,7 +9,7 @@ import '../services/invoice_share_service.dart';
 import '../services/invoices_service.dart';
 import '../services/products_service.dart';
 import '../services/customers_service.dart';
-import '../widgets/app_navigation_drawer.dart';
+import '../services/company_profile_service.dart';
 import '../widgets/error_banner.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
@@ -21,12 +21,14 @@ class InvoiceListScreen extends StatefulWidget {
     required this.productsService,
     required this.customersService,
     required this.drawer,
+    this.companyProfileService,
     this.shareService,
   });
 
   final InvoicesService invoicesService;
   final ProductsService productsService;
   final CustomersService customersService;
+  final CompanyProfileService? companyProfileService;
   final Widget drawer;
   final InvoiceShareService? shareService;
 
@@ -107,7 +109,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             onTap: () => _openInvoice(invoice),
             title: Text('Invoice #${invoice.invoiceNumber}'),
             subtitle: Text(
-              '${invoice.customerName} • ${invoice.invoiceDate} • ${invoice.paymentMode}',
+              '${invoice.customerName} • ${invoice.invoiceDate} • ${invoice.paymentState}',
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -218,6 +220,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               invoicesService: widget.invoicesService,
               productsService: widget.productsService,
               customersService: widget.customersService,
+              companyProfileService: widget.companyProfileService,
               shareService: widget.shareService,
             ),
           ),

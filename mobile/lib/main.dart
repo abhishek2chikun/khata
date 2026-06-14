@@ -6,6 +6,7 @@ import 'app/app_mode.dart';
 import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
+import 'backup/local_backup_transfer_service.dart';
 import 'models/customer.dart';
 import 'screens/buyer_list_screen.dart';
 import 'screens/analytics_screen.dart';
@@ -55,6 +56,7 @@ class BillingApp extends StatefulWidget {
     AnalyticsService? analyticsService,
     DriveBackupService? driveBackupService,
     BackupScheduler? backupScheduler,
+    BackupTransferService? backupTransferService,
   })  : dependencies = dependencies,
         controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
@@ -67,7 +69,9 @@ class BillingApp extends StatefulWidget {
         analyticsService = analyticsService ?? dependencies!.analyticsService,
         driveBackupService =
             driveBackupService ?? dependencies?.driveBackupService,
-        backupScheduler = backupScheduler ?? dependencies?.backupScheduler;
+        backupScheduler = backupScheduler ?? dependencies?.backupScheduler,
+        backupTransferService =
+            backupTransferService ?? dependencies?.backupTransferService;
 
   final AppDependencies? dependencies;
   final AuthController controller;
@@ -80,6 +84,7 @@ class BillingApp extends StatefulWidget {
   final AnalyticsService analyticsService;
   final DriveBackupService? driveBackupService;
   final BackupScheduler? backupScheduler;
+  final BackupTransferService? backupTransferService;
 
   @override
   State<BillingApp> createState() => _BillingAppState();
@@ -206,6 +211,7 @@ class _BillingAppState extends State<BillingApp> {
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
             customersService: widget.customersService,
+            companyProfileService: widget.companyProfileService,
             shareService: InvoiceShareService.production(),
           );
         case AppDestination.analytics:
@@ -223,6 +229,8 @@ class _BillingAppState extends State<BillingApp> {
             drawer: drawer,
             driveBackupService:
                 widget.driveBackupService ?? const GoogleDriveBackupService(),
+            backupTransferService: widget.backupTransferService,
+            onRestoreCompleted: widget.controller.logout,
           );
       }
     }
@@ -276,7 +284,10 @@ class _BillingAppState extends State<BillingApp> {
     }
     _didStartLocalBackupScheduling = true;
 
-    final scheduler = _backupScheduler();
+    final scheduler = widget.backupScheduler;
+    if (scheduler == null) {
+      return;
+    }
     Future<void>.microtask(() async {
       try {
         await scheduler.registerPlatformSchedule();
@@ -289,19 +300,5 @@ class _BillingAppState extends State<BillingApp> {
         // Catch-up failures are recorded by the scheduler and should not block startup.
       }
     });
-  }
-
-  BackupScheduler _backupScheduler() {
-    final backupScheduler = widget.backupScheduler;
-    if (backupScheduler != null) {
-      return backupScheduler;
-    }
-
-    final driveBackupService =
-        widget.driveBackupService ?? const GoogleDriveBackupService();
-    return BackupScheduler(
-      settingsLoader: driveBackupService.loadSettings,
-      runBackup: driveBackupService.exportBackup,
-    );
   }
 }

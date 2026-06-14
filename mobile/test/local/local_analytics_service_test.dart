@@ -74,8 +74,7 @@ void main() {
 
     final dashboard = await service.getDashboard();
 
-    final lowNames =
-        dashboard.lowStock.map((p) => p.productName).toList();
+    final lowNames = dashboard.lowStock.map((p) => p.productName).toList();
     expect(lowNames, contains('Low Stock Item'));
     expect(lowNames, isNot(contains('OK Stock Item')));
   });
@@ -335,6 +334,9 @@ Future<void> _seedFullSetup(LocalDatabase db) async {
           sgstAmount: '0',
           igstAmount: '0',
           lineTotal: '100',
+          revenueAmount: const Value('100'),
+          buyingAmount: const Value('50'),
+          profitAmount: const Value('50'),
         ),
       );
   await db.into(db.invoiceItems).insert(
@@ -370,6 +372,9 @@ Future<void> _seedFullSetup(LocalDatabase db) async {
           sgstAmount: '0',
           igstAmount: '0',
           lineTotal: '100',
+          revenueAmount: const Value('100'),
+          buyingAmount: const Value('40'),
+          profitAmount: const Value('60'),
         ),
       );
   await db.into(db.invoiceItems).insert(
@@ -406,6 +411,9 @@ Future<void> _seedFullSetup(LocalDatabase db) async {
           sgstAmount: '0',
           igstAmount: '0',
           lineTotal: '80',
+          revenueAmount: const Value('80'),
+          buyingAmount: const Value('40'),
+          profitAmount: const Value('40'),
         ),
       );
 

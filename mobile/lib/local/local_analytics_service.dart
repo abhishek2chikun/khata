@@ -34,17 +34,18 @@ class LocalAnalyticsService implements AnalyticsService {
     final query = _database.select(_database.invoices)
       ..where((invoice) => invoice.status.equals('ACTIVE'));
     if (fromDate != null) {
-      query.where((invoice) => invoice.invoiceDate.isBiggerOrEqualValue(fromDate));
+      query.where(
+          (invoice) => invoice.invoiceDate.isBiggerOrEqualValue(fromDate));
     }
     if (toDate != null) {
-      query.where((invoice) => invoice.invoiceDate.isSmallerOrEqualValue(toDate));
+      query.where(
+          (invoice) => invoice.invoiceDate.isSmallerOrEqualValue(toDate));
     }
     final invoices = await query.get();
     return invoices.map((invoice) => invoice.id).toSet();
   }
 
-  Future<List<RevenueByEntry>> _revenueByCompany(
-      Set<String> invoiceIds) async {
+  Future<List<RevenueByEntry>> _revenueByCompany(Set<String> invoiceIds) async {
     if (invoiceIds.isEmpty) return [];
     final items = await (_database.select(_database.invoiceItems)
           ..where((item) => item.invoiceId.isIn(invoiceIds.toList())))
@@ -52,8 +53,8 @@ class LocalAnalyticsService implements AnalyticsService {
     final aggregated = <String, double>{};
     for (final item in items) {
       final company = item.productCompanyName;
-      aggregated[company] =
-          (aggregated[company] ?? 0.0) + (double.tryParse(item.lineTotal) ?? 0.0);
+      aggregated[company] = (aggregated[company] ?? 0.0) +
+          (double.tryParse(item.revenueAmount) ?? 0.0);
     }
     final entries = aggregated.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
@@ -62,8 +63,7 @@ class LocalAnalyticsService implements AnalyticsService {
         .toList();
   }
 
-  Future<List<ProfitByEntry>> _profitByCompany(
-      Set<String> invoiceIds) async {
+  Future<List<ProfitByEntry>> _profitByCompany(Set<String> invoiceIds) async {
     if (invoiceIds.isEmpty) return [];
     final items = await (_database.select(_database.invoiceItems)
           ..where((item) => item.invoiceId.isIn(invoiceIds.toList())))
@@ -71,10 +71,7 @@ class LocalAnalyticsService implements AnalyticsService {
     final aggregated = <String, double>{};
     for (final item in items) {
       final company = item.productCompanyName;
-      final revenue = double.tryParse(item.lineTotal) ?? 0.0;
-      final qty = double.tryParse(item.quantity) ?? 0.0;
-      final buying = double.tryParse(item.buyingPrice) ?? 0.0;
-      final profit = revenue - (buying * qty);
+      final profit = double.tryParse(item.profitAmount) ?? 0.0;
       aggregated[company] = (aggregated[company] ?? 0.0) + profit;
     }
     final entries = aggregated.entries.toList()

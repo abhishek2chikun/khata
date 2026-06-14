@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="internal_billing_khata_mobile"
+        android:label="Khata"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -21,7 +21,7 @@ Company profile defines seller policy/default. Invoice draft carries the selecte
 | GST seller exception | Non-GST only for zero-rate lines | Approved safety boundary | Arbitrary taxable non-GST bills |
 | Non-GST seller prices | Stored/entered selling price is final; force tax zero | Seller cannot collect GST | Back-calculate embedded GST |
 | Date | Mobile sends date only; legacy aware datetime remains | Fix blocker compatibly | Drop column/validator |
-| PDF size | <=10 rows A5; >10 A4 | Explicit deterministic rule | Quantity/fit heuristic |
+| PDF size | <=15 rows is an A5 candidate retained only for a complete one-page render; overflow or >15 uses A4 | User-approved Stage 5 paper-efficiency refinement with readable 6pt minimum table text | Fixed 10/11 threshold; forcing overflow into A5 |
 | WhatsApp | PDF+caption through OS chooser | `wa.me` cannot attach file | Chat-only action |
 | Balance scope | Customer receivables, current dated snapshot | User approval/repo terminology | Supplier payables/today delta |
 
@@ -101,4 +101,3 @@ Disposable PostgreSQL migration/backfill/downgrade; Drift v8-to-v9 upgrade; four
 
 ## When Full Rediscovery Is Justified
 Only if repository baseline changed outside the workflow, the return packet contradicts the diff, or a material Stage 0 fact is missing/stale.
-

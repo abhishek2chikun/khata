@@ -70,8 +70,8 @@ class LocalInvoicesService implements InvoicesService {
                 companyCity: prepared.company.city,
                 companyState: prepared.company.state,
                 companyStateCode: prepared.company.stateCode,
-                companyGstin: Value(
-                    prepared.gstFlag ? prepared.company.gstin : null),
+                companyGstin:
+                    Value(prepared.gstFlag ? prepared.company.gstin : null),
                 companyPhone: Value(prepared.company.phone),
                 companyEmail: Value(prepared.company.email),
                 companyBankName: Value(prepared.company.bankName),
@@ -146,9 +146,10 @@ class LocalInvoicesService implements InvoicesService {
                 sgstAmount: _normalizeDecimal(line.sgstAmount),
                 igstAmount: _normalizeDecimal(line.igstAmount),
                 lineTotal: _normalizeDecimal(line.lineTotal),
-                revenueAmount: Value(_normalizeMoneyDecimal(line.taxableAmount)),
-                buyingAmount: Value(_normalizeMoneyDecimal(
-                    line.item.quantity * double.parse(line.product.buyingPrice))),
+                revenueAmount:
+                    Value(_normalizeMoneyDecimal(line.taxableAmount)),
+                buyingAmount: Value(_normalizeMoneyDecimal(line.item.quantity *
+                    double.parse(line.product.buyingPrice))),
                 profitAmount: Value(_normalizeMoneyDecimal(line.taxableAmount -
                     _roundMoney(line.item.quantity *
                         double.parse(line.product.buyingPrice)))),
@@ -663,7 +664,8 @@ class LocalInvoicesService implements InvoicesService {
     );
     final discountPercent = _roundRate(item.discountPercent);
     final grossLineTotal = _roundMoney(item.quantity * finalUnitPrice);
-    final discountAmount = _roundMoney(grossLineTotal * (discountPercent / 100));
+    final discountAmount =
+        _roundMoney(grossLineTotal * (discountPercent / 100));
     final taxableAmount = _roundMoney(grossLineTotal - discountAmount);
     final lineTotal = taxableAmount;
     return _PreparedLine(
@@ -689,8 +691,7 @@ class LocalInvoicesService implements InvoicesService {
   }
 
   void _validateCompanyGstProfile(CompanyProfile company) {
-    final hasGstin =
-        company.gstin != null && company.gstin!.trim().isNotEmpty;
+    final hasGstin = company.gstin != null && company.gstin!.trim().isNotEmpty;
     if (company.gstFlag && !hasGstin) {
       throw _policyError(
         'INVALID_GST_PROFILE',
@@ -1077,19 +1078,6 @@ class LocalInvoicesService implements InvoicesService {
     return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T00:00:00.000Z';
   }
 
-  void _validateTimezoneAwareDatetime(String value) {
-    final timezonePattern = RegExp(r'(Z|[+-]\d{2}:\d{2})$');
-    if (!timezonePattern.hasMatch(value)) {
-      throw _validationError(
-          'invoice_datetime must include timezone information');
-    }
-    try {
-      DateTime.parse(value);
-    } on FormatException {
-      throw _validationError('invoice_datetime must be a valid ISO datetime');
-    }
-  }
-
   void _validateStateMetadata({
     required String state,
     required String stateCode,
@@ -1135,7 +1123,8 @@ class LocalInvoicesService implements InvoicesService {
                 'pricing_mode': line.item.pricingMode,
                 'unit_price': _normalizeMoneyDecimal(line.enteredUnitPrice),
                 'gst_rate': _normalizeMoneyDecimal(line.gstRate),
-                'discount_percent': _normalizeMoneyDecimal(line.discountPercent),
+                'discount_percent':
+                    _normalizeMoneyDecimal(line.discountPercent),
               })
           .toList(),
     };

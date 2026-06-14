@@ -1,12 +1,13 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart';
+import 'package:flutter/services.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/auth_service.dart';
 import '../auth/session_store.dart';
 import '../backup/backup_scheduler.dart';
 import '../backup/drive_backup_service.dart';
+import '../backup/local_backup_transfer_service.dart';
 import '../config/api_base_url.dart';
 import '../local/local_analytics_service.dart';
 import '../local/local_auth_service.dart';
@@ -14,6 +15,7 @@ import '../local/local_buyers_service.dart';
 import '../local/local_company_profile_service.dart';
 import '../local/local_database.dart';
 import '../local/local_invoices_service.dart';
+import '../local/local_product_catalog_seeder.dart';
 import '../local/local_payments_service.dart';
 import '../local/local_products_service.dart';
 import '../local/local_customers_service.dart';
@@ -47,6 +49,7 @@ class AppDependencies {
     this.localAuthService,
     this.hasLocalUsers,
     this.driveBackupService,
+    this.backupTransferService,
     this.backupScheduler,
     Future<void> Function()? dispose,
   }) : _dispose = dispose;
@@ -63,6 +66,7 @@ class AppDependencies {
   final LocalAuthService? localAuthService;
   final Future<bool> Function()? hasLocalUsers;
   final DriveBackupService? driveBackupService;
+  final BackupTransferService? backupTransferService;
   final BackupScheduler? backupScheduler;
   final Future<void> Function()? _dispose;
 
@@ -72,6 +76,7 @@ class AppDependencies {
     LocalDatabase? localDatabase,
     SessionStore? sessionStore,
     ApiHttpClientsCreated? onApiHttpClientsCreated,
+    CatalogJsonLoader? loadCatalogJson,
   }) async {
     final resolvedMode = mode ?? resolveDataMode();
     switch (resolvedMode) {
@@ -84,6 +89,7 @@ class AppDependencies {
         return _createLocalDependencies(
           database: localDatabase,
           sessionStore: sessionStore,
+          loadCatalogJson: loadCatalogJson,
         );
     }
   }
@@ -91,10 +97,22 @@ class AppDependencies {
   static Future<AppDependencies> _createLocalDependencies({
     LocalDatabase? database,
     SessionStore? sessionStore,
+    CatalogJsonLoader? loadCatalogJson,
   }) async {
     final localDatabase = database ?? LocalDatabase();
+    if (loadCatalogJson != null || database == null) {
+      await LocalProductCatalogSeeder(
+        database: localDatabase,
+        loadCatalogJson: loadCatalogJson ??
+            () => rootBundle.loadString(
+                  LocalProductCatalogSeeder.catalogAssetPath,
+                ),
+      ).seedIfNeeded();
+    }
     final authService = LocalAuthService(database: localDatabase);
     final backupService = LocalDriveBackupService(database: localDatabase);
+    final backupTransferService =
+        LocalBackupTransferService(database: localDatabase);
     final controller = AuthController(
       authService: authService,
       sessionStore: sessionStore ?? SecureSessionStore(keyPrefix: 'auth.local'),
@@ -112,11 +130,7 @@ class AppDependencies {
       analyticsService: LocalAnalyticsService(database: localDatabase),
       localAuthService: authService,
       driveBackupService: backupService,
-      backupScheduler: BackupScheduler(
-        settingsLoader: backupService.loadSettings,
-        runBackup: backupService.exportBackup,
-        eventRecorder: LocalBackupEventRecorder(database: localDatabase),
-      ),
+      backupTransferService: backupTransferService,
       hasLocalUsers: () async {
         final users = await (localDatabase.select(localDatabase.localUsers)
               ..limit(1))

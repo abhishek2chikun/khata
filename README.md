@@ -191,6 +191,29 @@ password. After login, local mode exposes the same core flows for products,
 customers, collections, company profile, invoices, and ledger history without a
 backend process.
 
+### Preinstalled product catalog (local mode)
+
+Fresh local installs ship with **1,199 products** and **30 buyers** bundled in
+the APK. On first launch, `LocalProductCatalogSeeder` loads
+`mobile/assets/catalog/preinstalled_catalog.json` and inserts any missing buyers
+and products into the local Drift database. Seeded rows behave like manually
+added inventory: they support edit, archive, stock adjustment, and invoice use.
+
+Source spreadsheet: `data/source/products.xlsx`. Rebuild the bundled JSON after
+updating the spreadsheet:
+
+```bash
+python3 tools/build_preinstalled_catalog.py
+```
+
+Column mapping: Company → buyer + `company_name`; Category → `category`; Item
+Name → `item_name`; Buying Price (MRP) → GST-inclusive `buying_price`; Selling
+Price (DP) → GST-inclusive `selling_price`; Unit `1.0` → `pcs`; GST Rate →
+`gst_rate`; Quantity on Hand → `quantity_on_hand`; generated
+`item_number` per company (e.g. `DOMS-0001`); default `low_stock_threshold`
+`0`. HSN codes are not stored (no matching DB column). Re-seeding is
+idempotent and never overwrites existing rows.
+
 The local schema is intentionally backend-aligned for future server migration:
 local tables keep stable IDs, request IDs/request hashes, invoice numbers,
 ledger transactions, stock movements, user references, and decimal values as

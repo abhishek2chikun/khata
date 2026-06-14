@@ -8,6 +8,7 @@ import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_screen.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_backup_service.dart';
+import 'package:internal_billing_khata_mobile/backup/local_backup_transfer_service.dart';
 import 'package:internal_billing_khata_mobile/main.dart';
 import 'package:internal_billing_khata_mobile/models/buyer.dart';
 import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
@@ -29,60 +30,75 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  testWidgets('backup screen shows last backup, actions, and daily time',
+  testWidgets('backup screen exports with confirmed encryption password',
       (tester) async {
     final service = FakeDriveBackupService(
       settings: BackupScheduleSettings(
-        automaticBackupsEnabled: true,
-        dailyBackupTime: const BackupTimeOfDay(hour: 0, minute: 0),
         lastBackupAt: DateTime(2026, 5, 7, 22, 30),
       ),
     );
+    final transfer = FakeBackupTransferService();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: BackupScreen(driveBackupService: service),
+        home: BackupScreen(
+          driveBackupService: service,
+          backupTransferService: transfer,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Backup & Restore'), findsOneWidget);
     expect(find.text('Last backup: 2026-05-07 22:30'), findsOneWidget);
-    expect(find.text('Daily backup time: 00:00'), findsOneWidget);
-    expect(find.text('Export backup'), findsOneWidget);
-    expect(find.text('Import backup'), findsOneWidget);
+    expect(find.text('Export encrypted backup'), findsOneWidget);
+    expect(find.text('Restore encrypted backup'), findsOneWidget);
+    expect(
+        find.text('Automatic cloud backup is not configured'), findsOneWidget);
 
-    await tester.tap(find.text('Export backup'));
+    await tester.tap(find.text('Export encrypted backup'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Import backup'));
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordField')), 'secure-pass');
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordConfirmationField')),
+        'secure-pass');
+    await tester.tap(find.byKey(const Key('confirmBackupAction')));
     await tester.pumpAndSettle();
 
-    expect(service.exportCount, 1);
-    expect(service.importCount, 1);
+    expect(transfer.exportCount, 1);
+    expect(transfer.lastPassword, 'secure-pass');
+    expect(find.textContaining('Encrypted backup created'), findsOneWidget);
   });
 
-  testWidgets('backup screen persists automatic backup settings and daily time',
+  testWidgets('backup screen restores, warns, and calls logout callback',
       (tester) async {
     final service = FakeDriveBackupService();
+    final transfer = FakeBackupTransferService();
+    var restored = false;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: BackupScreen(driveBackupService: service),
+        home: BackupScreen(
+          driveBackupService: service,
+          backupTransferService: transfer,
+          onRestoreCompleted: () async => restored = true,
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Automatic backups'));
-    await tester.enterText(find.bySemanticsLabel('Daily backup hour'), '2');
-    await tester.enterText(find.bySemanticsLabel('Daily backup minute'), '45');
-    await tester.tap(find.text('Save backup schedule'));
+    await tester.tap(find.text('Restore encrypted backup'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('replaces all current local business data'),
+        findsOneWidget);
+    await tester.enterText(
+        find.byKey(const Key('backupPasswordField')), 'secure-pass');
+    await tester.tap(find.byKey(const Key('confirmBackupAction')));
     await tester.pumpAndSettle();
 
-    final settings = await service.loadSettings();
-    expect(settings.automaticBackupsEnabled, isTrue);
-    expect(
-        settings.dailyBackupTime, const BackupTimeOfDay(hour: 2, minute: 45));
-    expect(find.text('Daily backup time: 02:45'), findsOneWidget);
+    expect(transfer.importCount, 1);
+    expect(restored, isTrue);
   });
 
   testWidgets('local mode drawer shows backup destination and opens screen',

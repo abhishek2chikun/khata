@@ -59,8 +59,9 @@ Read customer model/service/local service, customer detail/list screens and test
 3. Run all customer, analytics, invoice, backup, service, local, and widget tests; then full `flutter test test` and backend PostgreSQL suite.
 4. Run Drift generation cleanliness check, `flutter analyze`, and local release APK build.
 5. End-to-end Android local-mode matrix:
-   - configure non-GST seller; create/share 10-line A5 invoice;
-   - configure GST seller; create/share taxable 11-line A4 invoice;
+   - configure non-GST seller; create/share a standard 15-line A5 invoice;
+   - configure GST seller; create/share a taxable 16-line A4 invoice;
+   - create a verbose invoice with at most 15 lines and verify automatic A4 fallback;
    - verify prohibited mode errors and date-only creation;
    - create customer debit/collection values, share individual exact balance;
    - share daily positive-only summary and empty state;

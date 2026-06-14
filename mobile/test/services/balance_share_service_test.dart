@@ -6,6 +6,7 @@ Customer _customer({
   required String id,
   required String name,
   required double pendingBalance,
+  bool isActive = true,
 }) {
   return Customer(
     id: id,
@@ -15,7 +16,7 @@ Customer _customer({
     gstin: null,
     state: null,
     stateCode: null,
-    isActive: true,
+    isActive: isActive,
     pendingBalance: pendingBalance,
   );
 }
@@ -48,15 +49,23 @@ void main() {
         _customer(id: 'c-1', name: 'alpha shop', pendingBalance: 100),
         _customer(id: 'c-3', name: 'Zero Balance', pendingBalance: 0),
         _customer(id: 'c-4', name: 'Negative', pendingBalance: -50),
+        _customer(
+          id: 'c-5',
+          name: 'Archived Due',
+          pendingBalance: 300,
+          isActive: false,
+        ),
       ],
     );
 
     expect(message, contains('alpha shop: 100.00'));
     expect(message, contains('Zed Stores: 200.00'));
-    expect(message.indexOf('alpha shop'), lessThan(message.indexOf('Zed Stores')));
+    expect(
+        message.indexOf('alpha shop'), lessThan(message.indexOf('Zed Stores')));
     expect(message, contains('Total: 300.00'));
     expect(message, isNot(contains('Zero Balance')));
     expect(message, isNot(contains('Negative')));
+    expect(message, isNot(contains('Archived Due')));
   });
 
   test('daily summary empty is shareable', () {

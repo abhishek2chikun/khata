@@ -130,6 +130,19 @@ def test_invoice_datetime_must_be_timezone_aware_and_match_invoice_date_when_sup
         )
 
 
+def test_date_only_invoice_request_resolves_to_utc_midnight():
+    request = InvoiceQuoteRequest(
+        customer_id=uuid4(),
+        invoice_date=date(2026, 4, 19),
+        items=[{"product_id": uuid4(), "quantity": "1.000"}],
+    )
+
+    assert request.resolved_invoice_datetime() == datetime(
+        2026, 4, 19, 0, 0, tzinfo=timezone.utc
+    )
+    assert request.resolved_invoice_date() == date(2026, 4, 19)
+
+
 def test_total_paid_request_hash_uses_resolved_paid_amount():
     request_id = uuid4()
     product_id = uuid4()
@@ -147,7 +160,19 @@ def test_total_paid_request_hash_uses_resolved_paid_amount():
     omitted_paid_amount = InvoiceCreateRequest(**base_payload)
     explicit_paid_amount = InvoiceCreateRequest(**{**base_payload, "paid_amount": "236.00"})
 
-    assert invoice_service._build_invoice_request_hash(omitted_paid_amount, "27", invoice_datetime, Decimal("236.00")) == invoice_service._build_invoice_request_hash(explicit_paid_amount, "27", invoice_datetime, Decimal("236.00"))
+    assert invoice_service._build_invoice_request_hash(
+        omitted_paid_amount,
+        "27",
+        invoice_datetime,
+        True,
+        Decimal("236.00"),
+    ) == invoice_service._build_invoice_request_hash(
+        explicit_paid_amount,
+        "27",
+        invoice_datetime,
+        True,
+        Decimal("236.00"),
+    )
 
 
 def test_invoice_model_and_migration_represent_payment_state_amount_constraints():
