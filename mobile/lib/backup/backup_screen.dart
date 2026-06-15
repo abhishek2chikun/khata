@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'backup_models.dart';
 import 'backup_scheduler.dart';
 import 'drive_backup_service.dart';
+import 'drive_platform.dart';
 import 'encrypted_drive_backup_orchestrator.dart';
 import 'local_backup_transfer_service.dart';
 
@@ -32,6 +33,7 @@ class _BackupScreenState extends State<BackupScreen> {
   BackupScheduleSettings? _settings;
   List<DriveBackupListItem>? _driveBackups;
   String? _message;
+  bool _messageIsError = false;
   String? _failureMessage;
   bool _isLoading = true;
   bool _isBusy = false;
@@ -62,22 +64,20 @@ class _BackupScreenState extends State<BackupScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: <Widget>[
+                if (_message != null) ...<Widget>[
+                  _StatusBanner(
+                    message: _message!,
+                    isError: _messageIsError,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _buildCloudCard(settings),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _buildManualCard(settings),
-                if (_driveBackups != null && _driveBackups!.isNotEmpty) ...<Widget>[
+                if (_driveBackups != null &&
+                    _driveBackups!.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 16),
                   _buildRestoreList(),
-                ],
-                if (_message != null) ...<Widget>[
-                  const SizedBox(height: 16),
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      _message!,
-                      key: const Key('backupMessage'),
-                    ),
-                  ),
                 ],
               ],
             ),
@@ -91,54 +91,72 @@ class _BackupScreenState extends State<BackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Google Drive backup',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            Row(
+              children: <Widget>[
+                Icon(Icons.cloud_outlined,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Google Drive backup',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                _SetupBadge(complete: _connected && _hasPassword),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               _connected
                   ? 'Connected as ${_accountEmail ?? 'Google account'}.'
                   : 'Connect Google Drive to upload encrypted backups automatically.',
             ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const Key('connectGoogleButton'),
-              onPressed: _isBusy
-                  ? null
-                  : (_connected ? _disconnectGoogle : _connectGoogle),
-              icon: Icon(_connected ? Icons.link_off_outlined : Icons.link),
-              label: Text(_connected ? 'Disconnect Google' : 'Connect Google'),
+            const SizedBox(height: 14),
+            _SetupStep(
+              number: 1,
+              title: _connected
+                  ? 'Google account connected'
+                  : 'Connect Google account',
+              subtitle: _connected
+                  ? (_accountEmail ?? 'Drive access is ready')
+                  : 'Required to create and restore cloud backups.',
+              complete: _connected,
+              action: FilledButton.tonalIcon(
+                key: const Key('connectGoogleButton'),
+                onPressed: _isBusy
+                    ? null
+                    : (_connected ? _disconnectGoogle : _connectGoogle),
+                icon: Icon(_connected ? Icons.link_off_outlined : Icons.link),
+                label: Text(_connected ? 'Disconnect' : 'Connect Google'),
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Backup password',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Required for encryption. Stored only on this device. '
-              'Re-enter after reinstalling the app.',
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                OutlinedButton(
-                  key: const Key('setBackupPasswordButton'),
-                  onPressed: _isBusy ? null : _configurePassword,
-                  child: Text(_hasPassword ? 'Change password' : 'Set password'),
-                ),
-                if (_hasPassword)
+            const Divider(height: 28),
+            _SetupStep(
+              number: 2,
+              title: _hasPassword
+                  ? 'Encryption password saved'
+                  : 'Set encryption password',
+              subtitle:
+                  'Stored only on this device. Keep a separate copy; it cannot be recovered.',
+              complete: _hasPassword,
+              action: Wrap(
+                spacing: 8,
+                children: <Widget>[
                   OutlinedButton(
-                    key: const Key('removeBackupPasswordButton'),
-                    onPressed: _isBusy ? null : _removePassword,
-                    child: const Text('Remove password'),
+                    key: const Key('setBackupPasswordButton'),
+                    onPressed: _isBusy ? null : _configurePassword,
+                    child: Text(_hasPassword ? 'Change' : 'Set password'),
                   ),
-              ],
+                  if (_hasPassword)
+                    TextButton(
+                      key: const Key('removeBackupPasswordButton'),
+                      onPressed: _isBusy ? null : _removePassword,
+                      child: const Text('Remove'),
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const Divider(height: 28),
             SwitchListTile(
               key: const Key('automaticBackupSwitch'),
               contentPadding: EdgeInsets.zero,
@@ -147,10 +165,18 @@ class _BackupScreenState extends State<BackupScreen> {
                 'Runs near ${settings.dailyBackupTime.format24Hour()} with catch-up on app launch.',
               ),
               value: settings.automaticBackupsEnabled,
-              onChanged: _isBusy ? null : _toggleAutomaticBackup,
+              onChanged: _isBusy || !_connected || !_hasPassword
+                  ? null
+                  : _toggleAutomaticBackup,
             ),
-            const SizedBox(height: 8),
-            Text('Last backup: ${_formatLastBackup(settings)}'),
+            const SizedBox(height: 4),
+            Row(
+              children: <Widget>[
+                const Icon(Icons.history, size: 18),
+                const SizedBox(width: 8),
+                Text('Last backup: ${_formatLastBackup(settings)}'),
+              ],
+            ),
             if (_failureMessage != null) ...<Widget>[
               const SizedBox(height: 8),
               Text(
@@ -158,12 +184,16 @@ class _BackupScreenState extends State<BackupScreen> {
                 key: const Key('backupFailureMessage'),
               ),
             ],
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const Key('backupNowButton'),
-              onPressed: _isBusy ? null : _backupNow,
-              icon: const Icon(Icons.cloud_upload_outlined),
-              label: const Text('Back up now'),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: const Key('backupNowButton'),
+                onPressed:
+                    _isBusy || !_connected || !_hasPassword ? null : _backupNow,
+                icon: const Icon(Icons.cloud_upload_outlined),
+                label: const Text('Back up now'),
+              ),
             ),
           ],
         ),
@@ -188,22 +218,30 @@ class _BackupScreenState extends State<BackupScreen> {
               'The password is required for restore and cannot be recovered.',
             ),
             const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const Key('exportBackupButton'),
-              onPressed: _isBusy || widget.backupTransferService == null
-                  ? null
-                  : _exportBackup,
-              icon: const Icon(Icons.upload_file_outlined),
-              label: const Text('Export encrypted backup'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              key: const Key('importBackupButton'),
-              onPressed: _isBusy || widget.backupTransferService == null
-                  ? null
-                  : _importBackup,
-              icon: const Icon(Icons.download_outlined),
-              label: const Text('Restore encrypted backup'),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    key: const Key('exportBackupButton'),
+                    onPressed: _isBusy || widget.backupTransferService == null
+                        ? null
+                        : _exportBackup,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Export'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('importBackupButton'),
+                    onPressed: _isBusy || widget.backupTransferService == null
+                        ? null
+                        : _importBackup,
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Restore'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -279,6 +317,7 @@ class _BackupScreenState extends State<BackupScreen> {
       setState(() {
         _settings = const BackupScheduleSettings();
         _message = _friendlyError(error);
+        _messageIsError = true;
         _isLoading = false;
       });
     }
@@ -389,14 +428,21 @@ class _BackupScreenState extends State<BackupScreen> {
     setState(() {
       _isBusy = true;
       _message = null;
+      _messageIsError = false;
     });
     try {
       final message = await action();
       if (!mounted) return;
-      setState(() => _message = message);
+      setState(() {
+        _message = message;
+        _messageIsError = false;
+      });
     } on Object catch (error) {
       if (!mounted) return;
-      setState(() => _message = _friendlyError(error));
+      setState(() {
+        _message = _friendlyError(error);
+        _messageIsError = true;
+      });
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -409,13 +455,12 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> _refreshCloudState() async {
     final settings = await widget.driveBackupService.loadSettings();
-    final connected = await widget.driveBackupService.isGoogleAccountConnected();
+    final connected =
+        await widget.driveBackupService.isGoogleAccountConnected();
     final hasPassword = await widget.driveBackupService.hasBackupPassword();
-    final accountEmail = connected
-        ? await widget.driveBackupService.googleAccountEmail()
-        : null;
-    final failureMessage =
-        await widget.driveBackupService.lastFailureMessage();
+    final accountEmail =
+        connected ? await widget.driveBackupService.googleAccountEmail() : null;
+    final failureMessage = await widget.driveBackupService.lastFailureMessage();
     List<DriveBackupListItem>? backups;
     if (connected) {
       try {
@@ -518,7 +563,9 @@ class _BackupScreenState extends State<BackupScreen> {
         error is UnsupportedBackupVersionException ||
         error is InvalidBackupPayloadException ||
         error is BackupPasswordException ||
-        error is DriveBackupConfigurationException) {
+        error is DriveBackupConfigurationException ||
+        error is DriveAuthException ||
+        error is DriveTransportException) {
       return error.toString().replaceFirst(RegExp(r'^[^:]+:\s*'), '');
     }
     return 'Backup operation failed. No data was changed.';
@@ -543,5 +590,106 @@ class _BackupScreenState extends State<BackupScreen> {
       return '$bytes B';
     }
     return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  }
+}
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.message, required this.isError});
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final background =
+        isError ? colors.errorContainer : colors.primaryContainer;
+    final foreground =
+        isError ? colors.onErrorContainer : colors.onPrimaryContainer;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('backupMessage'),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: foreground),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: TextStyle(color: foreground))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SetupBadge extends StatelessWidget {
+  const _SetupBadge({required this.complete});
+
+  final bool complete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: Icon(complete ? Icons.check_circle : Icons.pending_outlined,
+          size: 18),
+      label: Text(complete ? 'Ready' : 'Setup'),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _SetupStep extends StatelessWidget {
+  const _SetupStep({
+    required this.number,
+    required this.title,
+    required this.subtitle,
+    required this.complete,
+    required this.action,
+  });
+
+  final int number;
+  final String title;
+  final String subtitle;
+  final bool complete;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        CircleAvatar(
+          radius: 15,
+          backgroundColor:
+              complete ? colors.primary : colors.surfaceContainerHighest,
+          foregroundColor:
+              complete ? colors.onPrimary : colors.onSurfaceVariant,
+          child: complete
+              ? const Icon(Icons.check, size: 18)
+              : Text(number.toString()),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 3),
+              Text(subtitle, style: TextStyle(color: colors.onSurfaceVariant)),
+              const SizedBox(height: 10),
+              action,
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

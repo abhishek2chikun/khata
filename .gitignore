@@ -22,3 +22,9 @@ build/
 # Local infrastructure
 .postgres/
 .worktrees/
+
+# Local Google/Firebase credentials and release signing material
+**/google-services.json
+**/key.properties
+**/*.jks
+**/*.keystore

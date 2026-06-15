@@ -8,6 +8,7 @@ import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_screen.dart';
 import 'package:internal_billing_khata_mobile/backup/backup_scheduler.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_backup_service.dart';
+import 'package:internal_billing_khata_mobile/backup/drive_platform.dart';
 import 'package:internal_billing_khata_mobile/backup/encrypted_drive_backup_orchestrator.dart';
 import 'package:internal_billing_khata_mobile/backup/local_backup_transfer_service.dart';
 import 'package:internal_billing_khata_mobile/main.dart';
@@ -55,7 +56,10 @@ void main() {
     expect(find.text('Last backup: 2026-05-07 22:30'), findsOneWidget);
     expect(find.text('Google Drive backup'), findsOneWidget);
 
-    await tester.ensureVisible(find.byKey(const Key('exportBackupButton')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('exportBackupButton')),
+      300,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('exportBackupButton')));
     await tester.pumpAndSettle();
@@ -98,9 +102,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(service.hasPassword, isTrue);
 
-    await tester.tap(find.text('Back up now'));
+    await tester.ensureVisible(find.byKey(const Key('backupNowButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('backupNowButton')));
     await tester.pumpAndSettle();
     expect(service.backupNowCount, 1);
+  });
+
+  testWidgets(
+      'backup actions stay disabled until account and password are ready',
+      (tester) async {
+    final service = FakeDriveBackupService();
+
+    await tester.pumpWidget(
+      MaterialApp(home: BackupScreen(driveBackupService: service)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('backupNowButton')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('automaticBackupSwitch')))
+          .onChanged,
+      isNull,
+    );
+  });
+
+  testWidgets('backup screen explains missing Google OAuth configuration',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BackupScreen(
+          driveBackupService: _ConfigurationFailureDriveService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+        find.textContaining('GOOGLE_DRIVE_SERVER_CLIENT_ID'), findsOneWidget);
+    expect(find.byKey(const Key('backupMessage')), findsOneWidget);
   });
 
   testWidgets('backup screen restore confirmation warns before replacement',
@@ -155,7 +202,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('importBackupButton')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('importBackupButton')),
+      300,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('importBackupButton')));
     await tester.pumpAndSettle();
@@ -228,6 +278,16 @@ void main() {
 
     expect(find.text('Backup & Restore'), findsNothing);
   });
+}
+
+class _ConfigurationFailureDriveService extends FakeDriveBackupService {
+  @override
+  Future<bool> isGoogleAccountConnected() {
+    throw const DriveAuthException(
+      'Google Drive sign-in is not configured. '
+      'Set GOOGLE_DRIVE_SERVER_CLIENT_ID.',
+    );
+  }
 }
 
 class _AuthenticatedAuthService implements AuthService {

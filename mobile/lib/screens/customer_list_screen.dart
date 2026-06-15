@@ -63,11 +63,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       appBar: AppBar(
         title: const Text('Customers/Khata'),
         actions: <Widget>[
-          TextButton.icon(
+          IconButton(
             key: const Key('openDailyCollectionsButton'),
             onPressed: _isLoading ? null : _openDailyCollections,
             icon: const Icon(Icons.grid_view_outlined),
-            label: const Text('Daily collections'),
+            tooltip: 'Daily collections',
           ),
           if (widget.balanceShareService != null &&
               widget.companyProfileService != null)
@@ -103,7 +103,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               onChanged: (_) => _applySearchFilter(),
               decoration: const InputDecoration(
                 labelText: 'Search customers',
+                hintText: 'Name, phone, address or GSTIN',
+                prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
+                isDense: true,
               ),
             ),
             const SizedBox(height: 16),
@@ -184,7 +187,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   void _applySearchFilter() {
     setState(() {
-      _customers = _filterCustomers(_allCustomers, _searchController.text.trim());
+      _customers =
+          _filterCustomers(_allCustomers, _searchController.text.trim());
     });
   }
 

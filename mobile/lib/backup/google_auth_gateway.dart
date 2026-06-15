@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis_auth/googleapis_auth.dart' as auth;
 
 import 'drive_platform.dart';
+import 'google_auth_configuration.dart';
 
 typedef DriveAuthClientFactory = auth.AuthClient Function(
   GoogleSignInClientAuthorization authorization,
@@ -13,11 +14,15 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
   GoogleSignInAuthGateway({
     GoogleSignIn? signIn,
     DriveAuthClientFactory? authClientFactory,
+    GoogleAuthConfiguration? configuration,
   })  : _signIn = signIn ?? GoogleSignIn.instance,
-        _authClientFactory = authClientFactory ?? _defaultAuthClientFactory;
+        _authClientFactory = authClientFactory ?? _defaultAuthClientFactory,
+        _configuration =
+            configuration ?? GoogleAuthConfiguration.fromEnvironment();
 
   final GoogleSignIn _signIn;
   final DriveAuthClientFactory _authClientFactory;
+  final GoogleAuthConfiguration _configuration;
   GoogleSignInAccount? _currentAccount;
   var _initialized = false;
 
@@ -31,11 +36,21 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
     if (_initialized) {
       return;
     }
-    await _signIn.initialize();
+    try {
+      await _signIn.initialize(
+        serverClientId: _configuration.serverClientIdOrNull,
+      );
+    } on GoogleSignInException catch (error) {
+      throw mapGoogleSignInError(error);
+    }
     _initialized = true;
-    final lightweight = _signIn.attemptLightweightAuthentication();
-    if (lightweight != null) {
-      _currentAccount = await lightweight;
+    try {
+      final lightweight = _signIn.attemptLightweightAuthentication();
+      if (lightweight != null) {
+        _currentAccount = await lightweight;
+      }
+    } on GoogleSignInException catch (error) {
+      throw mapGoogleSignInError(error);
     }
   }
 
@@ -62,12 +77,7 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
         GoogleAuthGateway.driveScopes,
       );
     } on GoogleSignInException catch (error) {
-      if (error.code == GoogleSignInExceptionCode.canceled) {
-        throw const DriveAuthException('sign in canceled');
-      }
-      throw DriveAuthException(
-        error.description ?? 'Google sign in failed',
-      );
+      throw mapGoogleSignInError(error);
     }
   }
 
@@ -85,7 +95,8 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
     if (account == null) {
       return false;
     }
-    final authorization = await account.authorizationClient.authorizationForScopes(
+    final authorization =
+        await account.authorizationClient.authorizationForScopes(
       GoogleAuthGateway.driveScopes,
     );
     return authorization != null;
@@ -100,7 +111,8 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
     if (account == null) {
       return null;
     }
-    var authorization = await account.authorizationClient.authorizationForScopes(
+    var authorization =
+        await account.authorizationClient.authorizationForScopes(
       GoogleAuthGateway.driveScopes,
     );
     if (authorization == null && promptIfUnauthorized) {
@@ -113,4 +125,24 @@ class GoogleSignInAuthGateway implements GoogleAuthGateway {
     }
     return _authClientFactory(authorization);
   }
+}
+
+DriveAuthException mapGoogleSignInError(GoogleSignInException error) {
+  if (error.code == GoogleSignInExceptionCode.clientConfigurationError) {
+    return const DriveAuthException(
+      'Google Drive sign-in is not configured for this installed app. Add '
+      'a google-services.json containing a web OAuth client, or rebuild '
+      'with GOOGLE_DRIVE_SERVER_CLIENT_ID. The Android OAuth client must '
+      'match the app package and signing SHA fingerprint.',
+    );
+  }
+  if (error.code == GoogleSignInExceptionCode.canceled) {
+    return const DriveAuthException(
+      'Google sign-in was canceled. If this appears after choosing an '
+      'account, verify the app package, signing SHA, and OAuth client ID.',
+    );
+  }
+  return DriveAuthException(
+    error.description ?? 'Google sign-in failed. Please try again.',
+  );
 }

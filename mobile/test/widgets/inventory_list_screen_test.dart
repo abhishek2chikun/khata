@@ -339,10 +339,10 @@ void main() {
     expect(find.text('Blue Pen'), findsOneWidget);
     expect(find.text('Acme Traders'), findsOneWidget);
     expect(find.text('Pens'), findsOneWidget);
-    expect(find.text('Stock: 2 box'), findsOneWidget);
-    expect(find.text('Selling: 10.50'), findsOneWidget);
-    expect(find.text('GST: 18%'), findsOneWidget);
-    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Stock 2 box'), findsOneWidget);
+    expect(find.text('10.50'), findsOneWidget);
+    expect(find.text('GST 18%'), findsOneWidget);
+    expect(find.text('Active'), findsNothing);
   });
 
   testWidgets('default list navigation opens product detail screen',

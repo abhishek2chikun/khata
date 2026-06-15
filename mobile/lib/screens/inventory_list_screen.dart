@@ -52,55 +52,95 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('Inventory'),
+        actions: <Widget>[
+          IconButton.filledTonal(
+            key: const Key('addProductButton'),
+            onPressed: _handleAddProduct,
+            icon: const Icon(Icons.add),
+            tooltip: 'Add product',
+          ),
+          const SizedBox(width: 12),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: FilledButton.icon(
-                    key: const Key('addProductButton'),
-                    onPressed: _handleAddProduct,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Product'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
             TextField(
               key: const Key('searchFilterField'),
               controller: _searchController,
               onChanged: (_) => _loadProducts(),
-              decoration: const InputDecoration(
-                labelText: 'Search',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: 'Search name, item number, HSN...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          _loadProducts();
+                        },
+                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear search',
+                      ),
+                border: const OutlineInputBorder(),
+                isDense: true,
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('companyFilterField'),
-              controller: _companyController,
-              onChanged: (_) => _loadProducts(),
-              decoration: const InputDecoration(
-                labelText: 'Company',
-                border: OutlineInputBorder(),
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    key: const Key('companyFilterField'),
+                    controller: _companyController,
+                    onChanged: (_) => _loadProducts(),
+                    decoration: const InputDecoration(
+                      labelText: 'Company',
+                      prefixIcon: Icon(Icons.business_outlined),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    key: const Key('categoryFilterField'),
+                    controller: _categoryController,
+                    onChanged: (_) => _loadProducts(),
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category_outlined),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('categoryFilterField'),
-              controller: _categoryController,
-              onChanged: (_) => _loadProducts(),
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                Text(
+                  '${_products.length} products',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const Spacer(),
+                if (_companyController.text.isNotEmpty ||
+                    _categoryController.text.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () {
+                      _companyController.clear();
+                      _categoryController.clear();
+                      _loadProducts();
+                    },
+                    icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                    label: const Text('Clear filters'),
+                  ),
+              ],
             ),
-            const SizedBox(height: 16),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
@@ -127,32 +167,83 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       itemBuilder: (context, index) {
         final product = _products[index];
         return Card(
+          margin: EdgeInsets.zero,
           child: ListTile(
             key: Key('productRow-${product.id}'),
             onTap: () => _handleProductSelected(product),
-            title: Text(product.itemName),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            title: Text(
+              product.itemName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Row(
                   children: <Widget>[
-                    _InfoChip(product.itemNumber),
-                    _InfoChip(product.companyName),
-                    _InfoChip(product.category),
-                    _InfoChip('Stock: ${_formatQuantity(product)}'),
+                    Flexible(
+                      child: Text(
+                        product.itemNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Text('  •  '),
+                    Flexible(
+                      child: Text(
+                        product.companyName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Text('  •  '),
+                    Flexible(
+                      child: Text(
+                        product.category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: <Widget>[
                     _InfoChip(
-                        'Selling: ${product.sellingPrice.toStringAsFixed(2)}'),
-                    _InfoChip('GST: ${_formatPercent(product.gstRate)}'),
-                    _InfoChip(product.isActive ? 'Active' : 'Archived'),
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Stock ${_formatQuantity(product)}',
+                      warning: product.isLowStock,
+                    ),
+                    _InfoChip(
+                      icon: Icons.currency_rupee,
+                      label: product.sellingPrice.toStringAsFixed(2),
+                    ),
+                    if (product.gstRate > 0)
+                      _InfoChip(
+                        icon: Icons.receipt_long_outlined,
+                        label: 'GST ${_formatPercent(product.gstRate)}',
+                      ),
+                    if (!product.isActive)
+                      const _InfoChip(
+                        icon: Icons.archive_outlined,
+                        label: 'Archived',
+                        warning: true,
+                      ),
                   ],
                 ),
                 if (product.isLowStock)
                   const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text('Low stock'),
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Low stock',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                 if (!product.isActive)
                   const Padding(
@@ -161,17 +252,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (!product.isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Chip(label: Text('Archived')),
-                  ),
-                const Icon(Icons.chevron_right),
-              ],
-            ),
+            trailing: const Icon(Icons.chevron_right),
           ),
         );
       },
@@ -246,12 +327,33 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip(this.label);
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    this.warning = false,
+  });
 
+  final IconData icon;
   final String label;
+  final bool warning;
 
   @override
   Widget build(BuildContext context) {
-    return Text(label);
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: warning ? colors.errorContainer : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 14),
+          const SizedBox(width: 4),
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+        ],
+      ),
+    );
   }
 }
