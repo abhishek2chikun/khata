@@ -1,13 +1,11 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:internal_billing_khata_mobile/backup/backup_models.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_backup_service.dart';
 import 'package:internal_billing_khata_mobile/backup/drive_platform.dart';
 import 'package:internal_billing_khata_mobile/backup/encrypted_drive_backup_orchestrator.dart';
-import 'package:internal_billing_khata_mobile/backup/local_backup_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
 
 import 'backup_test_fixtures.dart';
@@ -72,7 +70,8 @@ void main() {
       expect(settings.single.lastBackupAt, isNotNull);
     });
 
-    test('verification failure prevents success and retention prune', () async {
+    test('verification failure removes unverified upload and prevents success',
+        () async {
       await seedRoundTripData(database);
       gateway.shouldFailVerification = true;
       final orchestrator = buildOrchestrator();
@@ -82,9 +81,28 @@ void main() {
         throwsA(isA<DriveTransportException>()),
       );
 
-      expect(gateway.files, hasLength(1));
+      expect(gateway.files, isEmpty);
       final settings = await (database.select(database.backupSettings)).get();
       expect(settings, isEmpty);
+    });
+
+    test('cleanup failure does not mask upload verification failure', () async {
+      await seedRoundTripData(database);
+      gateway
+        ..shouldFailVerification = true
+        ..shouldFailDelete = true;
+      final orchestrator = buildOrchestrator();
+
+      await expectLater(
+        () => orchestrator.runVerifiedBackup(),
+        throwsA(
+          isA<DriveTransportException>().having(
+            (error) => error.message,
+            'message',
+            'upload verification failed',
+          ),
+        ),
+      );
     });
 
     test('retention keeps newest 30 owned backups', () async {
@@ -114,6 +132,50 @@ void main() {
       expect(owned.length, EncryptedDriveBackupOrchestrator.retentionCount);
     });
 
+    test('retention deletion failure does not invalidate verified backup',
+        () async {
+      await seedRoundTripData(database);
+      final orchestrator = buildOrchestrator(
+        clock: () => DateTime.utc(2026, 6, 14),
+      );
+      final folderId = await gateway.ensureBackupFolder();
+      for (var index = 0; index < 30; index += 1) {
+        await gateway.uploadBackupFile(
+          folderId: folderId,
+          fileName: 'seed-$index.khata',
+          bytes: [index],
+          appProperties: {
+            DriveGateway.khataOwnerProperty: DriveGateway.khataOwnerValue,
+          },
+        );
+      }
+      gateway.shouldFailDelete = true;
+
+      await orchestrator.runVerifiedBackup();
+
+      final settings = await database.select(database.backupSettings).get();
+      expect(settings.single.lastBackupAt, isNotNull);
+      final events = await database.select(database.backupEvents).get();
+      expect(
+        events,
+        contains(
+          isA<db.BackupEvent>()
+              .having(
+                  (event) => event.eventType, 'eventType', 'drive_retention')
+              .having((event) => event.status, 'status', 'failure'),
+        ),
+      );
+      expect(
+        events,
+        contains(
+          isA<db.BackupEvent>()
+              .having(
+                  (event) => event.eventType, 'eventType', 'automatic_backup')
+              .having((event) => event.status, 'status', 'success'),
+        ),
+      );
+    });
+
     test('does not list unrelated files without ownership property', () async {
       final folderId = await gateway.ensureBackupFolder();
       gateway.seedUnrelatedFile(folderId: folderId, name: 'notes.txt');
@@ -132,7 +194,8 @@ void main() {
       expect(gateway.unrelatedFiles, isNotEmpty);
     });
 
-    test('lists backups newest first and restores downloaded package', () async {
+    test('lists backups newest first and restores downloaded package',
+        () async {
       await seedRoundTripData(database);
       final orchestrator = buildOrchestrator();
       await orchestrator.runVerifiedBackup();
@@ -153,9 +216,36 @@ void main() {
       expect(await database.select(database.products).get(), isNotEmpty);
     });
 
+    test('rejects a corrupted Drive download before changing local data',
+        () async {
+      await seedRoundTripData(database);
+      final digestBefore = await canonicalDatabaseDigest(database);
+      final orchestrator = buildOrchestrator();
+      await orchestrator.runVerifiedBackup();
+      final listed = await orchestrator.listBackups();
+      gateway.tamperFile(fileId: listed.single.id, bytes: const [1, 2, 3]);
+
+      await expectLater(
+        () => orchestrator.restoreFromBackup(
+          fileId: listed.single.id,
+          password: 'backup-password',
+        ),
+        throwsA(
+          isA<DriveTransportException>().having(
+            (error) => error.message,
+            'message',
+            'download verification failed',
+          ),
+        ),
+      );
+
+      expect(await canonicalDatabaseDigest(database), digestBefore);
+    });
+
     test('maps sign-in cancellation to DriveAuthException', () async {
       auth = FakeGoogleAuthGateway(shouldCancelSignIn: true);
-      await expectLater(() => auth.signIn(), throwsA(isA<DriveAuthException>()));
+      await expectLater(
+          () => auth.signIn(), throwsA(isA<DriveAuthException>()));
     });
 
     test('requires drive access before backup', () async {
@@ -213,9 +303,7 @@ Future<String> canonicalDatabaseDigest(db.LocalDatabase database) async {
     final rows = await database
         .customSelect('SELECT * FROM $tableName ORDER BY id')
         .get();
-    payload[tableName] = rows
-        .map((row) => _sortMapKeys(row.data))
-        .toList();
+    payload[tableName] = rows.map((row) => _sortMapKeys(row.data)).toList();
   }
   return sha256.convert(utf8.encode(jsonEncode(payload))).toString();
 }

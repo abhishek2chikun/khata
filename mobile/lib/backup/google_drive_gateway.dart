@@ -102,7 +102,8 @@ class GoogleApisDriveGateway implements DriveGateway {
       id: uploaded.id!,
       name: uploaded.name ?? fileName,
       createdTime: uploaded.createdTime ?? DateTime.now().toUtc(),
-      sizeBytes: int.tryParse(uploaded.size ?? '${bytes.length}') ?? bytes.length,
+      sizeBytes:
+          int.tryParse(uploaded.size ?? '${bytes.length}') ?? bytes.length,
       appProperties: Map<String, String>.from(properties),
       sha256: properties['sha256'] ?? sha256,
     );
@@ -110,11 +111,20 @@ class GoogleApisDriveGateway implements DriveGateway {
 
   @override
   Future<List<int>> downloadFile({required String fileId}) async {
+    final metadata = await _api.files.get(
+      fileId,
+      $fields: 'id,appProperties',
+    ) as drive.File;
     final media = await _api.files.get(
       fileId,
       downloadOptions: drive.DownloadOptions.fullMedia,
     ) as drive.Media;
-    return media.stream.expand((chunk) => chunk).toList();
+    final bytes = await media.stream.expand((chunk) => chunk).toList();
+    final storedHash = metadata.appProperties?['sha256'];
+    if (storedHash != null && _sha256Hex(bytes) != storedHash) {
+      throw const DriveTransportException('download verification failed');
+    }
+    return bytes;
   }
 
   @override

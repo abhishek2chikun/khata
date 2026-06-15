@@ -40,7 +40,8 @@ class EncryptedDriveBackupOrchestrator {
         _authGateway = authGateway,
         _driveGatewayFactory = driveGatewayFactory,
         _secretStore = secretStore,
-        _backupService = backupService ?? LocalBackupService(database: database),
+        _backupService =
+            backupService ?? LocalBackupService(database: database),
         _clock = clock ?? DateTime.now;
 
   static const retentionCount = 30;
@@ -52,11 +53,14 @@ class EncryptedDriveBackupOrchestrator {
   final LocalBackupService _backupService;
   final DateTime Function() _clock;
 
-  Future<void> runVerifiedBackup({String eventType = 'automatic_backup'}) async {
+  Future<void> runVerifiedBackup(
+      {String eventType = 'automatic_backup'}) async {
     await _ensureReadyForBackup();
     final password = (await _secretStore.readPassword())!;
     final now = _clock().toUtc();
     DriveGateway? gateway;
+    String? uploadedFileId;
+    var uploadVerified = false;
     try {
       gateway = await _driveGatewayFactory();
       final package = await _backupService.exportEncrypted(password: password);
@@ -76,12 +80,18 @@ class EncryptedDriveBackupOrchestrator {
           'sha256': contentHash,
         },
       );
+      uploadedFileId = uploaded.id;
       await gateway.verifyUploadedFile(
         fileId: uploaded.id,
         expectedSha256: contentHash,
       );
+      uploadVerified = true;
       await _updateLastBackupAt(now);
-      await _pruneOwnedBackups(gateway: gateway, folderId: folderId);
+      await _pruneOwnedBackupsBestEffort(
+        gateway: gateway,
+        folderId: folderId,
+        at: now,
+      );
       await _recordEvent(
         eventType: eventType,
         status: 'success',
@@ -89,6 +99,13 @@ class EncryptedDriveBackupOrchestrator {
         at: now,
       );
     } on Object catch (error) {
+      if (gateway != null && uploadedFileId != null && !uploadVerified) {
+        try {
+          await gateway.deleteFile(fileId: uploadedFileId);
+        } on Object {
+          // Preserve the original upload or verification failure for callers.
+        }
+      }
       await _recordEvent(
         eventType: eventType,
         status: 'failure',
@@ -155,7 +172,8 @@ class EncryptedDriveBackupOrchestrator {
   }
 
   Future<void> _ensureReadyForBackup() async {
-    if (!await _authGateway.isSignedIn() || !await _authGateway.hasDriveAccess()) {
+    if (!await _authGateway.isSignedIn() ||
+        !await _authGateway.hasDriveAccess()) {
       throw const DriveBackupConfigurationException(
         'Connect a Google account with Drive access before backing up.',
       );
@@ -179,6 +197,23 @@ class EncryptedDriveBackupOrchestrator {
     final extras = files.skip(retentionCount).toList();
     for (final file in extras) {
       await gateway.deleteFile(fileId: file.id);
+    }
+  }
+
+  Future<void> _pruneOwnedBackupsBestEffort({
+    required DriveGateway gateway,
+    required String folderId,
+    required DateTime at,
+  }) async {
+    try {
+      await _pruneOwnedBackups(gateway: gateway, folderId: folderId);
+    } on Object catch (error) {
+      await _recordEvent(
+        eventType: 'drive_retention',
+        status: 'failure',
+        message: redactBackupFailureMessage(error),
+        at: at,
+      );
     }
   }
 

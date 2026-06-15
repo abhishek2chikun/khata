@@ -6,6 +6,7 @@ class FakeDriveGateway implements DriveGateway {
     this.shouldFailVerification = false,
     this.shouldFailUpload = false,
     this.shouldFailDownload = false,
+    this.shouldFailDelete = false,
   });
 
   final files = <String, _StoredDriveFile>{};
@@ -13,6 +14,7 @@ class FakeDriveGateway implements DriveGateway {
   bool shouldFailVerification;
   bool shouldFailUpload;
   bool shouldFailDownload;
+  bool shouldFailDelete;
   String? _folderId;
   var _nextId = 1;
   var ensureFolderCalls = 0;
@@ -68,11 +70,18 @@ class FakeDriveGateway implements DriveGateway {
     if (file == null) {
       throw const DriveTransportException('file not found');
     }
-    return List<int>.from(file.bytes);
+    final bytes = List<int>.from(file.bytes);
+    if (sha256.convert(bytes).toString() != file.sha256) {
+      throw const DriveTransportException('download verification failed');
+    }
+    return bytes;
   }
 
   @override
   Future<void> deleteFile({required String fileId}) async {
+    if (shouldFailDelete) {
+      throw const DriveTransportException('delete failed');
+    }
     files.remove(fileId);
   }
 
@@ -104,6 +113,16 @@ class FakeDriveGateway implements DriveGateway {
       sha256: 'sha-unrelated',
       createdTime: DateTime.utc(2026, 6, 1),
     );
+  }
+
+  void tamperFile({required String fileId, required List<int> bytes}) {
+    final file = files[fileId];
+    if (file == null) {
+      throw StateError('Cannot tamper with missing file $fileId.');
+    }
+    file.bytes
+      ..clear()
+      ..addAll(bytes);
   }
 }
 
