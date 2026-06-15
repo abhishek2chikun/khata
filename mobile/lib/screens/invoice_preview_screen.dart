@@ -8,6 +8,7 @@ import '../services/invoice_settlement.dart';
 import '../services/invoice_share_service.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class InvoicePreviewScreen extends StatelessWidget {
   const InvoicePreviewScreen({
@@ -38,20 +39,36 @@ class InvoicePreviewScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 if (quote != null) ...<Widget>[
-                  Text('Customer: ${controller.draft.customer?.name ?? ''}',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    quote.gstFlag ? 'GST invoice' : 'Non-GST invoice',
-                    style: Theme.of(context).textTheme.titleSmall,
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          AppInfoRow(
+                            label: 'Customer',
+                            value: controller.draft.customer?.name ?? '',
+                            emphasized: true,
+                          ),
+                          AppInfoRow(
+                            label: 'Invoice type',
+                            value: quote.gstFlag
+                                ? 'GST invoice'
+                                : 'Non-GST invoice',
+                          ),
+                          AppInfoRow(
+                            label: 'Date',
+                            value: controller.draft.invoiceDate,
+                          ),
+                          if (quote.gstFlag)
+                            AppInfoRow(
+                              label: 'Place of supply',
+                              value:
+                                  '${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})',
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text('Date: ${controller.draft.invoiceDate}'),
-                  if (quote.gstFlag) ...<Widget>[
-                    Text('Tax regime: ${quote.taxRegime}'),
-                    Text(
-                        'Place of supply: ${quote.placeOfSupplyState} (${quote.placeOfSupplyStateCode})'),
-                  ],
                   const SizedBox(height: 8),
                   _buildPaymentModeSection(context),
                   const SizedBox(height: 12),
@@ -61,9 +78,12 @@ class InvoicePreviewScreen extends StatelessWidget {
                       child: Text(warning.message),
                     ),
                   ),
-                  const Divider(),
+                  const AppSectionHeader(title: 'Items'),
+                  const SizedBox(height: 8),
                   _buildItemsTable(context, quote),
-                  const Divider(),
+                  const SizedBox(height: 16),
+                  const AppSectionHeader(title: 'Totals'),
+                  const SizedBox(height: 8),
                   _buildTotals(context, quote),
                 ],
                 if (createdInvoice != null) ...<Widget>[

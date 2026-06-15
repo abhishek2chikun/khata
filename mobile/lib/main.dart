@@ -30,6 +30,7 @@ import 'services/payments_service.dart';
 import 'services/products_service.dart';
 import 'services/customers_service.dart';
 import 'widgets/app_navigation_drawer.dart';
+import 'widgets/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,6 +121,8 @@ class _BillingAppState extends State<BillingApp> {
       builder: (context, _) {
         return MaterialApp(
           title: 'Internal Billing',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
           home: Builder(builder: _buildBody),
         );
       },

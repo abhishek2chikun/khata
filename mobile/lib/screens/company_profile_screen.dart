@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/company_profile.dart';
 import '../services/company_profile_service.dart';
+import '../widgets/app_ui.dart';
 import '../widgets/error_banner.dart';
 
 class CompanyProfileScreen extends StatefulWidget {
@@ -93,23 +94,31 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
+                  const AppSectionHeader(
+                    title: 'Business details',
+                    subtitle: 'Shown on invoices and account documents.',
+                  ),
+                  const SizedBox(height: 12),
                   _buildField(_nameController, 'Company name'),
-                  _buildField(_addressController, 'Address'),
-                  _buildField(_cityController, 'City'),
-                  _buildField(_stateController, 'State'),
+                  _buildField(_addressController, 'Address', maxLines: 2),
+                  Row(children: [
+                    Expanded(child: _buildField(_cityController, 'City')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildField(_stateController, 'State')),
+                  ]),
                   _buildField(_stateCodeController, 'State code'),
                   SwitchListTile(
                     key: const Key('companyGstFlagSwitch'),
+                    contentPadding: EdgeInsets.zero,
                     title: const Text('GST registered seller'),
+                    subtitle: const Text('Enable GST fields and calculations.'),
                     value: _gstFlag,
                     onChanged: _isSaving
                         ? null
                         : (value) {
                             setState(() {
                               _gstFlag = value;
-                              if (!value) {
-                                _gstinController.clear();
-                              }
+                              if (!value) _gstinController.clear();
                             });
                           },
                   ),
@@ -118,13 +127,41 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                     'GSTIN',
                     enabled: _gstFlag && !_isSaving,
                   ),
-                  _buildField(_phoneController, 'Phone'),
-                  _buildField(_emailController, 'Email'),
-                  _buildField(_bankNameController, 'Bank name'),
-                  _buildField(_bankAccountController, 'Bank account'),
-                  _buildField(_bankIfscController, 'Bank IFSC'),
-                  _buildField(_bankBranchController, 'Bank branch'),
                   _buildField(_jurisdictionController, 'Jurisdiction'),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Contact details',
+                    children: [
+                      _buildField(
+                        _phoneController,
+                        'Phone',
+                        keyboardType: TextInputType.phone,
+                      ),
+                      _buildField(
+                        _emailController,
+                        'Email',
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Bank details',
+                    subtitle: 'Optional payment information for invoices.',
+                    children: [
+                      _buildField(_bankNameController, 'Bank name'),
+                      _buildField(_bankAccountController, 'Bank account'),
+                      Row(children: [
+                        Expanded(
+                          child: _buildField(_bankIfscController, 'IFSC'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildField(_bankBranchController, 'Branch'),
+                        ),
+                      ]),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   FilledButton(
                     key: const Key('saveCompanyProfileButton'),
@@ -143,16 +180,22 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     );
   }
 
-  Widget _buildField(TextEditingController controller, String label,
-      {bool enabled = true}) {
+  Widget _buildField(
+    TextEditingController controller,
+    String label, {
+    bool enabled = true,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
         enabled: enabled,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
         ),
       ),
     );

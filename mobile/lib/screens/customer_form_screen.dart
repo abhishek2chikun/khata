@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/customer.dart';
 import '../services/customers_service.dart';
+import '../widgets/app_ui.dart';
 import '../widgets/error_banner.dart';
 
 class CustomerFormScreen extends StatefulWidget {
@@ -90,6 +91,11 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
+            const AppSectionHeader(
+              title: 'Customer details',
+              subtitle: 'Basic information used in Khata and invoices.',
+            ),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('customerNameField'),
               controller: _nameController,
@@ -99,11 +105,16 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
               key: const Key('customerAddressField'),
               controller: _addressController,
               label: 'Address',
+              maxLines: 2,
             ),
+            const SizedBox(height: 8),
+            const AppSectionHeader(title: 'Contact'),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('customerPhoneField'),
               controller: _phoneController,
               label: 'Phone',
+              keyboardType: TextInputType.phone,
             ),
             SwitchListTile(
               key: const Key('whatsappSameAsPhoneToggle'),
@@ -125,7 +136,14 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
               controller: _whatsappController,
               label: 'WhatsApp number',
               enabled: !_whatsappSameAsPhone,
+              keyboardType: TextInputType.phone,
             ),
+            const SizedBox(height: 8),
+            const AppSectionHeader(
+              title: 'Tax details',
+              subtitle: 'Optional. Required only for GST invoices.',
+            ),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('customerGstinField'),
               controller: _gstinController,
@@ -164,6 +182,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     required TextEditingController controller,
     required String label,
     bool enabled = true,
+    int maxLines = 1,
+    TextInputType? keyboardType,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -171,9 +191,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
         key: key,
         controller: controller,
         enabled: enabled && !_isSaving,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
         ),
       ),
     );

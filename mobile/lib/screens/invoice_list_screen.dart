@@ -12,6 +12,7 @@ import '../services/products_service.dart';
 import '../services/customers_service.dart';
 import '../services/company_profile_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 import 'create_invoice_screen.dart';
 import 'invoice_detail_screen.dart';
 
@@ -81,6 +82,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               },
             ),
             const SizedBox(height: 16),
+            if (!_isLoading)
+              Text(
+                '${_invoices.length} ${_invoices.length == 1 ? 'invoice' : 'invoices'}',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            if (!_isLoading) const SizedBox(height: 10),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
@@ -97,7 +104,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_invoices.isEmpty) {
-      return const Center(child: Text('No invoices found'));
+      return const AppEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No invoices found',
+        message: 'Create an invoice or choose another status filter.',
+      );
     }
     return ListView.separated(
       itemCount: _invoices.length,
@@ -108,7 +119,17 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           child: ListTile(
             key: Key('invoiceTile-${invoice.id}'),
             onTap: () => _openInvoice(invoice),
-            title: Text('Invoice #${invoice.invoiceNumber}'),
+            leading: CircleAvatar(
+              child: Icon(
+                invoice.status == 'CANCELED'
+                    ? Icons.block_outlined
+                    : Icons.receipt_outlined,
+              ),
+            ),
+            title: Text(
+              'Invoice #${invoice.invoiceNumber}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             subtitle: Text(
               '${invoice.customerName} • ${invoice.invoiceDate} • ${invoiceSettlementLabel(
                 paymentMode: invoice.paymentMode,
@@ -136,8 +157,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: <Widget>[
-                    Text(invoice.grandTotal.toStringAsFixed(2)),
-                    Text(invoice.status),
+                    Text(
+                      '₹${invoice.grandTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    if (invoice.status == 'CANCELED')
+                      Text(
+                        'Canceled',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 11,
+                        ),
+                      ),
                   ],
                 ),
               ],

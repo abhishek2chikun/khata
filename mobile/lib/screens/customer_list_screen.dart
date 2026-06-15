@@ -10,6 +10,7 @@ import '../services/company_profile_service.dart';
 import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 import 'customer_detail_screen.dart';
 import 'daily_collections_screen.dart';
 
@@ -109,7 +110,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
+            if (!_isLoading)
+              Text(
+                '${_customers.length} ${_customers.length == 1 ? 'customer' : 'customers'}',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            const SizedBox(height: 10),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
@@ -126,7 +133,15 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_customers.isEmpty) {
-      return const Center(child: Text('No customers found'));
+      return AppEmptyState(
+        icon: Icons.people_outline,
+        title: _searchController.text.trim().isEmpty
+            ? 'No customers yet'
+            : 'No matching customers',
+        message: _searchController.text.trim().isEmpty
+            ? 'Add a customer to start invoicing and tracking Khata.'
+            : 'Try a different name, phone number, address or GSTIN.',
+      );
     }
     return ListView.separated(
       itemCount: _customers.length,
@@ -136,14 +151,42 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         return Card(
           child: ListTile(
             onTap: () => _openCustomer(customer),
-            title: Text(customer.name),
-            subtitle: Text(customer.address),
+            leading: CircleAvatar(
+              child: Text(customer.name.trim().isEmpty
+                  ? '?'
+                  : customer.name.trim().characters.first.toUpperCase()),
+            ),
+            title: Text(
+              customer.name,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: customer.address.trim().isEmpty
+                ? const Text('No address added')
+                : Text(
+                    customer.address,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                Text(customer.pendingBalance.toStringAsFixed(2)),
-                if (!customer.isActive) const Text('Archived'),
+                Text(
+                  'Receivable',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                Text(
+                  '₹${customer.pendingBalance.toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                if (!customer.isActive)
+                  Text(
+                    'Archived',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),

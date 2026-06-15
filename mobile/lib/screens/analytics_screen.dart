@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/analytics.dart';
 import '../services/analytics_service.dart';
 import '../widgets/analytics/revenue_profit_chart.dart';
+import '../widgets/app_ui.dart';
 
 enum AnalyticsDatePreset {
   today,
@@ -105,7 +106,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final start = DateTime(_now.year, _now.month, 1);
         return (_formatDate(start), _formatDate(_now));
       case AnalyticsDatePreset.custom:
-        return (_fromDate ?? _formatDate(_now.subtract(const Duration(days: 29))), _toDate ?? _formatDate(_now));
+        return (
+          _fromDate ?? _formatDate(_now.subtract(const Duration(days: 29))),
+          _toDate ?? _formatDate(_now)
+        );
     }
   }
 
@@ -145,17 +149,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
 
     if (_errorMessage != null && _dashboard == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_errorMessage!),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadDashboard,
-              child: const Text('Retry'),
-            ),
-          ],
+      return AppEmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: 'Analytics unavailable',
+        message: _errorMessage!,
+        action: FilledButton.tonal(
+          onPressed: _loadDashboard,
+          child: const Text('Retry'),
         ),
       );
     }
@@ -173,8 +173,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildDateControls(),
-            const SizedBox(height: 48),
-            const Center(child: Text('No analytics data available')),
+            const SizedBox(height: 24),
+            const AppEmptyState(
+              icon: Icons.query_stats_outlined,
+              title: 'No analytics data available',
+              message: 'Create invoices or select a wider date range.',
+            ),
           ],
         ),
       );
@@ -269,7 +273,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 (_) => Card(
                   child: Container(
                     margin: const EdgeInsets.all(16),
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ),
@@ -306,7 +311,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _pickDate(isFrom: true),
-                  child: Text(_fromDate != null ? 'From: $_fromDate' : 'From date'),
+                  child: Text(
+                      _fromDate != null ? 'From: $_fromDate' : 'From date'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -340,16 +346,37 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Widget _buildKpiGrid(Dashboard dashboard) {
     final cards = [
-      _KpiCard(label: 'Revenue', value: dashboard.totalRevenue),
-      _KpiCard(label: 'Profit', value: dashboard.totalProfit),
-      _KpiCard(label: 'Receivables', value: dashboard.customerReceivables),
-      _KpiCard(label: 'Payables', value: dashboard.buyerPayables),
+      _KpiCard(
+        label: 'Revenue',
+        value: dashboard.totalRevenue,
+        icon: Icons.trending_up,
+      ),
+      _KpiCard(
+        label: 'Profit',
+        value: dashboard.totalProfit,
+        icon: Icons.savings_outlined,
+      ),
+      _KpiCard(
+        label: 'Receivables',
+        value: dashboard.customerReceivables,
+        icon: Icons.call_received,
+      ),
+      _KpiCard(
+        label: 'Payables',
+        value: dashboard.buyerPayables,
+        icon: Icons.call_made,
+      ),
       _KpiCard(
         label: 'Active invoices',
         value: dashboard.activeInvoiceCount.toDouble(),
         isCount: true,
+        icon: Icons.receipt_long_outlined,
       ),
-      _KpiCard(label: 'Avg invoice', value: dashboard.averageInvoiceValue),
+      _KpiCard(
+        label: 'Avg invoice',
+        value: dashboard.averageInvoiceValue,
+        icon: Icons.calculate_outlined,
+      ),
     ];
 
     return LayoutBuilder(
@@ -510,16 +537,19 @@ class _KpiCard extends StatelessWidget {
   const _KpiCard({
     required this.label,
     required this.value,
+    required this.icon,
     this.isCount = false,
   });
 
   final String label;
   final double value;
+  final IconData icon;
   final bool isCount;
 
   @override
   Widget build(BuildContext context) {
-    final display = isCount ? value.toInt().toString() : value.toStringAsFixed(2);
+    final display =
+        isCount ? value.toInt().toString() : value.toStringAsFixed(2);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -527,14 +557,28 @@ class _KpiCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
               display,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ],
         ),

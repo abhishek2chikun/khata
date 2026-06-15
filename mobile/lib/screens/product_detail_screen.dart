@@ -7,6 +7,7 @@ import 'product_form_screen.dart';
 import '../services/payments_service.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({
@@ -48,88 +49,107 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         }
       },
       child: Scaffold(
-      appBar: AppBar(title: const Text('Product details')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (_errorMessage != null) ...<Widget>[
-              ErrorBanner(message: _errorMessage!),
+        appBar: AppBar(title: const Text('Product details')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_errorMessage != null) ...<Widget>[
+                ErrorBanner(message: _errorMessage!),
+                const SizedBox(height: 16),
+              ],
+              _buildHeader(),
               const SizedBox(height: 16),
-            ],
-            _buildHeader(),
-            const SizedBox(height: 16),
-            _buildSection(
-              'Pricing',
-              <Widget>[
-                _buildDetail('Buying price', _money(_product.buyingPrice)),
-                _buildDetail('Selling price', _money(_product.sellingPrice)),
-                _buildDetail('GST', _percent(_product.gstRate)),
-                _buildDetail('Unit', _product.unit ?? 'Not set'),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildSection(
-              'Stock',
-              <Widget>[
-                _buildDetail(
-                    'Stock on hand', _quantity(_product.quantityOnHand)),
-                _buildDetail(
-                  'Low stock threshold',
-                  _quantity(_product.lowStockThreshold),
-                ),
-                if (_product.isLowStock) const Text('Low stock'),
-                const Text('Stock movement history is deferred for this task.'),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildSection(
-              'Status',
-              <Widget>[
-                _buildDetail(
-                    'Status', _product.isActive ? 'Active' : 'Archived'),
-                if (!_product.isActive) ...<Widget>[
-                  const Text('Archived products are hidden from new invoices.'),
-                  if (!widget.supportsProductReactivation)
-                    const Text('Reactivation is only available in local mode.'),
+              _buildSection(
+                'Pricing',
+                <Widget>[
+                  AppInfoRow(
+                    label: 'Buying price',
+                    value: _money(_product.buyingPrice),
+                  ),
+                  AppInfoRow(
+                    label: 'Selling price',
+                    value: _money(_product.sellingPrice),
+                    emphasized: true,
+                  ),
+                  AppInfoRow(label: 'GST', value: _percent(_product.gstRate)),
+                  AppInfoRow(label: 'Unit', value: _product.unit ?? 'Not set'),
                 ],
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              key: const Key('editProductButton'),
-              onPressed: _isSaving ? null : _handleEdit,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit product'),
-            ),
-            const SizedBox(height: 8),
-            if (_product.isActive) ...<Widget>[
-              OutlinedButton.icon(
-                key: const Key('adjustStockButton'),
-                onPressed: _isSaving ? null : _showStockAdjustmentDialog,
-                icon: const Icon(Icons.inventory_2_outlined),
-                label: const Text('Adjust stock'),
+              ),
+              const SizedBox(height: 12),
+              _buildSection(
+                'Stock',
+                <Widget>[
+                  AppInfoRow(
+                    label: 'Stock on hand',
+                    value: _quantity(_product.quantityOnHand),
+                    emphasized: true,
+                  ),
+                  AppInfoRow(
+                    label: 'Low stock threshold',
+                    value: _quantity(_product.lowStockThreshold),
+                  ),
+                  if (_product.isLowStock)
+                    Chip(
+                      avatar: const Icon(Icons.warning_amber_rounded, size: 18),
+                      label: const Text('Low stock'),
+                      backgroundColor:
+                          Theme.of(context).colorScheme.errorContainer,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildSection(
+                'Status',
+                <Widget>[
+                  AppInfoRow(
+                    label: 'Availability',
+                    value: _product.isActive ? 'Active' : 'Archived',
+                  ),
+                  if (!_product.isActive) ...<Widget>[
+                    const Text(
+                        'Archived products are hidden from new invoices.'),
+                    if (!widget.supportsProductReactivation)
+                      const Text(
+                          'Reactivation is only available in local mode.'),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                key: const Key('editProductButton'),
+                onPressed: _isSaving ? null : _handleEdit,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit product'),
               ),
               const SizedBox(height: 8),
+              if (_product.isActive) ...<Widget>[
+                OutlinedButton.icon(
+                  key: const Key('adjustStockButton'),
+                  onPressed: _isSaving ? null : _showStockAdjustmentDialog,
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Adjust stock'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (_product.isActive)
+                OutlinedButton.icon(
+                  key: const Key('archiveProductButton'),
+                  onPressed: _isSaving ? null : _confirmArchive,
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('Archive product'),
+                )
+              else if (widget.supportsProductReactivation)
+                FilledButton.icon(
+                  key: const Key('reactivateProductButton'),
+                  onPressed: _isSaving ? null : _reactivate,
+                  icon: const Icon(Icons.unarchive_outlined),
+                  label: const Text('Reactivate product'),
+                ),
             ],
-            if (_product.isActive)
-              OutlinedButton.icon(
-                key: const Key('archiveProductButton'),
-                onPressed: _isSaving ? null : _confirmArchive,
-                icon: const Icon(Icons.archive_outlined),
-                label: const Text('Archive product'),
-              )
-            else if (widget.supportsProductReactivation)
-              FilledButton.icon(
-                key: const Key('reactivateProductButton'),
-                onPressed: _isSaving ? null : _reactivate,
-                icon: const Icon(Icons.unarchive_outlined),
-                label: const Text('Reactivate product'),
-              ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -145,13 +165,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
-              spacing: 12,
+              spacing: 8,
               runSpacing: 8,
               children: <Widget>[
-                Text(_product.itemNumber),
-                Text(_product.companyName),
-                Text(_product.category),
-                Text(_product.isActive ? 'Active' : 'Archived'),
+                Chip(label: Text(_product.itemNumber)),
+                Chip(label: Text(_product.companyName)),
+                Chip(label: Text(_product.category)),
+                if (_product.hsnCode != null && _product.hsnCode!.isNotEmpty)
+                  Chip(label: Text('HSN ${_product.hsnCode}')),
               ],
             ),
           ],
@@ -167,25 +188,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            AppSectionHeader(title: title),
             const SizedBox(height: 12),
             ...children,
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetail(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(child: Text(label)),
-          const SizedBox(width: 16),
-          Flexible(child: Text(value, textAlign: TextAlign.end)),
-        ],
       ),
     );
   }

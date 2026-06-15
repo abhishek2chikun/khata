@@ -18,9 +18,11 @@ import '../widgets/error_banner.dart';
 import '../widgets/money_text_field.dart';
 import '../widgets/product_picker.dart';
 import '../widgets/customer_picker.dart';
+import '../widgets/app_ui.dart';
 import 'customer_quick_add_dialog.dart';
 import 'product_quick_add_dialog.dart';
 import 'invoice_preview_screen.dart';
+
 class CreateInvoiceScreen extends StatefulWidget {
   const CreateInvoiceScreen({
     super.key,
@@ -152,6 +154,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         ErrorBanner(message: _controller.quoteErrorMessage!),
                         const SizedBox(height: 16),
                       ],
+                      const AppSectionHeader(
+                        title: 'Invoice details',
+                        subtitle: 'Choose the customer, date and payment mode.',
+                      ),
+                      const SizedBox(height: 12),
                       _buildCustomerSection(),
                       const SizedBox(height: 12),
                       _buildGstModeSection(),
@@ -160,22 +167,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       const SizedBox(height: 12),
                       _buildPaymentModeSection(),
                       const SizedBox(height: 12),
-                      TextField(
-                        key: const Key('placeOfSupplyStateCodeField'),
-                        controller: _placeOfSupplyStateCodeController,
-                        onChanged: _controller.updatePlaceOfSupplyStateCode,
-                        decoration: const InputDecoration(
-                          labelText: 'Place of supply state code',
-                          border: OutlineInputBorder(),
+                      if (_showGstControls) ...[
+                        TextField(
+                          key: const Key('placeOfSupplyStateCodeField'),
+                          controller: _placeOfSupplyStateCodeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: _controller.updatePlaceOfSupplyStateCode,
+                          decoration: const InputDecoration(
+                            labelText: 'Place of supply state code',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                      ],
                       TextField(
                         controller: _notesController,
+                        maxLines: 2,
                         onChanged: _controller.updateNotes,
                         decoration: const InputDecoration(
-                          labelText: 'Notes',
-                          border: OutlineInputBorder(),
+                          labelText: 'Notes (optional)',
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -358,7 +367,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text('Items', style: Theme.of(context).textTheme.titleMedium),
+        const AppSectionHeader(
+          title: 'Invoice items',
+          subtitle: 'Add products and confirm quantity and selling price.',
+        ),
         const SizedBox(height: 8),
         ...List.generate(items.length, (index) {
           return _buildItemCard(index, items.length > 1);
@@ -367,11 +379,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         Row(
           children: <Widget>[
             Expanded(
-              child: IconButton(
+              child: OutlinedButton.icon(
                 key: const Key('addProductButton'),
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: 'Add product',
                 onPressed: _openProductQuickAdd,
+                icon: const Icon(Icons.add_box_outlined),
+                label: const Text('New product'),
               ),
             ),
             Expanded(
@@ -422,21 +434,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            MoneyTextField(
-              fieldKey: Key('quantityField-$index'),
-              controller: _quantityControllers[index],
-              label: 'Quantity',
-              onChanged: (value) => _controller.updateItemQuantity(
-                  index, _parseNumber(value) ?? 0),
-            ),
-            const SizedBox(height: 8),
-            MoneyTextField(
-              fieldKey: Key('unitPriceField-$index'),
-              controller: _unitPriceControllers[index],
-              label: 'Selling price',
-              onChanged: (value) =>
-                  _controller.updateItemUnitPrice(index, _parseNumber(value)),
-            ),
+            Row(children: [
+              Expanded(
+                child: MoneyTextField(
+                  fieldKey: Key('quantityField-$index'),
+                  controller: _quantityControllers[index],
+                  label: 'Quantity',
+                  onChanged: (value) => _controller.updateItemQuantity(
+                    index,
+                    _parseNumber(value) ?? 0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: MoneyTextField(
+                  fieldKey: Key('unitPriceField-$index'),
+                  controller: _unitPriceControllers[index],
+                  label: 'Selling price',
+                  onChanged: (value) => _controller.updateItemUnitPrice(
+                    index,
+                    _parseNumber(value),
+                  ),
+                ),
+              ),
+            ]),
             if (_showGstControls) ...<Widget>[
               const SizedBox(height: 8),
               MoneyTextField(

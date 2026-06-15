@@ -18,6 +18,7 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _isSaving = false;
   String? _errorMessage;
 
@@ -25,6 +26,7 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
   void dispose() {
     _nameController.dispose();
     _addressController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -40,7 +42,8 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
             children: <Widget>[
               if (_errorMessage != null) ...<Widget>[
                 Text(_errorMessage!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
                 const SizedBox(height: 12),
               ],
               TextFormField(
@@ -48,7 +51,6 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Name',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -57,12 +59,21 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
               TextFormField(
                 key: const Key('customerAddressField'),
                 controller: _addressController,
+                maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: 'Address',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const Key('customerPhoneField'),
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone (optional)',
+                ),
               ),
             ],
           ),
@@ -101,6 +112,7 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
         CreateCustomerInput(
           name: _nameController.text.trim(),
           address: _addressController.text.trim(),
+          phone: _nullableText(_phoneController.text),
         ),
       );
       if (!mounted) return;
@@ -112,5 +124,10 @@ class _CustomerQuickAddDialogState extends State<CustomerQuickAddDialog> {
         _isSaving = false;
       });
     }
+  }
+
+  String? _nullableText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }

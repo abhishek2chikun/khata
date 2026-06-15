@@ -7,6 +7,7 @@ import '../models/buyer.dart';
 import '../services/buyers_service.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 import 'buyer_detail_screen.dart';
 import 'buyer_form_screen.dart';
 
@@ -67,10 +68,17 @@ class _BuyerListScreenState extends State<BuyerListScreen> {
               onChanged: (_) => _applySearchFilter(),
               decoration: const InputDecoration(
                 labelText: 'Search buyers',
-                border: OutlineInputBorder(),
+                hintText: 'Name, phone, address or GSTIN',
+                prefixIcon: Icon(Icons.search),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
+            if (!_isLoading)
+              Text(
+                '${_buyers.length} ${_buyers.length == 1 ? 'buyer' : 'buyers'}',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            const SizedBox(height: 10),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
@@ -87,7 +95,15 @@ class _BuyerListScreenState extends State<BuyerListScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_buyers.isEmpty) {
-      return const Center(child: Text('No buyers found'));
+      return AppEmptyState(
+        icon: Icons.storefront_outlined,
+        title: _searchController.text.trim().isEmpty
+            ? 'No buyers yet'
+            : 'No matching buyers',
+        message: _searchController.text.trim().isEmpty
+            ? 'Add a supplier to track purchases and pending payables.'
+            : 'Try a different name, phone number, address or GSTIN.',
+      );
     }
     return ListView.separated(
       itemCount: _buyers.length,
@@ -97,14 +113,31 @@ class _BuyerListScreenState extends State<BuyerListScreen> {
         return Card(
           child: ListTile(
             onTap: () => _openBuyer(buyer),
-            title: Text(buyer.name),
-            subtitle: Text(buyer.address),
+            leading: CircleAvatar(
+              child: Text(buyer.name.trim().isEmpty
+                  ? '?'
+                  : buyer.name.trim().characters.first.toUpperCase()),
+            ),
+            title: Text(
+              buyer.name,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: buyer.address.trim().isEmpty
+                ? const Text('No address added')
+                : Text(buyer.address,
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                const Text('Pending Payable'),
-                Text(buyer.pendingPayable.toStringAsFixed(2)),
+                Text(
+                  'Payable',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                Text(
+                  '₹${buyer.pendingPayable.toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ],
             ),
           ),

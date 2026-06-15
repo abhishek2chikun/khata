@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class DailyCollectionsScreen extends StatefulWidget {
   const DailyCollectionsScreen({
@@ -25,8 +26,10 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
   final _amountControllers = <String, TextEditingController>{};
 
   List<String> _selectedDates = const <String>[];
-  List<CollectionGridCustomerRow> _allCustomers = const <CollectionGridCustomerRow>[];
-  List<CollectionGridCustomerRow> _visibleCustomers = const <CollectionGridCustomerRow>[];
+  List<CollectionGridCustomerRow> _allCustomers =
+      const <CollectionGridCustomerRow>[];
+  List<CollectionGridCustomerRow> _visibleCustomers =
+      const <CollectionGridCustomerRow>[];
   String? _batchRequestId;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -58,7 +61,9 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
           IconButton(
             key: const Key('addCollectionDateButton'),
             tooltip: 'Add date',
-            onPressed: _isLoading || _isSaving || _selectedDates.length >= 7 ? null : _addPreviousDate,
+            onPressed: _isLoading || _isSaving || _selectedDates.length >= 7
+                ? null
+                : _addPreviousDate,
             icon: const Icon(Icons.calendar_today_outlined),
           ),
           if (_selectedDates.length > 1)
@@ -81,10 +86,17 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
               onChanged: (_) => _applySearchFilter(),
               decoration: const InputDecoration(
                 labelText: 'Search customers',
-                border: OutlineInputBorder(),
+                hintText: 'Name or phone number',
+                prefixIcon: Icon(Icons.search),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            if (!_isLoading)
+              Text(
+                '${_visibleCustomers.length} customers · ${_selectedDates.length} ${_selectedDates.length == 1 ? 'date' : 'dates'}',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            const SizedBox(height: 10),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 12),
@@ -99,10 +111,17 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
             ],
             Expanded(child: _buildBody()),
             const SizedBox(height: 12),
-            Text(
-              key: const Key('dailyCollectionsSummary'),
-              _summaryText(),
-              style: Theme.of(context).textTheme.titleSmall,
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  key: const Key('dailyCollectionsSummary'),
+                  _summaryText(),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             FilledButton(
@@ -127,7 +146,11 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_visibleCustomers.isEmpty) {
-      return const Center(child: Text('No customers with pending balance'));
+      return const AppEmptyState(
+        icon: Icons.payments_outlined,
+        title: 'No pending collections',
+        message: 'No active customers currently have a receivable balance.',
+      );
     }
     return ListView.separated(
       itemCount: _visibleCustomers.length,
@@ -148,7 +171,19 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
-                    Text(customer.pendingBalance.toStringAsFixed(2)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Pending',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        Text(
+                          '₹${customer.pendingBalance.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -188,11 +223,13 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
                               key: Key('additionalAmount-${customer.id}-$date'),
                               controller: controller,
                               enabled: !_isSaving,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               decoration: const InputDecoration(
                                 labelText: 'Additional',
+                                prefixText: '₹ ',
                                 isDense: true,
-                                border: OutlineInputBorder(),
                               ),
                               onChanged: (_) {
                                 _invalidateBatchRequestId();
@@ -213,7 +250,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
     );
   }
 
-  Future<void> _loadGrid({bool preserveInputs = false, bool preserveMessages = false}) async {
+  Future<void> _loadGrid(
+      {bool preserveInputs = false, bool preserveMessages = false}) async {
     setState(() {
       _isLoading = true;
       if (!preserveMessages) {
@@ -233,7 +271,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       }
       setState(() {
         _allCustomers = grid.customers;
-        _visibleCustomers = _filterCustomers(_allCustomers, _searchController.text.trim());
+        _visibleCustomers =
+            _filterCustomers(_allCustomers, _searchController.text.trim());
         _selectedDates = List<String>.from(grid.dates);
         if (!preserveInputs) {
           _clearUnusedControllers();
@@ -277,7 +316,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm collections'),
-        content: Text('Post $entryCount entries totaling ${totalAmount.toStringAsFixed(2)}?'),
+        content: Text(
+            'Post $entryCount entries totaling ${totalAmount.toStringAsFixed(2)}?'),
         actions: <Widget>[
           TextButton(
             key: const Key('cancelDailyCollectionsButton'),
@@ -326,11 +366,13 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       }
       setState(() {
         _errorMessage = error.message;
-        if (error.code == 'STALE_BALANCE' || error.code == 'IDEMPOTENCY_CONFLICT') {
+        if (error.code == 'STALE_BALANCE' ||
+            error.code == 'IDEMPOTENCY_CONFLICT') {
           _batchRequestId = null;
         }
       });
-      if (error.code == 'STALE_BALANCE' || error.code == 'IDEMPOTENCY_CONFLICT') {
+      if (error.code == 'STALE_BALANCE' ||
+          error.code == 'IDEMPOTENCY_CONFLICT') {
         await _loadGrid(preserveInputs: true, preserveMessages: true);
       }
     } on Object catch (error) {
@@ -381,7 +423,9 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       for (final customer in _allCustomers)
         for (final date in _selectedDates) _cellKey(customer.id, date),
     };
-    final staleKeys = _amountControllers.keys.where((key) => !validKeys.contains(key)).toList();
+    final staleKeys = _amountControllers.keys
+        .where((key) => !validKeys.contains(key))
+        .toList();
     for (final key in staleKeys) {
       _amountControllers.remove(key)?.dispose();
     }
@@ -396,7 +440,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
 
   void _applySearchFilter() {
     setState(() {
-      _visibleCustomers = _filterCustomers(_allCustomers, _searchController.text.trim());
+      _visibleCustomers =
+          _filterCustomers(_allCustomers, _searchController.text.trim());
     });
   }
 
@@ -409,7 +454,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
       return customers;
     }
     return customers
-        .where((customer) => customer.name.toLowerCase().contains(normalizedQuery))
+        .where(
+            (customer) => customer.name.toLowerCase().contains(normalizedQuery))
         .toList();
   }
 
@@ -417,7 +463,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
     if (_selectedDates.length >= 7) {
       return;
     }
-    final oldest = _selectedDates.reduce((left, right) => left.compareTo(right) < 0 ? left : right);
+    final oldest = _selectedDates
+        .reduce((left, right) => left.compareTo(right) < 0 ? left : right);
     final previous = _parseDate(oldest).subtract(const Duration(days: 1));
     final previousString = _dateString(previous);
     if (_daysBetween(previousString, _todayString()) > 6) {
@@ -438,7 +485,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
     if (_selectedDates.length <= 1) {
       return;
     }
-    final oldest = _selectedDates.reduce((left, right) => left.compareTo(right) < 0 ? left : right);
+    final oldest = _selectedDates
+        .reduce((left, right) => left.compareTo(right) < 0 ? left : right);
     setState(() {
       _selectedDates = _selectedDates.where((date) => date != oldest).toList();
     });
@@ -522,7 +570,8 @@ class _DailyCollectionsScreenState extends State<DailyCollectionsScreen> {
 
   DateTime _parseDate(String value) {
     final parts = value.split('-');
-    return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    return DateTime(
+        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
 
   int _daysBetween(String earlier, String later) {

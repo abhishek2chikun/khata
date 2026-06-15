@@ -4,6 +4,7 @@ import '../models/api_error.dart';
 import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class RecordCollectionScreen extends StatefulWidget {
   const RecordCollectionScreen({
@@ -53,29 +54,36 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(widget.customer.name,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 16),
             if (_errorMessage != null) ...<Widget>[
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            _buildField(
-              key: const Key('collectionAmountField'),
-              controller: _amountController,
-              label: 'Amount',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            _buildField(
-              key: const Key('collectionOccurredOnField'),
-              controller: _occurredOnController,
-              label: 'Occurred on',
-            ),
-            _buildField(
-              key: const Key('collectionNotesField'),
-              controller: _notesController,
-              label: 'Notes',
+            AppFormSection(
+              title: widget.customer.name,
+              subtitle: 'Add money received against the pending balance.',
+              children: [
+                _buildField(
+                  key: const Key('collectionAmountField'),
+                  controller: _amountController,
+                  label: 'Amount received',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  prefixText: '₹ ',
+                ),
+                _buildField(
+                  key: const Key('collectionOccurredOnField'),
+                  controller: _occurredOnController,
+                  label: 'Collection date',
+                  suffixIcon: Icons.calendar_today_outlined,
+                  onSuffixTap: _pickDate,
+                ),
+                _buildField(
+                  key: const Key('collectionNotesField'),
+                  controller: _notesController,
+                  label: 'Notes (optional)',
+                  maxLines: 3,
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -100,6 +108,10 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
     required TextEditingController controller,
     required String label,
     TextInputType? keyboardType,
+    String? prefixText,
+    IconData? suffixIcon,
+    VoidCallback? onSuffixTap,
+    int maxLines = 1,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -108,12 +120,32 @@ class _RecordCollectionScreenState extends State<RecordCollectionScreen> {
         controller: controller,
         enabled: !_isSaving,
         keyboardType: keyboardType,
+        maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
+          prefixText: prefixText,
+          suffixIcon: suffixIcon == null
+              ? null
+              : IconButton(
+                  onPressed: onSuffixTap,
+                  icon: Icon(suffixIcon),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate:
+          DateTime.tryParse(_occurredOnController.text) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      _occurredOnController.text = selected.toIso8601String().substring(0, 10);
+    }
   }
 
   Future<void> _submit() async {

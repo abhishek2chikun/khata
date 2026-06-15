@@ -145,8 +145,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-        find.textContaining('GOOGLE_DRIVE_SERVER_CLIENT_ID'), findsOneWidget);
+    expect(find.textContaining('not available in this installed build'),
+        findsOneWidget);
+    expect(find.textContaining('manual encrypted backup'), findsOneWidget);
     expect(find.byKey(const Key('backupMessage')), findsOneWidget);
   });
 

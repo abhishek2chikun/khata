@@ -7,6 +7,7 @@ import '../services/invoice_pdf_service.dart';
 import '../services/invoice_share_service.dart';
 import '../services/invoices_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class InvoiceDetailScreen extends StatefulWidget {
   const InvoiceDetailScreen({
@@ -55,26 +56,55 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (invoice != null) ...<Widget>[
-                    Text(
-                      'Invoice #${invoice.invoiceNumber}',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            AppSectionHeader(
+                              title: 'Invoice #${invoice.invoiceNumber}',
+                              trailing: invoice.status == 'CANCELED'
+                                  ? Chip(
+                                      label: const Text('Canceled'),
+                                      backgroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .errorContainer,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: 10),
+                            AppInfoRow(
+                              label: 'Customer',
+                              value: invoice.customerName,
+                            ),
+                            AppInfoRow(
+                              label: 'Date',
+                              value: invoice.invoiceDate,
+                            ),
+                            AppInfoRow(
+                              label: 'Payment: ${invoiceSettlementLabel(
+                                paymentMode: invoice.paymentMode,
+                                paymentState: invoice.paymentState,
+                              )}',
+                              value: '',
+                            ),
+                            AppInfoRow(
+                              label: 'Grand total',
+                              value:
+                                  '₹${invoice.grandTotal.toStringAsFixed(2)}',
+                              emphasized: true,
+                            ),
+                            if ((invoice.notes ?? '').isNotEmpty)
+                              AppInfoRow(label: 'Notes', value: invoice.notes!),
+                            if ((invoice.cancelReason ?? '').isNotEmpty)
+                              AppInfoRow(
+                                label: 'Cancel reason',
+                                value: invoice.cancelReason!,
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text('Customer: ${invoice.customerName}'),
-                    Text('Date: ${invoice.invoiceDate}'),
-                    Text('Status: ${invoice.status}'),
-                    Text(
-                      'Payment: ${invoiceSettlementLabel(
-                        paymentMode: invoice.paymentMode,
-                        paymentState: invoice.paymentState,
-                      )}',
-                    ),
-                    Text(
-                        'Grand total: ${invoice.grandTotal.toStringAsFixed(2)}'),
-                    if ((invoice.notes ?? '').isNotEmpty)
-                      Text('Notes: ${invoice.notes}'),
-                    if ((invoice.cancelReason ?? '').isNotEmpty)
-                      Text('Cancel reason: ${invoice.cancelReason}'),
                     const SizedBox(height: 16),
                     if (invoice.status == 'ACTIVE')
                       FilledButton.tonal(
@@ -97,8 +127,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Download PDF'),
                     ),
@@ -127,8 +156,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       ],
                     ],
                     const SizedBox(height: 24),
-                    Text('Items',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    const AppSectionHeader(title: 'Items'),
                     const SizedBox(height: 12),
                     ...invoice.items.map(
                       (item) => Card(
@@ -136,7 +164,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           title: Text(item.productName),
                           subtitle: Text(
                               'Qty ${formatInvoiceQuantity(item.quantity)}'),
-                          trailing: Text(item.lineTotal.toStringAsFixed(2)),
+                          trailing: Text(
+                            '₹${item.lineTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ),
                     ),

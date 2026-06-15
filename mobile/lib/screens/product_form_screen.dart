@@ -5,6 +5,7 @@ import '../models/buyer.dart';
 import '../models/product.dart';
 import '../services/buyers_service.dart';
 import '../services/products_service.dart';
+import '../widgets/app_ui.dart';
 import '../widgets/error_banner.dart';
 import 'buyer_form_screen.dart';
 
@@ -29,6 +30,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _categoryController;
   late final TextEditingController _itemNameController;
   late final TextEditingController _itemCodeController;
+  late final TextEditingController _hsnCodeController;
   late final TextEditingController _buyingPriceController;
   late final TextEditingController _sellingPriceController;
   late final TextEditingController _unitController;
@@ -59,6 +61,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _itemNameController = TextEditingController(text: product?.itemName ?? '');
     _itemCodeController =
         TextEditingController(text: product?.itemNumber ?? '');
+    _hsnCodeController = TextEditingController(text: product?.hsnCode ?? '');
     _buyingPriceController = TextEditingController(
       text: product == null ? '' : product.buyingPrice.toString(),
     );
@@ -85,6 +88,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _categoryController.dispose();
     _itemNameController.dispose();
     _itemCodeController.dispose();
+    _hsnCodeController.dispose();
     _buyingPriceController.dispose();
     _sellingPriceController.dispose();
     _unitController.dispose();
@@ -111,7 +115,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         _buyers = buyers;
         _isLoadingBuyers = false;
         if (initialBuyerId != null) {
-          _selectedBuyer = _buyers.where((b) => b.id == initialBuyerId).firstOrNull;
+          _selectedBuyer =
+              _buyers.where((b) => b.id == initialBuyerId).firstOrNull;
         }
       });
     } on Object {
@@ -135,30 +140,46 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
+            const AppSectionHeader(
+              title: 'Product identity',
+              subtitle: 'Searchable information used while creating invoices.',
+            ),
+            const SizedBox(height: 12),
             _buildCompanyField(),
             _buildField(_categoryController, 'Category'),
             _buildField(_itemNameController, 'Item name'),
-            _buildField(_itemCodeController, 'Item number'),
+            Row(children: [
+              Expanded(child: _buildField(_itemCodeController, 'Item number')),
+              const SizedBox(width: 12),
+              Expanded(child: _buildField(_hsnCodeController, 'HSN code')),
+            ]),
+            const SizedBox(height: 8),
+            const AppSectionHeader(
+              title: 'Pricing and tax',
+              subtitle: 'Prices support three decimal places.',
+            ),
+            const SizedBox(height: 12),
             _buildField(_buyingPriceController, 'Buying price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true)),
             _buildField(_sellingPriceController, 'Selling price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true)),
-            _buildField(_unitController, 'Unit'),
             _buildField(_gstController, 'GST rate',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true)),
+            const SizedBox(height: 8),
+            const AppSectionHeader(title: 'Stock'),
+            const SizedBox(height: 12),
+            _buildField(_unitController, 'Unit'),
             if (!_isEditing)
               _buildField(
                 _quantityController,
                 'Quantity on hand',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: TextInputType.number,
               ),
             _buildField(_thresholdController, 'Low stock threshold',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true)),
+                keyboardType: TextInputType.number),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _isSaving ? null : _save,
@@ -344,6 +365,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 gstRate: validation.gstRate,
                 lowStockThreshold: validation.lowStockThreshold,
                 buyerId: _selectedBuyerId,
+                hsnCode: _nullableText(_hsnCodeController.text),
               ),
             )
           : await widget.productsService.createProduct(
@@ -359,6 +381,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 quantityOnHand: validation.quantityOnHand,
                 lowStockThreshold: validation.lowStockThreshold,
                 buyerId: _selectedBuyerId,
+                hsnCode: _nullableText(_hsnCodeController.text),
               ),
             );
       if (!mounted) {
@@ -479,6 +502,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       return null;
     }
     return parsed;
+  }
+
+  String? _nullableText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
 

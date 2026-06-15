@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/api_error.dart';
 import '../models/buyer.dart';
 import '../services/buyers_service.dart';
+import '../widgets/app_ui.dart';
 import '../widgets/error_banner.dart';
 
 class BuyerFormScreen extends StatefulWidget {
@@ -88,6 +89,11 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
+            const AppSectionHeader(
+              title: 'Buyer details',
+              subtitle: 'Supplier information used for purchases and payables.',
+            ),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('buyerNameField'),
               controller: _nameController,
@@ -97,11 +103,16 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
               key: const Key('buyerAddressField'),
               controller: _addressController,
               label: 'Address',
+              maxLines: 2,
             ),
+            const SizedBox(height: 8),
+            const AppSectionHeader(title: 'Contact'),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('buyerPhoneField'),
               controller: _phoneController,
               label: 'Phone',
+              keyboardType: TextInputType.phone,
             ),
             SwitchListTile(
               key: const Key('whatsappSameAsPhoneToggle'),
@@ -123,7 +134,14 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
               controller: _whatsappController,
               label: 'WhatsApp number',
               enabled: !_whatsappSameAsPhone,
+              keyboardType: TextInputType.phone,
             ),
+            const SizedBox(height: 8),
+            const AppSectionHeader(
+              title: 'Tax details',
+              subtitle: 'Optional supplier registration details.',
+            ),
+            const SizedBox(height: 12),
             _buildField(
               key: const Key('buyerGstinField'),
               controller: _gstinController,
@@ -162,6 +180,8 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
     required TextEditingController controller,
     required String label,
     bool enabled = true,
+    int maxLines = 1,
+    TextInputType? keyboardType,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -169,9 +189,10 @@ class _BuyerFormScreenState extends State<BuyerFormScreen> {
         key: key,
         controller: controller,
         enabled: enabled && !_isSaving,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
         ),
       ),
     );

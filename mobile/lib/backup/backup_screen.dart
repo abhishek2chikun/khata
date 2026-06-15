@@ -559,6 +559,12 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   String _friendlyError(Object error) {
+    if (error is DriveAuthException &&
+        error.toString().contains('not configured')) {
+      return 'Google Drive is not available in this installed build yet. '
+          'Use manual encrypted backup until the app administrator finishes '
+          'Google sign-in setup.';
+    }
     if (error is BackupDecryptionException ||
         error is UnsupportedBackupVersionException ||
         error is InvalidBackupPayloadException ||

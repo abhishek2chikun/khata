@@ -18,6 +18,7 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
   final _formKey = GlobalKey<FormState>();
   final _itemNameController = TextEditingController();
   final _itemNumberController = TextEditingController();
+  final _hsnCodeController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _categoryController = TextEditingController();
   final _sellingPriceController = TextEditingController();
@@ -29,6 +30,7 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
   void dispose() {
     _itemNameController.dispose();
     _itemNumberController.dispose();
+    _hsnCodeController.dispose();
     _companyNameController.dispose();
     _categoryController.dispose();
     _sellingPriceController.dispose();
@@ -48,7 +50,8 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
             children: <Widget>[
               if (_errorMessage != null) ...<Widget>[
                 Text(_errorMessage!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
                 const SizedBox(height: 12),
               ],
               TextFormField(
@@ -56,7 +59,6 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
                 controller: _itemNameController,
                 decoration: const InputDecoration(
                   labelText: 'Item name',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -67,10 +69,18 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
                 controller: _itemNumberController,
                 decoration: const InputDecoration(
                   labelText: 'Item number',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const Key('productHsnCodeField'),
+                controller: _hsnCodeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'HSN code (optional)',
+                ),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -78,7 +88,6 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
                 controller: _companyNameController,
                 decoration: const InputDecoration(
                   labelText: 'Company name',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -89,7 +98,6 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
                 controller: _categoryController,
                 decoration: const InputDecoration(
                   labelText: 'Category',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -98,10 +106,11 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
               TextFormField(
                 key: const Key('productSellingPriceField'),
                 controller: _sellingPriceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Selling price',
-                  border: OutlineInputBorder(),
+                  prefixText: '₹ ',
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -110,10 +119,11 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
               TextFormField(
                 key: const Key('productGstRateField'),
                 controller: _gstRateController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'GST rate',
-                  border: OutlineInputBorder(),
+                  suffixText: '%',
                 ),
                 validator: (value) =>
                     (value == null || value.trim().isEmpty) ? 'Required' : null,
@@ -157,8 +167,10 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
           category: _categoryController.text.trim(),
           itemName: _itemNameController.text.trim(),
           itemNumber: _itemNumberController.text.trim(),
+          hsnCode: _nullableText(_hsnCodeController.text),
           buyingPrice: 0,
-          sellingPrice: double.tryParse(_sellingPriceController.text.trim()) ?? 0,
+          sellingPrice:
+              double.tryParse(_sellingPriceController.text.trim()) ?? 0,
           gstRate: double.tryParse(_gstRateController.text.trim()) ?? 0,
           quantityOnHand: 0,
           lowStockThreshold: 0,
@@ -173,5 +185,10 @@ class _ProductQuickAddDialogState extends State<ProductQuickAddDialog> {
         _isSaving = false;
       });
     }
+  }
+
+  String? _nullableText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }

@@ -10,6 +10,7 @@ import '../services/company_profile_service.dart';
 import '../services/payments_service.dart';
 import '../services/customers_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 import 'balance_adjustment_screen.dart';
 import 'customer_form_screen.dart';
 import 'opening_balance_screen.dart';
@@ -92,19 +93,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(customer.name,
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 8),
                             Text(
                               'Balance receivable',
                               style: Theme.of(context).textTheme.labelLarge,
                             ),
                             Text(
-                              customer.pendingBalance.toStringAsFixed(2),
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              '₹${customer.pendingBalance.toStringAsFixed(2)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             if (widget.balanceShareService != null &&
-                                widget.companyProfileService != null) ...<Widget>[
+                                widget.companyProfileService !=
+                                    null) ...<Widget>[
                               const SizedBox(height: 12),
                               OutlinedButton.icon(
                                 key: const Key('shareIndividualBalanceButton'),
@@ -122,23 +129,41 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const SizedBox(height: 8),
-                    Text(customer.address),
-                    if (customer.phone != null && customer.phone!.isNotEmpty)
-                      Text('Phone: ${customer.phone}'),
-                    if (customer.gstin != null && customer.gstin!.isNotEmpty)
-                      Text('GSTIN: ${customer.gstin}'),
-                    if (customer.state != null && customer.state!.isNotEmpty)
-                      Text(
-                          'State: ${customer.state} (${customer.stateCode ?? ''})'),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      key: const Key('editCustomerButton'),
-                      onPressed: _isLoading ? null : _handleEdit,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit customer'),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            AppInfoRow(
+                              label: 'Address',
+                              value: customer.address.trim().isEmpty
+                                  ? 'Not added'
+                                  : customer.address,
+                            ),
+                            if (customer.phone != null &&
+                                customer.phone!.isNotEmpty)
+                              AppInfoRow(
+                                label: 'Phone',
+                                value: customer.phone!,
+                              ),
+                            if (customer.gstin != null &&
+                                customer.gstin!.isNotEmpty)
+                              AppInfoRow(
+                                label: 'GSTIN',
+                                value: customer.gstin!,
+                              ),
+                            if (customer.state != null &&
+                                customer.state!.isNotEmpty)
+                              AppInfoRow(
+                                label: 'State',
+                                value:
+                                    '${customer.state} (${customer.stateCode ?? ''})',
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -172,14 +197,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               : null,
                           child: const Text('Create invoice'),
                         ),
+                        OutlinedButton.icon(
+                          key: const Key('editCustomerButton'),
+                          onPressed: _isLoading ? null : _handleEdit,
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit customer'),
+                        ),
                         if (!customer.isActive)
                           const Text(
                               'Create invoice unavailable for archived customers'),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text('Ledger history',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    const AppSectionHeader(
+                      title: 'Ledger history',
+                      subtitle: 'Collections and balance changes by date.',
+                    ),
                     const SizedBox(height: 12),
                     TextField(
                       key: const Key('ledgerDateFilterField'),
@@ -199,8 +232,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     else
                       ...ledger.transactions.map(_buildTransactionTile),
                     const SizedBox(height: 24),
-                    Text('Invoice history',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    const AppSectionHeader(title: 'Invoice history'),
                     const SizedBox(height: 12),
                     if (ledger.invoices.isEmpty)
                       const Text('No invoices yet')

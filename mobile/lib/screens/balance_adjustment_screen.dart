@@ -4,6 +4,7 @@ import '../models/api_error.dart';
 import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class BalanceAdjustmentScreen extends StatefulWidget {
   const BalanceAdjustmentScreen({
@@ -60,42 +61,49 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            DropdownButtonFormField<String>(
-              key: const Key('balanceAdjustmentDirectionField'),
-              value: _direction,
-              decoration: const InputDecoration(
-                labelText: 'Direction',
-                border: OutlineInputBorder(),
-              ),
-              items: const <DropdownMenuItem<String>>[
-                DropdownMenuItem(value: 'INCREASE', child: Text('Increase')),
-                DropdownMenuItem(value: 'DECREASE', child: Text('Decrease')),
+            AppFormSection(
+              title: widget.customer.name,
+              subtitle: 'Correct the balance without creating an invoice.',
+              children: [
+                DropdownButtonFormField<String>(
+                  key: const Key('balanceAdjustmentDirectionField'),
+                  initialValue: _direction,
+                  decoration: const InputDecoration(labelText: 'Direction'),
+                  items: const <DropdownMenuItem<String>>[
+                    DropdownMenuItem(
+                        value: 'INCREASE', child: Text('Increase')),
+                    DropdownMenuItem(
+                        value: 'DECREASE', child: Text('Decrease')),
+                  ],
+                  onChanged: _isSaving
+                      ? null
+                      : (value) {
+                          if (value != null) setState(() => _direction = value);
+                        },
+                ),
+                const SizedBox(height: 12),
+                _buildField(
+                  key: const Key('balanceAdjustmentAmountField'),
+                  controller: _amountController,
+                  label: 'Amount',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  prefixText: '₹ ',
+                ),
+                _buildField(
+                  key: const Key('balanceAdjustmentOccurredOnField'),
+                  controller: _occurredOnController,
+                  label: 'Occurred on',
+                  suffixIcon: Icons.calendar_today_outlined,
+                  onSuffixTap: _pickDate,
+                ),
+                _buildField(
+                  key: const Key('balanceAdjustmentNotesField'),
+                  controller: _notesController,
+                  label: 'Reason / notes',
+                  maxLines: 3,
+                ),
               ],
-              onChanged: _isSaving
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        setState(() {
-                          _direction = value;
-                        });
-                      }
-                    },
-            ),
-            const SizedBox(height: 12),
-            _buildField(
-              key: const Key('balanceAdjustmentAmountField'),
-              controller: _amountController,
-              label: 'Amount',
-            ),
-            _buildField(
-              key: const Key('balanceAdjustmentOccurredOnField'),
-              controller: _occurredOnController,
-              label: 'Occurred on',
-            ),
-            _buildField(
-              key: const Key('balanceAdjustmentNotesField'),
-              controller: _notesController,
-              label: 'Notes',
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -119,6 +127,11 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
     required Key key,
     required TextEditingController controller,
     required String label,
+    TextInputType? keyboardType,
+    String? prefixText,
+    IconData? suffixIcon,
+    VoidCallback? onSuffixTap,
+    int maxLines = 1,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -126,12 +139,33 @@ class _BalanceAdjustmentScreenState extends State<BalanceAdjustmentScreen> {
         key: key,
         controller: controller,
         enabled: !_isSaving,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
+          prefixText: prefixText,
+          suffixIcon: suffixIcon == null
+              ? null
+              : IconButton(
+                  onPressed: onSuffixTap,
+                  icon: Icon(suffixIcon),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate:
+          DateTime.tryParse(_occurredOnController.text) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      _occurredOnController.text = selected.toIso8601String().substring(0, 10);
+    }
   }
 
   Future<void> _submit() async {

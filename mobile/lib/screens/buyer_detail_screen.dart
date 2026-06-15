@@ -10,6 +10,7 @@ import '../services/buyers_service.dart';
 import '../services/money_validator.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 import 'buyer_form_screen.dart';
 import 'product_detail_screen.dart';
 
@@ -71,31 +72,49 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
                     const SizedBox(height: 16),
                   ],
                   if (buyer != null) ...<Widget>[
-                    Text(
-                      buyer.name,
-                      style: Theme.of(context).textTheme.headlineSmall,
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              buyer.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Pending Payable: ${buyer.pendingPayable.toStringAsFixed(2)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const Divider(),
+                            AppInfoRow(
+                              label: 'Address',
+                              value: buyer.address.trim().isEmpty
+                                  ? 'Not added'
+                                  : buyer.address,
+                            ),
+                            if (buyer.phone != null && buyer.phone!.isNotEmpty)
+                              AppInfoRow(label: 'Phone', value: buyer.phone!),
+                            if (buyer.gstin != null && buyer.gstin!.isNotEmpty)
+                              AppInfoRow(label: 'GSTIN', value: buyer.gstin!),
+                            if (buyer.state != null && buyer.state!.isNotEmpty)
+                              AppInfoRow(
+                                label: 'State',
+                                value:
+                                    '${buyer.state} (${buyer.stateCode ?? ''})',
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(buyer.address),
-                    if (buyer.phone != null && buyer.phone!.isNotEmpty)
-                      Text('Phone: ${buyer.phone}'),
-                    if (buyer.gstin != null && buyer.gstin!.isNotEmpty)
-                      Text('GSTIN: ${buyer.gstin}'),
-                    if (buyer.state != null && buyer.state!.isNotEmpty)
-                      Text('State: ${buyer.state} (${buyer.stateCode ?? ''})'),
                     const SizedBox(height: 12),
-                    Text(
-                      'Pending Payable: ${buyer.pendingPayable.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      key: const Key('editBuyerButton'),
-                      onPressed: _isLoading ? null : _handleEdit,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit buyer'),
-                    ),
-                    const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -138,19 +157,26 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
                           onPressed: () => _openAdjustmentForm(buyer),
                           child: const Text('Payable Adjustment'),
                         ),
+                        OutlinedButton.icon(
+                          key: const Key('editBuyerButton'),
+                          onPressed: _isLoading ? null : _handleEdit,
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Edit buyer'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text('Ledger rows',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    const AppSectionHeader(title: 'Ledger rows'),
                     const SizedBox(height: 12),
                     if (ledger!.transactions.isEmpty)
                       const Text('No ledger rows yet')
                     else
                       ...ledger.transactions.map(_buildTransactionTile),
                     const SizedBox(height: 24),
-                    Text('Products',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    const AppSectionHeader(
+                      title: 'Products',
+                      subtitle: 'Products linked to this buyer.',
+                    ),
                     const SizedBox(height: 12),
                     if (_isLoadingProducts)
                       const Center(
@@ -184,7 +210,8 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen> {
     return Card(
       child: ListTile(
         title: Text(product.itemName),
-        subtitle: Text('${product.itemNumber} · Stock: ${product.quantityOnHand}'),
+        subtitle:
+            Text('${product.itemNumber} · Stock: ${product.quantityOnHand}'),
         trailing: Text(product.sellingPrice.toStringAsFixed(2)),
         onTap: () => _openProductDetail(product),
       ),

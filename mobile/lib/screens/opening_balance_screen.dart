@@ -4,6 +4,7 @@ import '../models/api_error.dart';
 import '../models/customer.dart';
 import '../services/payments_service.dart';
 import '../widgets/error_banner.dart';
+import '../widgets/app_ui.dart';
 
 class OpeningBalanceScreen extends StatefulWidget {
   const OpeningBalanceScreen({
@@ -53,15 +54,26 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
               ErrorBanner(message: _errorMessage!),
               const SizedBox(height: 16),
             ],
-            _buildField(
-              key: const Key('openingBalanceAmountField'),
-              controller: _amountController,
-              label: 'Amount',
-            ),
-            _buildField(
-              key: const Key('openingBalanceOccurredOnField'),
-              controller: _occurredOnController,
-              label: 'Occurred on',
+            AppFormSection(
+              title: widget.customer.name,
+              subtitle: 'Record the balance carried into Khata.',
+              children: [
+                _buildField(
+                  key: const Key('openingBalanceAmountField'),
+                  controller: _amountController,
+                  label: 'Amount',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  prefixText: '₹ ',
+                ),
+                _buildField(
+                  key: const Key('openingBalanceOccurredOnField'),
+                  controller: _occurredOnController,
+                  label: 'Occurred on',
+                  suffixIcon: Icons.calendar_today_outlined,
+                  onSuffixTap: _pickDate,
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -85,6 +97,10 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
     required Key key,
     required TextEditingController controller,
     required String label,
+    TextInputType? keyboardType,
+    String? prefixText,
+    IconData? suffixIcon,
+    VoidCallback? onSuffixTap,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -92,12 +108,32 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
         key: key,
         controller: controller,
         enabled: !_isSaving,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
+          prefixText: prefixText,
+          suffixIcon: suffixIcon == null
+              ? null
+              : IconButton(
+                  onPressed: onSuffixTap,
+                  icon: Icon(suffixIcon),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate:
+          DateTime.tryParse(_occurredOnController.text) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      _occurredOnController.text = selected.toIso8601String().substring(0, 10);
+    }
   }
 
   Future<void> _submit() async {
