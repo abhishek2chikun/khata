@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../local/local_database.dart';
+import '../debug/agent_debug_log.dart';
 
 class HybridCacheRepository {
   HybridCacheRepository(this._database);
@@ -61,13 +62,13 @@ class HybridCacheRepository {
             itemNumber: row['item_number'] as String,
             itemName: row['item_name'] as String,
             category: row['category'] as String,
-            buyerId: Value(row['buyer_id'] as String?),
+            buyerId: Value(row['buyer_id']?.toString()),
             companyName: row['company_name'] as String,
             buyingPrice: '${row['buying_price']}',
             sellingPrice: '${row['selling_price']}',
             unit: Value(row['unit'] as String?),
             gstRate: '${row['gst_rate']}',
-            hsnCode: Value(row['hsn_code'] as String?),
+            hsnCode: Value(row['hsn_code']?.toString()),
             quantityOnHand: '${row['quantity_on_hand']}',
             lowStockThreshold: '${row['low_stock_threshold'] ?? '0'}',
             isActive: Value((row['is_active'] as bool?) ?? true),
@@ -373,63 +374,151 @@ class HybridSyncService {
 
   Future<void> initializeHybridCacheIfNeeded() async {
     if (await _cacheRepository.isHybridInitialized()) {
+      // #region agent log
+      AgentDebugLog.write(
+        location: 'hybrid_sync_service.dart:initializeHybridCacheIfNeeded',
+        message: 'hybrid cache already initialized',
+        hypothesisId: 'H-sync',
+        data: {'skipped': true},
+      );
+      // #endregion
       return;
     }
+    // #region agent log
+    AgentDebugLog.write(
+      location: 'hybrid_sync_service.dart:initializeHybridCacheIfNeeded',
+      message: 'clearing local business cache before first sync',
+      hypothesisId: 'H-sync',
+    );
+    // #endregion
     await _cacheRepository.clearBusinessCache();
     await syncAll(forceFull: true);
     await _cacheRepository.markHybridInitialized();
+    // #region agent log
+    AgentDebugLog.write(
+      location: 'hybrid_sync_service.dart:initializeHybridCacheIfNeeded',
+      message: 'hybrid cache initialized',
+      hypothesisId: 'H-sync',
+      data: {'lastError': _lastError},
+    );
+    // #endregion
   }
+
+  static const _syncPageSize = 1000;
 
   Future<void> syncAll({bool forceFull = false}) async {
     if (_client.auth.currentSession == null) {
       _lastError = 'Sign in required before sync';
+      // #region agent log
+      AgentDebugLog.write(
+        location: 'hybrid_sync_service.dart:syncAll',
+        message: 'sync skipped without session',
+        hypothesisId: 'H-session',
+      );
+      // #endregion
       return;
     }
 
     _isSyncing = true;
     _lastError = null;
+    final syncedCounts = <String, int>{};
     try {
-      await _syncTable('buyers', _cacheRepository.upsertBuyer);
-      await _syncTable('customers', _cacheRepository.upsertCustomer);
-      await _syncTable('products', _cacheRepository.upsertProduct);
-      await _syncTable(
-          'company_profiles', _cacheRepository.upsertCompanyProfile);
-      await _syncTable('invoices', _cacheRepository.upsertInvoice);
-      await _syncInvoiceItems();
-      await _syncTable('stock_movements', _cacheRepository.upsertStockMovement);
-      await _syncTable(
+      syncedCounts['buyers'] =
+          await _syncTable('buyers', _cacheRepository.upsertBuyer);
+      syncedCounts['customers'] =
+          await _syncTable('customers', _cacheRepository.upsertCustomer);
+      syncedCounts['products'] =
+          await _syncTable('products', _cacheRepository.upsertProduct);
+      syncedCounts['company_profiles'] = await _syncTable(
+        'company_profiles',
+        _cacheRepository.upsertCompanyProfile,
+      );
+      syncedCounts['invoices'] =
+          await _syncTable('invoices', _cacheRepository.upsertInvoice);
+      syncedCounts['invoice_items'] = await _syncInvoiceItems();
+      syncedCounts['stock_movements'] = await _syncTable(
+        'stock_movements',
+        _cacheRepository.upsertStockMovement,
+      );
+      syncedCounts['customer_transactions'] = await _syncTable(
         'customer_transactions',
         _cacheRepository.upsertCustomerTransaction,
       );
-      await _syncTable(
+      syncedCounts['buyer_transactions'] = await _syncTable(
         'buyer_transactions',
         _cacheRepository.upsertBuyerTransaction,
       );
       final now = DateTime.now().toUtc().toIso8601String();
       await _cacheRepository.updateLastSyncedAt(now);
+      // #region agent log
+      AgentDebugLog.write(
+        location: 'hybrid_sync_service.dart:syncAll',
+        message: 'sync complete',
+        hypothesisId: 'H-sync',
+        data: syncedCounts,
+        runId: 'post-fix',
+      );
+      // #endregion
     } on Object catch (error) {
       _lastError = error.toString();
+      // #region agent log
+      AgentDebugLog.write(
+        location: 'hybrid_sync_service.dart:syncAll',
+        message: 'sync failed',
+        hypothesisId: 'H-sync',
+        data: {'error': _lastError, 'syncedCounts': syncedCounts},
+        runId: 'post-fix',
+      );
+      // #endregion
       rethrow;
     } finally {
       _isSyncing = false;
     }
   }
 
-  Future<void> _syncTable(
+  Future<int> _syncTable(
     String table,
     Future<void> Function(Map<String, dynamic>) upsert,
   ) async {
-    final rows = await _client.from(table).select();
-    for (final row in rows) {
-      await upsert(Map<String, dynamic>.from(row as Map));
+    var from = 0;
+    var total = 0;
+    while (true) {
+      final to = from + _syncPageSize - 1;
+      final rows = await _client.from(table).select().range(from, to);
+      if (rows.isEmpty) {
+        break;
+      }
+      for (final row in rows) {
+        await upsert(Map<String, dynamic>.from(row as Map));
+        total++;
+      }
+      if (rows.length < _syncPageSize) {
+        break;
+      }
+      from += _syncPageSize;
     }
+    return total;
   }
 
-  Future<void> _syncInvoiceItems() async {
-    final rows = await _client.from('invoice_items').select();
-    for (final row in rows) {
-      await _cacheRepository
-          .upsertInvoiceItem(Map<String, dynamic>.from(row as Map));
+  Future<int> _syncInvoiceItems() async {
+    var from = 0;
+    var total = 0;
+    while (true) {
+      final to = from + _syncPageSize - 1;
+      final rows = await _client.from('invoice_items').select().range(from, to);
+      if (rows.isEmpty) {
+        break;
+      }
+      for (final row in rows) {
+        await _cacheRepository
+            .upsertInvoiceItem(Map<String, dynamic>.from(row as Map));
+        total++;
+      }
+      if (rows.length < _syncPageSize) {
+        break;
+      }
+      from += _syncPageSize;
     }
+    return total;
   }
 }

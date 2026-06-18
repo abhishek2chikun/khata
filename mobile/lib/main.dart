@@ -127,6 +127,8 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
   bool _needsLocalFirstUserSetup = false;
   bool _didStartLocalBackupScheduling = false;
   bool _hybridBootstrapStarted = false;
+  bool _hybridBootstrapInFlight = false;
+  String? _hybridSyncError;
 
   @override
   void initState() {
@@ -159,10 +161,11 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     if (!mounted || widget.dependencies?.mode != DataMode.hybrid) {
       return;
     }
-    if (!widget.controller.isAuthenticated || _hybridBootstrapStarted) {
+    if (!widget.controller.isAuthenticated ||
+        _hybridBootstrapStarted ||
+        _hybridBootstrapInFlight) {
       return;
     }
-    _hybridBootstrapStarted = true;
     unawaited(_bootstrapHybridCache());
   }
 
@@ -171,15 +174,37 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     if (syncService == null) {
       return;
     }
+    _hybridBootstrapInFlight = true;
+    _hybridSyncError = null;
     try {
       await syncService.initializeHybridCacheIfNeeded();
+      _hybridBootstrapStarted = true;
       if (mounted) {
         setState(() {});
       }
-    } on Object {
+    } on Object catch (error) {
+      _hybridSyncError = error.toString();
+      // #region agent log
+      AgentDebugLog.write(
+        location: 'main.dart:_bootstrapHybridCache',
+        message: 'hybrid bootstrap failed',
+        hypothesisId: 'H-sync',
+        data: {'error': _hybridSyncError},
+        runId: 'post-fix',
+      );
+      // #endregion
       if (mounted) {
         setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not sync from Supabase. Pull to refresh or sign in again.',
+            ),
+          ),
+        );
       }
+    } finally {
+      _hybridBootstrapInFlight = false;
     }
   }
 
@@ -194,10 +219,15 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     }
     try {
       await syncService.syncAll();
+      _hybridSyncError = null;
+      if (!_hybridBootstrapStarted) {
+        _hybridBootstrapStarted = true;
+      }
       if (mounted) {
         setState(() {});
       }
-    } on Object {
+    } on Object catch (error) {
+      _hybridSyncError = error.toString();
       if (mounted) {
         setState(() {});
       }
@@ -242,6 +272,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
 
     if (widget.controller.isAuthenticated) {
       _startLocalBackupSchedulingOnce();
+      _maybeBootstrapHybrid();
 
       final drawer = AppNavigationDrawer(
         selected: _selectedDestination,
@@ -254,9 +285,10 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
         showLocalBackup: widget.dependencies?.mode == DataMode.local,
       );
 
+      Widget screen;
       switch (_selectedDestination) {
         case AppDestination.inventory:
-          return InventoryListScreen(
+          screen = InventoryListScreen(
             drawer: drawer,
             productsService: widget.productsService,
             onAddProduct: () async {
@@ -284,8 +316,9 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
               return result;
             },
           );
+          break;
         case AppDestination.customers:
-          return CustomerListScreen(
+          screen = CustomerListScreen(
             drawer: drawer,
             customersService: widget.customersService,
             paymentsService: widget.paymentsService,
@@ -293,14 +326,16 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
             companyProfileService: widget.companyProfileService,
             balanceShareService: BalanceShareService.production(),
           );
+          break;
         case AppDestination.buyers:
-          return BuyerListScreen(
+          screen = BuyerListScreen(
             drawer: drawer,
             buyersService: widget.buyersService,
             productsService: widget.productsService,
           );
+          break;
         case AppDestination.invoices:
-          return InvoiceListScreen(
+          screen = InvoiceListScreen(
             drawer: drawer,
             invoicesService: widget.invoicesService,
             productsService: widget.productsService,
@@ -308,25 +343,31 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
             companyProfileService: widget.companyProfileService,
             shareService: InvoiceShareService.production(),
           );
+          break;
         case AppDestination.analytics:
-          return AnalyticsScreen(
+          screen = AnalyticsScreen(
             analyticsService: widget.analyticsService,
             drawer: drawer,
           );
+          break;
         case AppDestination.companyProfile:
-          return CompanyProfileScreen(
+          screen = CompanyProfileScreen(
             drawer: drawer,
             companyProfileService: widget.companyProfileService,
           );
+          break;
         case AppDestination.backup:
-          return BackupScreen(
+          screen = BackupScreen(
             drawer: drawer,
             driveBackupService:
                 widget.driveBackupService ?? const GoogleDriveBackupService(),
             backupTransferService: widget.backupTransferService,
             onRestoreCompleted: widget.controller.logout,
           );
+          break;
       }
+
+      return screen;
     }
 
     return Scaffold(
