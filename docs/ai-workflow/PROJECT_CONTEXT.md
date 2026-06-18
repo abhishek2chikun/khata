@@ -1,34 +1,67 @@
 # Verified Project Context
 
+Workflow schema: five-stage-v1
+
 Repository: `/Users/abhishek/python_venv/khata_app`
 
-Accepted baseline: `837ccbc0cfdb09a25b6aad02e4b0c357abafa8a6`
+As-of HEAD: `862dc3468005f7e3bd87881090f0ee38f9abe47d`
 
-Integrated code SHA: `1d8e5dca5c04e2ff40efc0fca636df29b2296d47`
+Last reconciled by cycle: context-refresh `20260618` (no active feature cycle)
 
-Latest cycle: `20260614-invoice-collections-backup-analytics` (integrated; release followups open)
+Last updated: 2026-06-18 IST
 
-## Stable Architecture
+## Product And Architecture Summary
 
-- Primary deployed product: Flutter Android local mode backed by Drift/SQLite; this release does not use the client-server runtime.
-- FastAPI/PostgreSQL remains compatibility code and is not a deployment gate for local mode.
+- Primary deployed product: Flutter Android local mode backed by Drift/SQLite (`DATA_MODE=local`); this release path does not require FastAPI/PostgreSQL at runtime.
+- FastAPI/PostgreSQL remains compatibility code for future server mode; not a deployment gate for local mode.
 - API/local service boundaries remain parallel through `AppDependencies`.
 - Buyers are suppliers/payables; customers are retail shops/receivables.
 - Invoice creation/cancellation owns stock and ledger side effects transactionally.
 - Backup packages are AES-256-GCM encrypted, version-gated, and exclude sessions.
 
-## Accepted Baseline Facts
+## Current Capability Matrix
 
-- Alembic head: `0009_invoice_gst_flags`.
-- Drift and backup schema: 9; compatibility: `local-v2`.
-- Bundled catalog: 1,199 products and 30 buyers.
-- Catalog workbook HSN: 109 distinct non-empty codes, 67 repeated codes, 125 missing values.
-- Product picker has no search.
-- Drive and background scheduling are skeletons.
-- Analytics is list-based and includes low stock.
-- Android application ID/signing remain release blockers outside the active cycle.
+| Capability | Status | Evidence/source cycle | As-of SHA | Notes |
+|---|---|---|---|---|
+| GST/non-GST invoicing with `gst_flag` | implemented | baseline + upgrade | `862dc34` | seller profile + invoice snapshot |
+| HSN/precision contracts (schema 10) | implemented | `20260614` cycle | `1d8e5dc` | Alembic `0010`; Drift schema 10 |
+| Searchable invoice product picker | implemented | `20260614` cycle | `1d8e5dc` | 1,199 bundled products |
+| Batch daily collections (local) | implemented | `20260614` cycle | `1d8e5dc` | Drift transaction boundary |
+| Encrypted Drive backup orchestration | implemented; device-unverified | `20260614` + post-merge | `240f491` | fake adapters in tests only |
+| Owner analytics dashboard | implemented | `20260614` cycle | `1d8e5dc` | KPIs, trends, rankings |
+| Pre-confirm invoice PDF preview | implemented | post-merge commit | `862dc34` | `InvoicePreviewBuilder`, `printing` package |
+| Preinstalled catalog seeding | implemented | baseline + v3 WIP | `862dc34` | uncommitted catalog rebuild in progress |
+| API collection concurrency | deferred defect | `20260614` final review | `1d8e5dc` | `customer_service.py:211`, `:346` |
+| Production Android identity/signing | unresolved | baseline audit | historical | release blocker |
 
-## Canonical Commands
+## Stable Contracts And Invariants
+
+- Alembic head: `0010_product_hsn_and_unit_price_precision` (down from `0009_invoice_gst_flags`).
+- Drift and backup schema: **10**; backend compatibility: `local-v2`.
+- Products carry nullable non-unique `hsn_code`; invoice lines snapshot `product_hsn_code`.
+- GST invoice creation rejects products missing HSN; non-GST allows missing HSN.
+- New invoice quantities must be whole numbers; unit prices use 3dp; monetary totals 2dp.
+- New invoice writes require zero discount; historical discounted invoices remain readable.
+- PDF page format: A5 when `itemCount <= 15`, else A4 (`invoice_pdf_service.dart`).
+- Place of supply resolves customer state → company state; optional override on GST create form; hidden for non-GST.
+- Non-GST PDFs use simplified item table without Code column.
+- Blank/zero daily collection cells create no transaction.
+- Bundled catalog: 1,199 products and 29 buyers (as-of committed asset; v3 rebuild uncommitted).
+
+## Module/Ownership Map
+
+| Area | Primary paths | Responsibility |
+|---|---|---|
+| Mobile app shell | `mobile/lib/main.dart`, `mobile/lib/app/` | mode selection, dependency wiring |
+| Local persistence | `mobile/lib/local/` | Drift schema, local services |
+| Invoice flow | `mobile/lib/screens/create_invoice_screen.dart`, `invoice_preview_screen.dart`, `invoice_pdf_preview_screen.dart` | draft → quote → PDF preview → confirm |
+| PDF generation | `mobile/lib/services/invoice_pdf_service.dart`, `invoice_preview_builder.dart` | adaptive GST/non-GST PDFs |
+| Backup/Drive | `mobile/lib/backup/` | encrypted backup, Drive orchestration, scheduler |
+| Analytics | `mobile/lib/screens/analytics_screen.dart`, `mobile/lib/local/local_analytics_service.dart` | owner KPIs and trends |
+| Backend API | `backend/app/` | FastAPI services, Alembic migrations |
+| Catalog build | `tools/build_preinstalled_catalog.py`, `data/source/products.xlsx` | preinstalled asset generation |
+
+## Canonical Build/Test/Run Commands
 
 ```bash
 .venv/bin/python -m pytest backend/pure_tests -q
@@ -39,14 +72,45 @@ BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_
 python3 tools/build_preinstalled_catalog.py
 ```
 
-## Active Handoff
+Verified at context-refresh `20260618`:
+- `backend/pure_tests`: **56 passed**
+- `mobile/test`: **474 passed**
+- PostgreSQL integration tests: not run (`pg_isready` not attempted this refresh)
 
-Schema-10 HSN/precision, invoice UX/PDF, daily collections, Drive, and analytics capabilities are integrated on `main` for local mode. Physical Drive evidence and production Android identity/signing remain release blockers.
+## Deployment/Environment State
 
-Read `cycles/20260614-invoice-collections-backup-analytics/STATE.md` and `05-final-review.md`. Integration is complete; the next action is production Android identity/signing plus physical Drive verification.
+- Remote: `git@github.com:abhishek2chikun/khata.git`
+- Integration branch: `main` at `862dc34`
+- Local-mode release APK build documented; production signing/app ID unresolved.
+- Google Drive OAuth requires external Google Cloud configuration; no committed secrets.
 
-## Active Risks And Release Blockers
+## Active Risks, Blockers, And Verification Gaps
 
-- Physical Android Google OAuth, WorkManager, Drive backup, and restore remain unverified.
-- Production Android application ID and signing remain outside this cycle and unresolved.
-- API collection concurrency remains deferred and must be repaired before any future server-mode deployment.
+- Physical Android Google OAuth, WorkManager, Drive backup, and restore unverified.
+- Production Android application ID and signing unresolved.
+- API collection concurrency defect deferred; blocks future server-mode deployment.
+- PostgreSQL-backed integration tests not verified in this refresh.
+- `mobile/agent.md` still documents A5 ≤10 lines; code uses ≤15 (doc drift).
+
+## Deferred Work
+
+- Catalog v3 rebuild from corrected `Invoices (3).xlsx` source (uncommitted changes to `products.xlsx`, `preinstalled_catalog.json`, build script).
+- Invoice cancel UI limited to invoice detail.
+- No UI for product archive, customer archive, or manual stock adjustment.
+- `flutter_lints` referenced in `analysis_options.yaml` but not in `pubspec.yaml`.
+
+## Decision Ledger
+
+| Decision | Current rule | Source cycle | As-of SHA | Supersedes |
+|---|---|---|---|---|
+| Local mode is primary deployment runtime | FastAPI not required for release | `20260614` final review | `1d8e5dc` | server-first assumptions |
+| A5 PDF threshold | ≤15 line items | code truth | `862dc34` | baseline ≤10 docs |
+| Backup schema version | 10 / `local-v2` | `20260614` cycle | `1d8e5dc` | schema 8/9 |
+| API concurrency fix deferred | local mode unaffected | `20260614` final review | `1d8e5dc` | — |
+| Pre-confirm PDF shows actual generated PDF | View PDF on preview screen | post-merge | `862dc34` | quote-only preview |
+
+## Known Documentation Drift
+
+- `mobile/agent.md` A5 threshold (≤10) vs code/README (≤15).
+- `INDEX.md` prior baseline SHA `837ccbc` superseded by post-merge `main` history.
+- Untracked `docs/hybrid-supabase-architecture.html` is not part of verified workflow or product architecture.

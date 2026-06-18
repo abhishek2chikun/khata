@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khata Hybrid Supabase Architecture</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202124;
+      --muted: #5f6368;
+      --line: #d8dee4;
+      --surface: #ffffff;
+      --soft: #f6f8fa;
+      --teal: #087f7a;
+      --green: #2f855a;
+      --amber: #b7791f;
+      --coral: #c2410c;
+      --blue: #2563eb;
+      --shadow: 0 12px 34px rgba(32, 33, 36, 0.08);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+      gap: 24px;
+      align-items: stretch;
+      min-height: 360px;
+      padding: 24px 0 18px;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      font-size: 0.78rem;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 880px;
+      font-size: clamp(2.2rem, 6vw, 4.8rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .hero-copy p {
+      max-width: 760px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .hero-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: center;
+    }
+
+    .signal {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .glyph {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .glyph.teal {
+      background: var(--teal);
+    }
+
+    .glyph.green {
+      background: var(--green);
+    }
+
+    .glyph.amber {
+      background: var(--amber);
+    }
+
+    .signal strong {
+      display: block;
+      font-size: 0.98rem;
+    }
+
+    .signal span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .notice {
+      margin: 8px 0 24px;
+      border-left: 4px solid var(--coral);
+      background: #fff7ed;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      color: #7c2d12;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(246, 248, 250, 0.96);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 0;
+      margin: 0 -20px 26px;
+    }
+
+    .nav-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .nav-inner a,
+    .tab-button,
+    .choice-button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 8px 12px;
+      text-decoration: none;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .nav-inner a:hover,
+    .tab-button[aria-selected="true"],
+    .choice-button[aria-pressed="true"] {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: #eefcf9;
+    }
+
+    section {
+      margin: 26px 0;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mini-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fbfcfd;
+    }
+
+    .mini-card.ok {
+      border-top: 4px solid var(--green);
+    }
+
+    .mini-card.warn {
+      border-top: 4px solid var(--amber);
+    }
+
+    .mini-card.stop {
+      border-top: 4px solid var(--coral);
+    }
+
+    .arch {
+      display: grid;
+      grid-template-columns: 1fr 82px 1.2fr 82px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .node {
+      min-height: 150px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fbfcfd;
+    }
+
+    .node.authority {
+      border-color: rgba(47, 133, 90, 0.55);
+      background: #f0fff4;
+    }
+
+    .pipe {
+      text-align: center;
+      color: var(--teal);
+      font-weight: 800;
+    }
+
+    .badge {
+      display: inline-block;
+      margin: 0 6px 8px 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #edf2f7;
+      color: #334155;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .badge.green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge.amber {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 18px;
+      margin-top: 16px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 8px;
+    }
+
+    .step-button {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      padding: 10px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .step-button[aria-pressed="true"] {
+      border-color: var(--teal);
+      background: #eefcf9;
+    }
+
+    .num {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .detail {
+      min-height: 260px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      background: #fbfcfd;
+    }
+
+    .code {
+      display: block;
+      overflow-x: auto;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: #111827;
+      color: #e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    .tab-panel {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fbfcfd;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .scenario-output {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #fbfcfd;
+      min-height: 150px;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .check input {
+      margin-top: 4px;
+      inline-size: 18px;
+      block-size: 18px;
+    }
+
+    .progress {
+      margin-top: 12px;
+      height: 10px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--teal), var(--green));
+      transition: width 180ms ease;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 28px;
+    }
+
+    @media (max-width: 900px) {
+      header,
+      .grid.three,
+      .grid.two,
+      .flow,
+      .arch {
+        grid-template-columns: 1fr;
+      }
+
+      .pipe {
+        transform: rotate(90deg);
+        min-height: 40px;
+      }
+
+      section {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="hero-copy">
+        <p class="eyebrow">Khata architecture note</p>
+        <h1>Hybrid Supabase mode: local speed, shared Postgres authority</h1>
+        <p>
+          The app started with two clear modes: local Drift/SQLite for one-device use,
+          and client-server FastAPI/Postgres for a deployed backend. This proposal adds a
+          third mode: Flutter plus local cache, with Supabase Postgres as the source of
+          truth and RPC functions for financially critical writes.
+        </p>
+      </div>
+      <aside class="hero-panel" aria-label="Architecture goals">
+        <div class="signal">
+          <div class="glyph teal">A</div>
+          <div>
+            <strong>ACID stays central</strong>
+            <span>Postgres commits invoice, stock, and ledger changes together.</span>
+          </div>
+        </div>
+        <div class="signal">
+          <div class="glyph green">5</div>
+          <div>
+            <strong>5 to 10 devices is fine</strong>
+            <span>The bottleneck is correctness design, not your current volume.</span>
+          </div>
+        </div>
+        <div class="signal">
+          <div class="glyph amber">Rs</div>
+          <div>
+            <strong>Free-tier friendly</strong>
+            <span>Your invoice/customer/product count is small for Supabase quotas.</span>
+          </div>
+        </div>
+      </aside>
+    </header>
+
+    <div class="notice">
+      This is intentionally a little unconventional: no custom API server at first.
+      The discipline is that the app must not write important tables directly. It asks
+      Postgres to perform business actions through RPC functions.
+    </div>
+
+    <nav aria-label="Page sections">
+      <div class="nav-inner">
+        <a href="#one-line">One-line model</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#cache">Local cache</a>
+        <a href="#rpc">RPC</a>
+        <a href="#invoice-flow">Invoice flow</a>
+        <a href="#integrity">Integrity</a>
+        <a href="#migration">Migration path</a>
+        <a href="#cost">Cost</a>
+        <a href="#risks">Risks</a>
+      </div>
+    </nav>
+
+    <section id="one-line">
+      <h2>One-Line Model</h2>
+      <p>
+        Supabase Postgres becomes the shared ledger. The phone database becomes a cache,
+        draft store, and backup/export layer. RPC functions become the protected doorway
+        for actions that must be atomic.
+      </p>
+      <div class="grid three">
+        <div class="mini-card ok">
+          <span class="badge green">Keep</span>
+          <h3>Drift/SQLite</h3>
+          <p class="muted">
+            Great for fast screens, offline reads, PDF generation input, recent state,
+            and local backup. It should not independently invent official financial
+            truth once multiple devices can write.
+          </p>
+        </div>
+        <div class="mini-card ok">
+          <span class="badge green">Add</span>
+          <h3>Supabase Postgres</h3>
+          <p class="muted">
+            One shared source for invoices, products, customers, buyers, stock movements,
+            and ledger transactions. Postgres gives transactions and constraints.
+          </p>
+        </div>
+        <div class="mini-card warn">
+          <span class="badge amber">Constrain</span>
+          <h3>Direct Table Writes</h3>
+          <p class="muted">
+            Reads can be broad. Critical writes should go through RPC so invoice numbers,
+            inventory, and ledger rows are committed as one unit.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p class="muted">
+        Think of this as a third data mode beside the existing local and API modes.
+        It borrows the local app's offline speed and the server mode's relational schema,
+        but avoids running a separate FastAPI service.
+      </p>
+
+      <div class="arch" aria-label="Hybrid architecture diagram">
+        <div class="node">
+          <span class="badge">Phone 1</span>
+          <h3>Father's app</h3>
+          <p>Reads from local Drift cache. Sends writes to Supabase RPC. Receives changes from sync pull.</p>
+        </div>
+        <div class="pipe">RPC<br>&lt;-&gt;</div>
+        <div class="node authority">
+          <span class="badge green">Authority</span>
+          <h3>Supabase Postgres</h3>
+          <p>Owns official rows, constraints, invoice numbering, idempotency, stock, and ledger transactions.</p>
+        </div>
+        <div class="pipe">&lt;-&gt;<br>RPC</div>
+        <div class="node">
+          <span class="badge">Phone 2..10</span>
+          <h3>Brother and future devices</h3>
+          <p>Same app, same rules. More devices do not change the source of truth.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>Source of truth</th>
+            <th>Best use</th>
+            <th>Main weakness</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Local</td>
+            <td>One phone SQLite</td>
+            <td>Single writer, no cloud dependency</td>
+            <td>Multi-device writes conflict</td>
+          </tr>
+          <tr>
+            <td>API</td>
+            <td>Backend Postgres through FastAPI</td>
+            <td>Classic controlled deployment</td>
+            <td>Need server hosting and ops</td>
+          </tr>
+          <tr>
+            <td>Hybrid</td>
+            <td>Supabase Postgres through RPC</td>
+            <td>Small team, many devices, low cost</td>
+            <td>Business logic moves into DB functions</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="cache">
+      <h2>Local Cache vs Postgres</h2>
+      <p>
+        The local database is still valuable. It just changes job title. It stops being
+        the legal ledger and becomes the local working copy.
+      </p>
+
+      <div class="tabs" role="tablist" aria-label="Cache responsibilities">
+        <button class="tab-button" role="tab" aria-selected="true" data-tab="cache-reads">Reads</button>
+        <button class="tab-button" role="tab" aria-selected="false" data-tab="cache-writes">Writes</button>
+        <button class="tab-button" role="tab" aria-selected="false" data-tab="cache-offline">Offline</button>
+        <button class="tab-button" role="tab" aria-selected="false" data-tab="cache-backup">Backup</button>
+      </div>
+
+      <div id="cache-reads" class="tab-panel active" role="tabpanel">
+        <h3>Reads are cache-first</h3>
+        <p class="muted">
+          Lists, detail pages, analytics, product picker, and PDFs can read from Drift.
+          A background sync pulls updated rows from Supabase and refreshes Drift.
+        </p>
+        <code class="code">open screen
+read Drift immediately
+show "synced 2 minutes ago"
+pull changes from Supabase
+update Drift
+screen refreshes if anything changed</code>
+      </div>
+
+      <div id="cache-writes" class="tab-panel" role="tabpanel">
+        <h3>Critical writes are RPC-first</h3>
+        <p class="muted">
+          Creating invoices, recording collections, canceling invoices, and changing stock
+          should call Supabase RPC. After success, the app updates Drift from the returned
+          canonical rows or via the next sync pull.
+        </p>
+        <code class="code">tap "Create invoice"
+call rpc_create_invoice(request_id, draft_payload)
+Postgres commits official rows
+app receives invoice_id and invoice_number
+Drift cache stores the result</code>
+      </div>
+
+      <div id="cache-offline" class="tab-panel" role="tabpanel">
+        <h3>Offline starts conservative</h3>
+        <p class="muted">
+          For the first hybrid release, offline can mean read-only plus drafts. Avoid
+          offline official invoices until an operation queue and conflict policy exist.
+        </p>
+        <code class="code">offline allowed:
+- browse last synced data
+- prepare invoice draft
+- export/share old PDFs
+
+offline blocked at first:
+- official invoice number
+- stock mutation
+- ledger mutation</code>
+      </div>
+
+      <div id="cache-backup" class="tab-panel" role="tabpanel">
+        <h3>Backup remains useful</h3>
+        <p class="muted">
+          The existing encrypted backup can still protect local state and provide a
+          disaster-recovery export. Supabase should also have periodic SQL backups or
+          exports once this becomes the authority.
+        </p>
+        <code class="code">device backup:
+encrypted Drift snapshot
+
+authority backup:
+Supabase SQL dump or managed backup/export
+
+rule:
+never restore a stale phone snapshot over newer Postgres truth</code>
+      </div>
+    </section>
+
+    <section id="rpc">
+      <h2>What RPC Means Here</h2>
+      <p>
+        RPC means "remote procedure call." In Supabase, the app calls a Postgres function
+        as if it were an API endpoint. The function runs inside the database, close to the
+        tables and constraints.
+      </p>
+
+      <div class="grid two">
+        <div class="mini-card ok">
+          <h3>Why not write tables directly?</h3>
+          <p class="muted">
+            An invoice is not one row. It changes invoice headers, invoice items, stock
+            movements, product quantities, and customer ledger rows. Direct table writes
+            make partial failure and bad ordering easier.
+          </p>
+        </div>
+        <div class="mini-card ok">
+          <h3>Why RPC helps</h3>
+          <p class="muted">
+            One function validates the draft, locks the invoice counter, assigns the next
+            number, inserts every related row, updates stock, writes ledger entries, and
+            commits or rolls back as one transaction.
+          </p>
+        </div>
+      </div>
+
+      <p class="muted">Flutter side:</p>
+      <code class="code">final result = await supabase.rpc(
+  'create_invoice',
+  params: {
+    'request_id': requestId,
+    'draft': draftJson,
+  },
+);</code>
+
+      <p class="muted" style="margin-top: 14px;">Postgres side, simplified:</p>
+      <code class="code">create or replace function create_invoice(request_id uuid, draft jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_number integer;
+begin
+  -- 1. Return existing result when request_id was already processed.
+  -- 2. Validate customer, products, quantities, GST mode, and totals.
+  -- 3. Lock invoice counter row.
+  -- 4. Insert invoice, items, stock movements, and ledger rows.
+  -- 5. Return canonical invoice payload.
+end;
+$$;</code>
+    </section>
+
+    <section id="invoice-flow">
+      <h2>Interactive Invoice Flow</h2>
+      <p class="muted">
+        Select a step to see where the data lives and why this avoids the multi-device
+        invoice-number conflict.
+      </p>
+
+      <div class="flow">
+        <div class="steps">
+          <button class="step-button" aria-pressed="true" data-step="1">
+            <span class="num">1</span>
+            <span>Draft on phone</span>
+          </button>
+          <button class="step-button" aria-pressed="false" data-step="2">
+            <span class="num">2</span>
+            <span>Call RPC</span>
+          </button>
+          <button class="step-button" aria-pressed="false" data-step="3">
+            <span class="num">3</span>
+            <span>Postgres transaction</span>
+          </button>
+          <button class="step-button" aria-pressed="false" data-step="4">
+            <span class="num">4</span>
+            <span>Return official result</span>
+          </button>
+          <button class="step-button" aria-pressed="false" data-step="5">
+            <span class="num">5</span>
+            <span>Sync other devices</span>
+          </button>
+        </div>
+
+        <div class="detail" id="step-detail" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="integrity">
+      <h2>Robustness and ACID Rules</h2>
+      <p>
+        This is the non-negotiable part. The architecture is only simple if the invariants
+        are simple and enforced near the data.
+      </p>
+
+      <div class="grid three">
+        <div class="mini-card ok">
+          <h3>Atomicity</h3>
+          <p class="muted">Invoice header, items, stock movements, and ledger rows commit together or not at all.</p>
+        </div>
+        <div class="mini-card ok">
+          <h3>Consistency</h3>
+          <p class="muted">Constraints prevent duplicate invoice numbers, duplicate request IDs, invalid amounts, and impossible stock states where required.</p>
+        </div>
+        <div class="mini-card ok">
+          <h3>Isolation</h3>
+          <p class="muted">Concurrent devices do not choose invoice numbers independently. The database locks the counter or uses a sequence.</p>
+        </div>
+        <div class="mini-card ok">
+          <h3>Durability</h3>
+          <p class="muted">Once Supabase confirms success, the official result is in Postgres. Phones can rebuild their cache from the authority.</p>
+        </div>
+        <div class="mini-card warn">
+          <h3>Idempotency</h3>
+          <p class="muted">Every write keeps a request_id. If the network times out and the user retries, Postgres returns the first result instead of creating a duplicate.</p>
+        </div>
+        <div class="mini-card warn">
+          <h3>RLS and RPC</h3>
+          <p class="muted">Clients should read only allowed rows. Critical table writes can be denied directly and allowed through audited functions.</p>
+        </div>
+      </div>
+
+      <div class="scenario-output" id="scenario-output" aria-live="polite">
+        <h3>Scenario simulator</h3>
+        <p class="muted">Choose a failure case to see how the hybrid model should behave.</p>
+      </div>
+      <div class="tabs" aria-label="Failure scenario choices">
+        <button class="choice-button" aria-pressed="false" data-scenario="timeout">Network timeout</button>
+        <button class="choice-button" aria-pressed="false" data-scenario="two-devices">Two devices invoice together</button>
+        <button class="choice-button" aria-pressed="false" data-scenario="stale-cache">Stale local cache</button>
+        <button class="choice-button" aria-pressed="false" data-scenario="offline">Offline sale attempt</button>
+      </div>
+    </section>
+
+    <section id="migration">
+      <h2>Migration Path From Today's App</h2>
+      <p class="muted">
+        Do not rewrite everything. Add a third data mode and move one business flow at a
+        time. The existing service interfaces are a strength here.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Build</th>
+            <th>Done when</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. Schema</td>
+            <td>Port backend/local tables to Supabase migrations. Add device_id, updated_at, deleted/archive markers, and sync cursor metadata where needed.</td>
+            <td>Supabase can hold products, customers, buyers, profiles, invoices, items, stock movements, and transactions.</td>
+          </tr>
+          <tr>
+            <td>2. Auth and roles</td>
+            <td>Use Supabase Auth or simple approved-user accounts. Add roles such as owner, operator, read_only.</td>
+            <td>Only known family/business devices can access the project.</td>
+          </tr>
+          <tr>
+            <td>3. Read sync</td>
+            <td>Implement pull-to-Drift for products/customers/buyers/invoices. Show last sync time.</td>
+            <td>Any device can rebuild its local cache from Supabase.</td>
+          </tr>
+          <tr>
+            <td>4. RPC writes</td>
+            <td>Implement create_invoice, cancel_invoice, record_collection, stock_adjustment, and catalog/profile upserts.</td>
+            <td>Critical writes are transactionally correct with request_id replay.</td>
+          </tr>
+          <tr>
+            <td>5. Hybrid services</td>
+            <td>Add HybridInvoicesService, HybridPaymentsService, HybridProductsService, and friends behind AppDependencies.</td>
+            <td>The Flutter UI stays mostly unchanged.</td>
+          </tr>
+          <tr>
+            <td>6. Offline policy</td>
+            <td>Start with offline read and drafts. Later add an operation queue only for operations with conflict-safe rules.</td>
+            <td>The app is honest about what can be official while offline.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="checklist" aria-label="Implementation readiness checklist">
+        <label class="check">
+          <input type="checkbox" data-check>
+          <span><strong>Invoice numbers assigned only by Supabase</strong><br><span class="muted">No phone uses max(invoice_number) + 1 for official hybrid invoices.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" data-check>
+          <span><strong>Every write has request_id</strong><br><span class="muted">Retries replay the original result.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" data-check>
+          <span><strong>Direct critical table writes blocked</strong><br><span class="muted">RPC is the doorway for ledger and stock side effects.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" data-check>
+          <span><strong>Drift can rebuild from Supabase</strong><br><span class="muted">Cache corruption or a new phone should not be scary.</span></span>
+        </label>
+      </div>
+      <div class="progress" aria-label="Checklist progress">
+        <div class="bar" id="check-progress"></div>
+      </div>
+    </section>
+
+    <section id="cost">
+      <h2>Cost and Scale Fit</h2>
+      <p>
+        Your stated scale is roughly 50 invoices per day, 2,000 products, 30 buyers, and
+        50 to 100 customers. That is small for Supabase Postgres.
+      </p>
+
+      <div class="grid three">
+        <div class="mini-card ok">
+          <h3>Database size</h3>
+          <p class="muted">
+            Supabase Free currently lists a 500 MB database quota. A small invoice
+            business should have a long runway if logs and old backups are controlled.
+          </p>
+        </div>
+        <div class="mini-card ok">
+          <h3>Users</h3>
+          <p class="muted">
+            Free tier currently lists 50,000 monthly active users. You need 5 to 10 known
+            devices, not a public consumer app.
+          </p>
+        </div>
+        <div class="mini-card warn">
+          <h3>Operational cost</h3>
+          <p class="muted">
+            Money cost can be zero at first. The real cost is learning DB functions,
+            access rules, migrations, and backup discipline.
+          </p>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top: 14px;">
+        For comparison, Firestore's free quota currently lists 1 GiB storage, 50,000
+        document reads per day, and 20,000 document writes per day. That also fits your
+        volume, but it is less natural for a relational ledger.
+      </p>
+    </section>
+
+    <section id="risks">
+      <h2>Risks and Guardrails</h2>
+      <div class="grid two">
+        <div class="mini-card stop">
+          <h3>Risk: business logic hidden in SQL</h3>
+          <p class="muted">
+            RPC is powerful, but PL/pgSQL can become hard to maintain. Keep functions
+            small, test them, and document each contract.
+          </p>
+        </div>
+        <div class="mini-card stop">
+          <h3>Risk: false offline confidence</h3>
+          <p class="muted">
+            A phone can show cached data while stale. Use sync timestamps and block
+            official writes when the app cannot reach Supabase in the first release.
+          </p>
+        </div>
+        <div class="mini-card warn">
+          <h3>Guardrail: append-only finance</h3>
+          <p class="muted">
+            Prefer reversals and adjustments over destructive edits. This makes audit,
+            sync, and recovery dramatically easier.
+          </p>
+        </div>
+        <div class="mini-card warn">
+          <h3>Guardrail: export path</h3>
+          <p class="muted">
+            Keep the existing encrypted local backup and add Supabase SQL export habits.
+            Free does not mean casual.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Source references checked on 2026-06-18:
+        <a href="https://supabase.com/docs/guides/platform/billing-on-supabase">Supabase billing quotas</a>,
+        <a href="https://supabase.com/docs/guides/platform/database-size">Supabase database size behavior</a>,
+        <a href="https://cloud.google.com/firestore/pricing">Firestore pricing</a>,
+        <a href="https://firebase.google.com/docs/projects/billing/firebase-pricing-plans">Firebase pricing plans</a>.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    const stepDetails = {
+      "1": {
+        title: "Draft on phone",
+        body: "The phone can use Drift for product lookup, customer lookup, totals preview, and draft storage. Nothing official has happened yet. No invoice number should be assigned here in hybrid mode.",
+        code: "location: Drift cache + UI state\nstatus: draft\nsafe offline: yes, as draft only"
+      },
+      "2": {
+        title: "Call RPC",
+        body: "When the user confirms, Flutter sends the draft and a request_id to Supabase. The request_id is the retry key. If the network fails after the database commits, the retry returns the same invoice instead of creating another.",
+        code: "rpc: create_invoice\nparams: request_id, draft\nretry behavior: idempotent"
+      },
+      "3": {
+        title: "Postgres transaction",
+        body: "The function validates the draft, chooses the official invoice number, inserts invoice rows, updates inventory, and writes ledger transactions. If any part fails, the transaction rolls back.",
+        code: "begin\n  lock invoice counter\n  insert invoice\n  insert invoice_items\n  update products\n  insert ledger rows\ncommit"
+      },
+      "4": {
+        title: "Return official result",
+        body: "The app receives the canonical invoice_id, invoice_number, totals, stock result, and ledger result from Supabase. The phone stores that result in Drift as cache.",
+        code: "source of truth: Supabase\nlocal state: cache copy\ninvoice number: official"
+      },
+      "5": {
+        title: "Sync other devices",
+        body: "Other phones pull the new or changed rows from Supabase and refresh their Drift cache. They do not need to import another phone's SQLite database.",
+        code: "pull changes since cursor\nupsert into Drift\nshow latest synced time"
+      }
+    };
+
+    const scenarios = {
+      timeout: {
+        title: "Network timeout after submit",
+        body: "The user taps create invoice and the connection drops. On retry, the same request_id is sent. If Postgres already committed, RPC returns the existing invoice. If it did not commit, RPC creates it once."
+      },
+      "two-devices": {
+        title: "Two devices create invoices together",
+        body: "Both devices call create_invoice. Postgres serializes the counter/sequence. One gets invoice #101 and the other gets #102. Neither phone independently calculates max + 1."
+      },
+      "stale-cache": {
+        title: "A phone has stale products or balance",
+        body: "The RPC validates against current Postgres rows, not stale Drift rows. If product stock or customer state changed, the function can reject with a clear refresh-required error."
+      },
+      offline: {
+        title: "Offline sale attempt",
+        body: "First hybrid release should save a draft and tell the user it becomes official only after reconnecting. Later, an offline operation queue can be added carefully."
+      }
+    };
+
+    function setStep(step) {
+      document.querySelectorAll(".step-button").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.step === step));
+      });
+      const detail = stepDetails[step];
+      document.getElementById("step-detail").innerHTML = `
+        <h3>${detail.title}</h3>
+        <p class="muted">${detail.body}</p>
+        <code class="code">${detail.code}</code>
+      `;
+    }
+
+    document.querySelectorAll(".step-button").forEach((button) => {
+      button.addEventListener("click", () => setStep(button.dataset.step));
+    });
+    setStep("1");
+
+    document.querySelectorAll(".tab-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.dataset.tab;
+        document.querySelectorAll(".tab-button").forEach((tab) => {
+          tab.setAttribute("aria-selected", String(tab === button));
+        });
+        document.querySelectorAll(".tab-panel").forEach((panel) => {
+          panel.classList.toggle("active", panel.id === target);
+        });
+      });
+    });
+
+    document.querySelectorAll(".choice-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".choice-button").forEach((choice) => {
+          choice.setAttribute("aria-pressed", String(choice === button));
+        });
+        const scenario = scenarios[button.dataset.scenario];
+        document.getElementById("scenario-output").innerHTML = `
+          <h3>${scenario.title}</h3>
+          <p class="muted">${scenario.body}</p>
+        `;
+      });
+    });
+
+    function updateProgress() {
+      const checks = Array.from(document.querySelectorAll("[data-check]"));
+      const done = checks.filter((check) => check.checked).length;
+      const percentage = checks.length === 0 ? 0 : Math.round((done / checks.length) * 100);
+      document.getElementById("check-progress").style.width = `${percentage}%`;
+    }
+
+    document.querySelectorAll("[data-check]").forEach((check) => {
+      check.addEventListener("change", updateProgress);
+    });
+    updateProgress();
+  </script>
+</body>
+</html>

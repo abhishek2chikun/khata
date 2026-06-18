@@ -16,7 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_XLSX = REPO_ROOT / "data" / "source" / "products.xlsx"
 OUTPUT_JSON = REPO_ROOT / "mobile" / "assets" / "catalog" / "preinstalled_catalog.json"
-CATALOG_VERSION = 2
+CATALOG_VERSION = 3
 CATALOG_NAMESPACE = uuid.UUID("8f4e2c1a-9b3d-4f6e-a7c5-1d2e3f4a5b6c")
 
 HEADERS = [
@@ -121,6 +121,19 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return parsed_rows
 
 
+def canonicalize_company_names(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    counts = Counter(row["company"].strip() for row in rows)
+    preferred: dict[str, str] = {}
+    for company, count in counts.items():
+        key = company.casefold()
+        if key not in preferred or count > counts[preferred[key]]:
+            preferred[key] = company
+    return [
+        {**row, "company": preferred[row["company"].strip().casefold()]}
+        for row in rows
+    ]
+
+
 def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
     buyers = sorted({row["company"].strip() for row in rows})
     buyer_records = [
@@ -188,7 +201,7 @@ def main() -> None:
     if not SOURCE_XLSX.exists():
         raise SystemExit(f"Source spreadsheet not found: {SOURCE_XLSX}")
 
-    rows = read_rows(SOURCE_XLSX)
+    rows = canonicalize_company_names(read_rows(SOURCE_XLSX))
     catalog = build_catalog(rows)
     OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_JSON.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
