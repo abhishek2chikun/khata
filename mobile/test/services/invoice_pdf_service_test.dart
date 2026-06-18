@@ -419,7 +419,12 @@ void main() {
         invoicePdfTableHeaders(gstFlag: false, isInterState: false);
     expect(headers, isNot(contains('HSN')));
     expect(headers, isNot(contains('GST%')));
-    expect(headers, contains('Code'));
+    expect(headers, isNot(contains('Code')));
+    expect(headers, contains('#'));
+    expect(headers, contains('Item'));
+    expect(headers, contains('Qty'));
+    expect(headers, contains('Rate'));
+    expect(headers, contains('Total'));
   });
 
   test('legacy discounted invoice keeps compact discount summary', () async {

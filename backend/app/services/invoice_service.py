@@ -134,7 +134,9 @@ def _get_active_company_for_invoicing(session: Session) -> CompanyProfile:
     return company
 
 
-def _resolve_place_of_supply_state_code(customer: Customer, provided_state_code: str | None) -> str:
+def _resolve_place_of_supply_state_code(
+    customer: Customer, provided_state_code: str | None, company: CompanyProfile
+) -> str:
     if provided_state_code:
         return normalize_state_code(provided_state_code)
 
@@ -150,7 +152,7 @@ def _resolve_place_of_supply_state_code(customer: Customer, provided_state_code:
         get_state_name(normalized_code)
         return normalized_code
 
-    raise _validation_error("place_of_supply_state_code is required when customer state metadata is incomplete")
+    return normalize_state_code(company.state_code)
 
 
 def _lock_or_load_products(session: Session, product_ids: list[UUID], lock: bool) -> dict[UUID, Product]:
@@ -204,7 +206,9 @@ def _prepare_invoice(session: Session, payload: InvoiceQuoteRequest, *, lock_pro
 
     company = _get_active_company_for_invoicing(session)
     resolved_gst_flag = _resolve_gst_flag(payload, company)
-    resolved_state_code = _resolve_place_of_supply_state_code(customer, payload.place_of_supply_state_code)
+    resolved_state_code = _resolve_place_of_supply_state_code(
+        customer, payload.place_of_supply_state_code, company
+    )
     resolved_state = get_state_name(resolved_state_code)
     tax_regime = derive_tax_regime(company.state_code, resolved_state_code)
 

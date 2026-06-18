@@ -46,6 +46,7 @@ class InvoiceQuoteItem {
     this.productCategory = '',
     this.productBuyerId,
     this.productCompanyName = '',
+    this.productHsnCode,
     this.buyingPrice = 0,
     this.sellingPrice = 0,
     this.unit,
@@ -55,7 +56,16 @@ class InvoiceQuoteItem {
     required this.unitPriceExclTax,
     this.unitPriceInclTax = 0,
     this.gstRate = 0,
+    this.cgstRate = 0,
+    this.sgstRate = 0,
+    this.igstRate = 0,
     this.gstAmount = 0,
+    this.cgstAmount = 0,
+    this.sgstAmount = 0,
+    this.igstAmount = 0,
+    this.discountPercent = 0,
+    this.discountAmount = 0,
+    this.taxableAmount = 0,
     required this.lineTotal,
   });
 
@@ -65,6 +75,7 @@ class InvoiceQuoteItem {
   final String productCategory;
   final String? productBuyerId;
   final String productCompanyName;
+  final String? productHsnCode;
   final double buyingPrice;
   final double sellingPrice;
   final String? unit;
@@ -74,7 +85,16 @@ class InvoiceQuoteItem {
   final double unitPriceExclTax;
   final double unitPriceInclTax;
   final double gstRate;
+  final double cgstRate;
+  final double sgstRate;
+  final double igstRate;
   final double gstAmount;
+  final double cgstAmount;
+  final double sgstAmount;
+  final double igstAmount;
+  final double discountPercent;
+  final double discountAmount;
+  final double taxableAmount;
   final double lineTotal;
 
   factory InvoiceQuoteItem.fromJson(Map<String, dynamic> json) {
@@ -85,6 +105,7 @@ class InvoiceQuoteItem {
       productCategory: json['product_category'] as String? ?? '',
       productBuyerId: json['product_buyer_id']?.toString(),
       productCompanyName: json['product_company_name'] as String? ?? '',
+      productHsnCode: json['product_hsn_code'] as String?,
       buyingPrice: _toDouble(json['buying_price']),
       sellingPrice: _toDouble(json['selling_price']),
       unit: json['unit'] as String?,
@@ -94,7 +115,16 @@ class InvoiceQuoteItem {
       unitPriceExclTax: _toDouble(json['unit_price_excl_tax']),
       unitPriceInclTax: _toDouble(json['unit_price_incl_tax']),
       gstRate: _toDouble(json['gst_rate']),
+      cgstRate: _toDouble(json['cgst_rate']),
+      sgstRate: _toDouble(json['sgst_rate']),
+      igstRate: _toDouble(json['igst_rate']),
       gstAmount: _toDouble(json['gst_amount']),
+      cgstAmount: _toDouble(json['cgst_amount']),
+      sgstAmount: _toDouble(json['sgst_amount']),
+      igstAmount: _toDouble(json['igst_amount']),
+      discountPercent: _toDouble(json['discount_percent']),
+      discountAmount: _toDouble(json['discount_amount']),
+      taxableAmount: _toDouble(json['taxable_amount']),
       lineTotal: _toDouble(json['line_total']),
     );
   }

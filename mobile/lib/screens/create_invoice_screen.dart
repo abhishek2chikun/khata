@@ -61,6 +61,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   List<Product> _products = const <Product>[];
   CompanyProfile? _sellerProfile;
   bool _isLoading = true;
+  bool _showPlaceOfSupplyOverride = false;
   String? _loadErrorMessage;
 
   @override
@@ -168,15 +169,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       _buildPaymentModeSection(),
                       const SizedBox(height: 12),
                       if (_showGstControls) ...[
-                        TextField(
-                          key: const Key('placeOfSupplyStateCodeField'),
-                          controller: _placeOfSupplyStateCodeController,
-                          keyboardType: TextInputType.number,
-                          onChanged: _controller.updatePlaceOfSupplyStateCode,
-                          decoration: const InputDecoration(
-                            labelText: 'Place of supply state code',
-                          ),
-                        ),
+                        _buildPlaceOfSupplySection(),
                         const SizedBox(height: 12),
                       ],
                       TextField(
@@ -248,6 +241,68 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               ),
             ],
           ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceOfSupplySection() {
+    final company = _sellerProfile;
+    if (company == null) {
+      return const SizedBox.shrink();
+    }
+    final customer = _controller.draft.customer;
+    final override = _controller.draft.placeOfSupplyStateCode;
+    final effectiveCode =
+        (override != null && override.isNotEmpty)
+            ? override
+            : (customer?.stateCode?.isNotEmpty == true
+                ? customer!.stateCode!
+                : company.stateCode);
+    final effectiveState = (override != null && override.isNotEmpty)
+        ? null
+        : (customer?.state?.isNotEmpty == true
+            ? customer!.state!
+            : company.state);
+    final displayValue = effectiveState != null
+        ? '$effectiveState ($effectiveCode)'
+        : effectiveCode;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        InputDecorator(
+          key: const Key('placeOfSupplyDisplay'),
+          decoration: const InputDecoration(
+            labelText: 'Place of supply',
+            border: OutlineInputBorder(),
+          ),
+          child: Text(displayValue),
+        ),
+        TextButton(
+          key: const Key('changePlaceOfSupplyButton'),
+          onPressed: () {
+            setState(() {
+              _showPlaceOfSupplyOverride = !_showPlaceOfSupplyOverride;
+            });
+          },
+          child: Text(
+            _showPlaceOfSupplyOverride
+                ? 'Use default place of supply'
+                : 'Change place of supply',
+          ),
+        ),
+        if (_showPlaceOfSupplyOverride) ...<Widget>[
+          TextField(
+            key: const Key('placeOfSupplyStateCodeField'),
+            controller: _placeOfSupplyStateCodeController,
+            keyboardType: TextInputType.number,
+            onChanged: _controller.updatePlaceOfSupplyStateCode,
+            decoration: const InputDecoration(
+              labelText: 'Override state code (optional)',
+              hintText: 'e.g. 27',
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -589,6 +644,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           MaterialPageRoute<bool>(
             builder: (_) => InvoicePreviewScreen(
               controller: _controller,
+              companyProfile: _sellerProfile,
               shareService: widget.shareService,
             ),
           ),

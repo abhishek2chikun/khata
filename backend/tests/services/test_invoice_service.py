@@ -148,6 +148,25 @@ def test_build_quote_returns_expected_totals(db_session):
     assert quote.place_of_supply_state == "Maharashtra"
 
 
+def test_quote_defaults_place_of_supply_to_company_state(db_session):
+    customer, _, product = _seed_invoice_v2_graph(db_session)
+    customer.state = None
+    customer.state_code = None
+    db_session.commit()
+
+    quote = invoice_service.build_quote(
+        db_session,
+        InvoiceQuoteRequest(
+            customer_id=customer.id,
+            payment_state="CREDIT",
+            items=[_v2_line(product)],
+        ),
+    )
+
+    assert quote.place_of_supply_state_code == "27"
+    assert quote.place_of_supply_state == "Maharashtra"
+
+
 def test_quote_defaults_to_product_selling_price_inclusive_of_gst(db_session):
     customer, _, product = _seed_invoice_v2_graph(db_session)
 

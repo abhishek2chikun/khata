@@ -30,7 +30,10 @@ The app models a wholesaler (distributor) business. Key entity names:
 
 - Seller profile and each invoice snapshot persist `gst_flag` (GST vs non-GST).
 - Non-GST invoices force zero tax; GST sellers may issue non-GST only when all line GST rates are zero.
-- Mobile invoice creation sends date-only `invoice_date`; PDFs adapt A5 (≤10 lines) / A4 (>10) with GST or non-GST layouts.
+- Mobile invoice creation sends date-only `invoice_date`; PDFs adapt A5 (≤15 lines) / A4 (>15) with GST or non-GST layouts.
+- Pre-confirm **View PDF** on the invoice preview screen shows the exact PDF that will be generated before confirming.
+- Place of supply resolves from customer state (if set), else company state; optional override on GST create form; hidden for non-GST sellers.
+- Non-GST invoice PDFs use a simplified item table without a Code column.
 - Invoice PDF sharing uses the OS chooser with attachment plus a safe caption; customer pending balances can be shared individually or as a daily positive-only summary.
 
 ## PostgreSQL Setup
@@ -201,7 +204,7 @@ backend process.
 
 ### Preinstalled product catalog (local mode)
 
-Fresh local installs ship with **1,199 products** and **30 buyers** bundled in
+Fresh local installs ship with **1,199 products** and **29 buyers** bundled in
 the APK. On first launch, `LocalProductCatalogSeeder` loads
 `mobile/assets/catalog/preinstalled_catalog.json` and inserts any missing buyers
 and products into the local Drift database. Seeded rows behave like manually
@@ -216,7 +219,7 @@ python3 tools/build_preinstalled_catalog.py
 
 Column mapping: Company → buyer + `company_name`; Category → `category`; Item
 Name → `item_name`; HSN → nullable `hsn_code` (125 source rows intentionally
-blank); Buying Price (MRP) → GST-inclusive `buying_price`; Selling Price (DP) →
+blank); Buying Price → GST-inclusive `buying_price`; Selling Price (DP) →
 GST-inclusive `selling_price`; Unit `1.0` → `pcs`; GST Rate →
 `gst_rate`; Quantity on Hand → `quantity_on_hand`; generated
 `item_number` per company (e.g. `DOMS-0001`); default `low_stock_threshold`

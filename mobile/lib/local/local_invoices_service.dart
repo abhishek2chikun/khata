@@ -439,6 +439,7 @@ class LocalInvoicesService implements InvoicesService {
     final placeOfSupplyStateCode = _resolvePlaceOfSupplyStateCode(
       customer,
       draft.placeOfSupplyStateCode,
+      company.stateCode,
     );
     final placeOfSupplyState = _stateName(placeOfSupplyStateCode);
     final taxRegime = _normalizeStateCode(company.stateCode) ==
@@ -929,6 +930,7 @@ class LocalInvoicesService implements InvoicesService {
               productCategory: line.product.category,
               productBuyerId: line.product.buyerId,
               productCompanyName: line.product.companyName,
+              productHsnCode: line.product.hsnCode,
               buyingPrice: double.parse(line.product.buyingPrice),
               sellingPrice: double.parse(line.product.sellingPrice),
               unit: line.product.unit,
@@ -938,7 +940,16 @@ class LocalInvoicesService implements InvoicesService {
               unitPriceExclTax: line.unitPriceExclTax,
               unitPriceInclTax: line.unitPriceInclTax,
               gstRate: line.gstRate,
+              cgstRate: line.cgstRate,
+              sgstRate: line.sgstRate,
+              igstRate: line.igstRate,
               gstAmount: line.gstAmount,
+              cgstAmount: line.cgstAmount,
+              sgstAmount: line.sgstAmount,
+              igstAmount: line.igstAmount,
+              discountPercent: line.discountPercent,
+              discountAmount: line.discountAmount,
+              taxableAmount: line.taxableAmount,
               lineTotal: line.lineTotal,
             ),
           )
@@ -1103,18 +1114,18 @@ class LocalInvoicesService implements InvoicesService {
     }
   }
 
-  String _resolvePlaceOfSupplyStateCode(Customer customer, String? provided) {
+  String _resolvePlaceOfSupplyStateCode(
+    Customer customer,
+    String? provided,
+    String companyStateCode,
+  ) {
     if (provided != null && provided.trim().isNotEmpty) {
       return _normalizeStateCode(provided);
     }
     if (customer.stateCode != null && customer.stateCode!.isNotEmpty) {
       return _normalizeStateCode(customer.stateCode!);
     }
-    throw const ApiError(
-      code: 'VALIDATION_ERROR',
-      message: 'place_of_supply_state_code is required',
-      statusCode: 400,
-    );
+    return _normalizeStateCode(companyStateCode);
   }
 
   String _invoiceRequestHash(InvoiceDraft draft, _PreparedInvoice prepared) {

@@ -45,7 +45,7 @@ The app currently supports:
 - customer list and customer khata detail
 - buyer list and buyer payable ledger detail
 - collection recording, opening balance, and balance adjustment
-- invoice create → preview → confirm flow (multi-line, payment state, GST/non-GST mode, date-only invoice date)
+- invoice create → preview → confirm flow (multi-line, payment state, GST/non-GST mode, date-only invoice date, pre-confirm PDF preview via View PDF)
 - invoice list and invoice detail screens with adaptive GST/non-GST PDFs (A5 ≤10 lines, A4 >10) and PDF+caption sharing
 - customer balance sharing (individual and daily positive-balance summary)
 - analytics dashboard (revenue/profit by buyer/company/customer, top products, low stock, khata balances)
@@ -136,7 +136,7 @@ On a fresh local database, the app shows `Set up local user`. Create the first
 local username/password there, then log in. Local mode uses the same main flows
 as API mode but persists data through Drift/SQLite on the device.
 
-**Preinstalled catalog:** release/local builds bundle ~1,199 products and 30
+**Preinstalled catalog:** release/local builds bundle ~1,199 products and 29
 buyers from `data/source/products.xlsx` (compiled to
 `assets/catalog/preinstalled_catalog.json`). `AppDependencies` seeds missing
 catalog rows on startup via `LocalProductCatalogSeeder`; seeded inventory is
@@ -236,6 +236,8 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 
 ## Progress
 
+- **2026-06-18:** Invoice preview improvements — pre-confirm **View PDF** on quote screen (actual generated PDF via `printing`); non-GST PDFs drop Code column; place of supply auto-resolves customer → company state (optional override on create form, hidden for non-GST).
+- **2026-06-15:** Preinstalled catalog v3 — rebuilt from corrected `Invoices (3).xlsx` source (`data/source/products.xlsx`); 1,199 products / 29 buyers; buying prices and HSN fixes; case-insensitive company merge (`Linc` → `linc`); existing local installs upgrade prices/HSN on startup.
 - **2026-06-14 (Task 07):** Integration handoff — signed stock-delta fix, 5 cross-slice regression tests, stale fixture refresh; **458** mobile + **55** pure tests green; release APK SHA-256 recorded; Postgres/device gates documented.
 - **2026-06-14:** Encrypted Google Drive backup — verified upload orchestration, 30-retention prune, secure password store, WorkManager + catch-up, full backup screen; 69 backup tests green; physical OAuth unverified (AC10/AC11).
 - **2026-06-14:** Owner analytics dashboard — backend/local KPI + `daily_trend` fields, `fl_chart` revenue/profit trend, date presets, low-stock removed from UI; parity fixture + 18 focused analytics tests green.

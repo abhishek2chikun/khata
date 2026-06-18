@@ -36,7 +36,7 @@ List<String> invoicePdfTableHeaders({
   required bool isInterState,
 }) {
   if (!gstFlag) {
-    return <String>['#', 'Item', 'Code', 'Qty', 'Rate', 'Total'];
+    return <String>['#', 'Item', 'Qty', 'Rate', 'Total'];
   }
   final headers = <String>[
     '#',
@@ -74,6 +74,14 @@ class InvoicePdfService {
   }
 
   Future<String> generateInvoicePdf(InvoiceDetail invoice) async {
+    final bytes = await generateInvoicePdfBytes(invoice);
+    final dir = await _outputDirectory();
+    final file = File('$dir/invoice_${invoice.invoiceNumber}.pdf');
+    await file.writeAsBytes(bytes);
+    return file.path;
+  }
+
+  Future<List<int>> generateInvoicePdfBytes(InvoiceDetail invoice) async {
     var pageFormat = invoicePdfPageFormatForItemCount(invoice.items.length);
     var pdf = _buildPdf(invoice, pageFormat);
     if (pageFormat == PdfPageFormat.a5 &&
@@ -81,11 +89,7 @@ class InvoicePdfService {
       pageFormat = PdfPageFormat.a4;
       pdf = _buildPdf(invoice, pageFormat);
     }
-
-    final dir = await _outputDirectory();
-    final file = File('$dir/invoice_${invoice.invoiceNumber}.pdf');
-    await file.writeAsBytes(await pdf.save());
-    return file.path;
+    return pdf.save();
   }
 
   pw.Document _buildPdf(InvoiceDetail invoice, PdfPageFormat pageFormat) {
@@ -283,7 +287,6 @@ class InvoicePdfService {
           : <String>[
               '${index + 1}',
               itemName,
-              item.productItemNumber,
               invoicePdfFormatQuantity(item.quantity),
               invoicePdfFormatUnitPrice(item.unitPriceInclTax),
               item.lineTotal.toStringAsFixed(2),
@@ -622,7 +625,6 @@ class InvoicePdfService {
         rows.add(<pw.Widget>[
           _serialCell('${index + 1}'),
           _cell(itemName),
-          _cell(item.productItemNumber),
           _cell(
             invoicePdfFormatQuantity(item.quantity),
             align: pw.Alignment.centerRight,
@@ -703,11 +705,10 @@ class InvoicePdfService {
     if (!isGst) {
       return <int, pw.TableColumnWidth>{
         0: const pw.FixedColumnWidth(18),
-        1: const pw.FlexColumnWidth(4),
-        2: const pw.FlexColumnWidth(2),
-        3: const pw.FlexColumnWidth(1.5),
+        1: const pw.FlexColumnWidth(5),
+        2: const pw.FlexColumnWidth(1.5),
+        3: const pw.FlexColumnWidth(2),
         4: const pw.FlexColumnWidth(2),
-        5: const pw.FlexColumnWidth(2),
       };
     }
     final widths = <int, pw.TableColumnWidth>{
@@ -733,11 +734,10 @@ class InvoicePdfService {
   Map<int, pw.FlexColumnWidth> _buildNonGstColumnWidths() {
     return <int, pw.FlexColumnWidth>{
       0: const pw.FlexColumnWidth(1.8),
-      1: const pw.FlexColumnWidth(4),
-      2: const pw.FlexColumnWidth(2),
-      3: const pw.FlexColumnWidth(1.5),
+      1: const pw.FlexColumnWidth(5),
+      2: const pw.FlexColumnWidth(1.5),
+      3: const pw.FlexColumnWidth(2.2),
       4: const pw.FlexColumnWidth(2.2),
-      5: const pw.FlexColumnWidth(2.2),
     };
   }
 

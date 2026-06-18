@@ -90,7 +90,7 @@ def test_quote_requires_company_profile_state_and_returns_totals(client, auth_he
     assert body["warnings"] == []
 
 
-def test_quote_rejects_missing_or_unresolved_tax_state_inputs(client, auth_headers):
+def test_quote_defaults_place_of_supply_to_company_state(client, auth_headers):
     company = client.put("/company-profile", headers=auth_headers, json=_company_payload())
     assert company.status_code == 200
 
@@ -101,8 +101,10 @@ def test_quote_rejects_missing_or_unresolved_tax_state_inputs(client, auth_heade
     payload.pop("place_of_supply_state_code")
 
     response = client.post("/invoices/quote", headers=auth_headers, json=payload)
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.status_code == 200
+    body = response.json()
+    assert body["place_of_supply_state_code"] == "27"
+    assert body["place_of_supply_state"] == "Maharashtra"
 
 
 def test_quote_rejects_inconsistent_customer_state_name_and_code(client, auth_headers):

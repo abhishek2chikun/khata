@@ -869,6 +869,26 @@ void main() {
     expect(await database.select(database.invoices).get(), isEmpty);
   });
 
+  test('defaults place of supply to company state when customer has none',
+      () async {
+    final customerWithoutState = await customersService.createCustomer(
+      _customerInput(
+        name: 'No State Stores',
+        phone: '6666666666',
+        state: null,
+        stateCode: null,
+      ),
+    );
+    final quote = await invoicesService.quoteInvoice(_draft(
+      customer: customerWithoutState,
+      product: product,
+      quantity: 1,
+    ));
+
+    expect(quote.placeOfSupplyStateCode, '27');
+    expect(quote.placeOfSupplyState, 'Maharashtra');
+  });
+
   test('rejects company state and state code mismatch for quote and create',
       () async {
     await companyService.upsertCompanyProfile(
@@ -1173,8 +1193,8 @@ UpsertCompanyProfileInput _companyInput({
 CreateCustomerInput _customerInput({
   String name = 'Acme Stores',
   String phone = '9999999999',
-  String state = 'Maharashtra',
-  String stateCode = '27',
+  String? state = 'Maharashtra',
+  String? stateCode = '27',
 }) {
   return CreateCustomerInput(
     name: name,

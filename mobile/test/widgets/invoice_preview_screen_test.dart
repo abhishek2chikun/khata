@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internal_billing_khata_mobile/models/company_profile.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_detail.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_draft.dart';
 import 'package:internal_billing_khata_mobile/models/invoice_quote.dart';
@@ -176,6 +177,123 @@ void main() {
     expect(find.text('Share PDF (WhatsApp and more)'), findsOneWidget);
     expect(find.text('Invoice created'), findsOneWidget);
   });
+
+  testWidgets('view pdf button visible before confirm when company profile provided',
+      (tester) async {
+    final controller = await _makeController(quote: _quote);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoicePreviewScreen(
+          controller: controller,
+          companyProfile: _companyProfile,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('viewPdfButton')), findsOneWidget);
+    expect(find.byKey(const Key('confirmInvoiceButton')), findsOneWidget);
+  });
+
+  testWidgets('view pdf button hidden after invoice is created', (tester) async {
+    final createdInvoice = InvoiceDetail(
+      id: 'inv-1',
+      customerId: 'customer-1',
+      invoiceNumber: '42',
+      status: 'ACTIVE',
+      paymentState: 'CREDIT',
+      paymentMode: 'CREDIT',
+      customerName: 'ABC Stores',
+      invoiceDate: '2026-01-10',
+      grandTotal: 236,
+      notes: null,
+      cancelReason: null,
+      items: const <InvoiceDetailItem>[
+        InvoiceDetailItem(
+          productId: 'product-1',
+          productName: 'Blue Pen',
+          quantity: 2,
+          lineTotal: 236,
+        ),
+      ],
+    );
+    final service = _CreateInvoicesService(createdInvoice: createdInvoice);
+    final customer = const Customer(
+      id: 'customer-1',
+      name: 'ABC Stores',
+      address: 'Market Yard',
+      phone: '9999999999',
+      gstin: '27BBBBB0000B1Z5',
+      state: 'Maharashtra',
+      stateCode: '27',
+      isActive: true,
+      pendingBalance: 0,
+    );
+    final controller = InvoiceDraftController(
+      invoicesService: service,
+      initialCustomer: customer,
+    );
+    controller.updateItemProduct(0, _product);
+    await controller.requestQuote();
+    await controller.submitInvoice();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoicePreviewScreen(
+          controller: controller,
+          companyProfile: _companyProfile,
+          shareService: _FakeShareService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('viewPdfButton')), findsNothing);
+    expect(find.byKey(const Key('sharePdfButton')), findsOneWidget);
+  });
+
+  testWidgets('non-gst preview hides item number in item subtitle', (tester) async {
+    const nonGstQuote = InvoiceQuote(
+      placeOfSupplyState: 'Maharashtra',
+      placeOfSupplyStateCode: '27',
+      taxRegime: 'INTRA_STATE',
+      gstFlag: false,
+      items: <InvoiceQuoteItem>[
+        InvoiceQuoteItem(
+          productId: 'product-1',
+          productItemName: 'Blue Pen',
+          productItemNumber: 'PEN-1',
+          productCategory: 'Pens',
+          unit: 'PCS',
+          quantity: 1,
+          enteredUnitPrice: 100,
+          unitPriceExclTax: 100,
+          lineTotal: 100,
+        ),
+      ],
+      totals: InvoiceTotals(
+        subtotal: 100,
+        discountTotal: 0,
+        taxableTotal: 100,
+        gstTotal: 0,
+        grandTotal: 100,
+      ),
+      warnings: <InvoiceWarning>[],
+    );
+    final controller = await _makeController(quote: nonGstQuote);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InvoicePreviewScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('PEN-1'), findsNothing);
+    expect(find.textContaining('Pens'), findsOneWidget);
+    expect(find.byKey(const Key('gstTotal')), findsNothing);
+  });
 }
 
 Future<InvoiceDraftController> _makeController({
@@ -207,6 +325,25 @@ Future<InvoiceDraftController> _makeController({
   await controller.requestQuote();
   return controller;
 }
+
+const _companyProfile = CompanyProfile(
+  id: 'company-1',
+  name: 'Acme Traders',
+  address: 'Main Road',
+  city: 'Pune',
+  state: 'Maharashtra',
+  stateCode: '27',
+  gstin: '27AAAAA0000A1Z5',
+  gstFlag: true,
+  phone: '9999999999',
+  email: 'owner@example.com',
+  bankName: 'ABC Bank',
+  bankAccount: '1234567890',
+  bankIfsc: 'ABC0001234',
+  bankBranch: 'Pune',
+  jurisdiction: 'Pune',
+  isActive: true,
+);
 
 const _product = Product(
   id: 'product-1',

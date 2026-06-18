@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../models/company_profile.dart';
 import '../models/invoice_detail.dart';
 import '../models/invoice_quote.dart';
 import '../services/invoice_pdf_service.dart';
 import '../services/decimal_validators.dart';
+import '../services/invoice_preview_builder.dart';
 import '../services/invoice_settlement.dart';
 import '../services/invoice_share_service.dart';
 import '../state/invoice_draft_controller.dart';
 import '../widgets/error_banner.dart';
 import '../widgets/app_ui.dart';
+import 'invoice_pdf_preview_screen.dart';
 
 class InvoicePreviewScreen extends StatelessWidget {
   const InvoicePreviewScreen({
     super.key,
     required this.controller,
+    this.companyProfile,
     this.shareService,
   });
 
   final InvoiceDraftController controller;
+  final CompanyProfile? companyProfile;
   final InvoiceShareService? shareService;
 
   @override
@@ -111,6 +116,14 @@ class InvoicePreviewScreen extends StatelessWidget {
                   ),
                 ] else ...<Widget>[
                   const SizedBox(height: 16),
+                  if (quote != null && companyProfile != null)
+                    OutlinedButton(
+                      key: const Key('viewPdfButton'),
+                      onPressed: () => _openPdfPreview(context, quote),
+                      child: const Text('View PDF'),
+                    ),
+                  if (quote != null && companyProfile != null)
+                    const SizedBox(height: 12),
                   FilledButton(
                     key: const Key('confirmInvoiceButton'),
                     onPressed: controller.isSubmitting
@@ -135,6 +148,23 @@ class InvoicePreviewScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  void _openPdfPreview(BuildContext context, InvoiceQuote quote) {
+    final profile = companyProfile;
+    if (profile == null) {
+      return;
+    }
+    final previewInvoice = buildPreviewInvoiceDetail(
+      draft: controller.draft,
+      quote: quote,
+      company: profile,
+    );
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => InvoicePdfPreviewScreen(invoice: previewInvoice),
+      ),
     );
   }
 
@@ -168,13 +198,18 @@ class InvoicePreviewScreen extends StatelessWidget {
         const SizedBox(height: 8),
         ...List.generate(quote.items.length, (index) {
           final item = quote.items[index];
-          return _buildItemRow(context, item, index);
+          return _buildItemRow(context, item, index, gstFlag: quote.gstFlag);
         }),
       ],
     );
   }
 
-  Widget _buildItemRow(BuildContext context, InvoiceQuoteItem item, int index) {
+  Widget _buildItemRow(
+    BuildContext context,
+    InvoiceQuoteItem item,
+    int index, {
+    required bool gstFlag,
+  }) {
     final draftItem = controller.draft.items
         .where((di) => di.product?.id == item.productId)
         .firstOrNull;
@@ -183,6 +218,9 @@ class InvoicePreviewScreen extends StatelessWidget {
         draftItem?.product?.itemNumber ?? item.productItemNumber;
     final productCategory =
         draftItem?.product?.category ?? item.productCategory;
+    final subtitle = gstFlag
+        ? '$productItemNumber | $productCategory'
+        : productCategory;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -205,7 +243,7 @@ class InvoicePreviewScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Text('$productItemNumber | $productCategory'),
+          Text(subtitle),
           Row(
             children: <Widget>[
               Text(
