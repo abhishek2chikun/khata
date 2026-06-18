@@ -20,7 +20,7 @@ Stage 3 implementation baseline SHA: `1fe37eee8fa8bc689f1c40fa630853fa8f3daf5a`
 
 Stage 3 final HEAD: `ec9afd9b7dca4e03296f602c8489287d9409dc63`
 
-Stage 4 final HEAD: record after `fix(stage4)` commit
+Stage 4 final HEAD: `420d7ae93f6a0b84c8164ee7bba180606cf1cdea`
 
 ## Verdict
 fix-required
@@ -65,7 +65,7 @@ Artifacts:
 2. `02-llm-review-anchor.md`
 3. `04-return-packet.md`
 4. `04-validation-report.md`
-5. Diff `1fe37ee..<stage4-head>`
+5. Diff `1fe37ee..420d7ae`
 
 ## Exact Next Action
 

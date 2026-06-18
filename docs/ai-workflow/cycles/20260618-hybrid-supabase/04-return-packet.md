@@ -29,7 +29,7 @@ Planning baseline SHA: `c7fff58` (Stage 2 planning commit on main)
 
 Stage 3 starting/ending SHA: `1fe37ee` → `ec9afd9`
 
-Stage 4 starting/final SHA: `ec9afd9` → `<record after Stage 4 commit>`
+Stage 4 starting/final SHA: `ec9afd9` → `420d7ae`
 
 Dirty/uncommitted state: clean after Stage 4 commit (catalog JSON noise reverted)
 
@@ -70,7 +70,7 @@ Merge blockers or authorization gaps: AC9 incomplete (local master-data writes),
 | `3bbe89f` | Task 03 | catalog seeds | `tools/build_preinstalled_catalog.py`, seeds | parity test |
 | `498ef81` | Task 04 partial | hybrid auth/invoice/sync code | `mobile/lib/hybrid/*`, `app_dependencies.dart` | flutter test (local mode) |
 | `ec9afd9` | Task 06 draft | Stage 3 handoff docs | workflow artifacts | claimed, not independently verified |
-| `<stage4>` | Stage 4 | sync lifecycle + cache tests | `main.dart`, `app_dependencies.dart`, `hybrid_sync_service_test.dart` | 481 flutter tests |
+| `420d7ae` | Stage 4 | sync lifecycle + cache tests | `main.dart`, `app_dependencies.dart`, `hybrid_sync_service_test.dart` | 481 flutter tests |
 
 ## Change Manifest
 | Path | Symbol/section | Before -> after | Why | Task/AC | Commit | Risk |
