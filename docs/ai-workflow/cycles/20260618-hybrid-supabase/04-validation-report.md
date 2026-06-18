@@ -57,7 +57,7 @@ Changed surface:
 | SQL migrations | `bash supabase/tests/run_migrations_and_tests.sh` | pass | pass against remote `DATABASE_URL` | 100% |
 | Flutter suite | `flutter test test --dart-define=DATA_MODE=local` | pass | 481 passed (478 baseline + 3 Stage 4) | 100% |
 | Flutter analyze | `flutter analyze` | 0 errors | 44 info/warning, 0 errors | 100% |
-| APK hybrid build | `flutter build apk --release ...` | release artifact | not completed within Stage 4 window | blocked/slow |
+| APK hybrid build | `flutter build apk --release ...` | release artifact | pass — `app-release.apk` 68.7MB | 100% |
 
 ## Findings
 | Severity | Defect source | File/symbol/scenario | Impact | Required action |
@@ -127,7 +127,7 @@ Stage 4 confirmed the failure boundary with code inspection, then reproduced gre
 - `flutter analyze` non-zero exit due to warnings only: acceptable for Stage 4 automation.
 
 ## Remaining Risks And Unverified Evidence
-- Hybrid APK release build not captured.
+- Hybrid APK release build verified post-report (`app-release.apk`, 68.7MB).
 - Remote `seed_master_catalog` RPC not run at scale (1528 products).
 - Manual father/brother multi-device scenario unverified.
 - Invoice idempotency under timeout/retry not tested end-to-end.
