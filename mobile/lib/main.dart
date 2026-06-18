@@ -7,6 +7,7 @@ import 'auth/auth_controller.dart';
 import 'app/app_dependencies.dart';
 import 'app/app_mode.dart';
 import 'hybrid/supabase_config.dart';
+import 'debug/agent_debug_log.dart';
 import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
@@ -44,6 +45,18 @@ Future<void> main() async {
   }
   if (mode == DataMode.hybrid) {
     final config = SupabaseConfig.fromEnvironment();
+    // #region agent log
+    AgentDebugLog.write(
+      location: 'main.dart:main',
+      message: 'hybrid startup config',
+      hypothesisId: 'H3',
+      data: {
+        'configPresent': config != null,
+        'urlConfigured': config?.url.isNotEmpty ?? false,
+        'anonConfigured': config?.anonKey.isNotEmpty ?? false,
+      },
+    );
+    // #endregion
     if (config != null) {
       await Supabase.initialize(
         url: config.url,

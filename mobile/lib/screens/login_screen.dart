@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in with your username and password.',
+                          'Sign in with your Supabase email and password.',
                           style: Theme.of(context).textTheme.bodyMedium,
                           textAlign: TextAlign.center,
                         ),
@@ -83,10 +83,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _usernameController,
                           enabled: !widget.controller.isLoggingIn,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
-                            labelText: 'Username',
-                            prefixIcon: Icon(Icons.person_outline),
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.alternate_email_outlined),
                           ),
                         ),
                         const SizedBox(height: 16),

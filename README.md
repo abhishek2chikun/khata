@@ -157,12 +157,28 @@ If you get `{"detail":"Not Found"}` from `/auth/login`, you are hitting the wron
 Hybrid mode is the only production runtime. Supabase Postgres is the authority,
 Drift is the local cache, and official writes go through Supabase RPCs.
 
+Before first hybrid login, provision Supabase Auth users (emails/passwords from `.env`):
+
+```bash
+python3 tools/provision_supabase_auth_users.py
+```
+
+Build/install a release APK with Supabase dart-defines from `.env`:
+
+```bash
+bash tools/build_hybrid_apk.sh
+```
+
+Or run on a connected device:
+
 ```bash
 (cd mobile && flutter pub get)
 (cd mobile && flutter run -d <device-id> \
   --dart-define=SUPABASE_URL=<url> \
   --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
+
+Sign in with the **email** and password from your Supabase Auth user (not a local username).
 
 `DATA_MODE=api` and `DATA_MODE=local` are no longer accepted production runtime
 options. API/local code may remain as historical reference and test fixtures
