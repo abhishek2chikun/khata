@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the bundled preinstalled product catalog JSON from the source spreadsheet."""
+"""Build bundled Drift catalog JSON and Supabase seed JSON from the master workbook."""
 
 from __future__ import annotations
 
@@ -14,10 +14,30 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_XLSX = REPO_ROOT / "data" / "source" / "products.xlsx"
+SOURCE_XLSX = REPO_ROOT / "data" / "source" / "MASTER CATALOG.xlsx"
 OUTPUT_JSON = REPO_ROOT / "mobile" / "assets" / "catalog" / "preinstalled_catalog.json"
-CATALOG_VERSION = 3
+SUPABASE_SEED_JSON = REPO_ROOT / "supabase" / "seed" / "master_catalog.json"
+CATALOG_VERSION = 4
 CATALOG_NAMESPACE = uuid.UUID("8f4e2c1a-9b3d-4f6e-a7c5-1d2e3f4a5b6c")
+
+HEADER_ALIASES = {
+    "company": "company",
+    "category": "category",
+    "item name": "item_name",
+    "item_name": "item_name",
+    "hsn code": "hsn_code",
+    "hsn_code": "hsn_code",
+    "buying price": "buying_price",
+    "buying_price": "buying_price",
+    "selling price (dp)": "selling_price",
+    "selling price": "selling_price",
+    "selling_price": "selling_price",
+    "unit": "unit",
+    "gst rate": "gst_rate",
+    "gst_rate": "gst_rate",
+    "quantity on hand": "quantity_on_hand",
+    "quantity_on_hand": "quantity_on_hand",
+}
 
 HEADERS = [
     "company",
@@ -70,7 +90,10 @@ def normalize_gst_rate(value: str) -> str:
     text = value.strip().rstrip("%")
     if not text:
         raise ValueError("missing gst rate")
-    return normalize_decimal(text, scale=2)
+    rate = Decimal(text)
+    if rate <= 1:
+        rate = rate * 100
+    return normalize_decimal(str(rate), scale=2)
 
 
 def normalize_unit(value: str) -> str | None:
@@ -80,6 +103,10 @@ def normalize_unit(value: str) -> str | None:
     if text in {"1", "1.0", "1.00"}:
         return "pcs"
     return text
+
+
+def _normalize_header(value: str) -> str | None:
+    return HEADER_ALIASES.get(value.strip().casefold())
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -94,8 +121,29 @@ def read_rows(path: Path) -> list[dict[str, str]]:
 
         sheet = ET.fromstring(workbook.read("xl/worksheets/sheet1.xml"))
         namespace = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        all_rows = sheet.findall(".//m:sheetData/m:row", namespace)
+        if not all_rows:
+            return []
+
+        header_values: list[str] = []
+        for cell in all_rows[0].findall("m:c", namespace):
+            cell_type = cell.get("t")
+            raw_value = cell.find("m:v", namespace)
+            if raw_value is None or raw_value.text is None:
+                header_values.append("")
+            elif cell_type == "s":
+                header_values.append(shared_strings[int(raw_value.text)])
+            else:
+                header_values.append(raw_value.text)
+
+        header_map: dict[int, str] = {}
+        for index, header in enumerate(header_values):
+            normalized = _normalize_header(header)
+            if normalized is not None:
+                header_map[index] = normalized
+
         parsed_rows: list[dict[str, str]] = []
-        for row in sheet.findall(".//m:sheetData/m:row", namespace)[1:]:
+        for row in all_rows[1:]:
             values: list[str] = []
             for cell in row.findall("m:c", namespace):
                 cell_type = cell.get("t")
@@ -108,9 +156,12 @@ def read_rows(path: Path) -> list[dict[str, str]]:
                     values.append(raw_value.text)
             if not values:
                 continue
-            while len(values) < len(HEADERS):
-                values.append("")
-            record = dict(zip(HEADERS, values[: len(HEADERS)], strict=False))
+
+            record = {field: "" for field in HEADERS}
+            for index, field in header_map.items():
+                if index < len(values):
+                    record[field] = values[index]
+
             company = record["company"].strip()
             item_name = record["item_name"].strip()
             if not company or not item_name:
@@ -134,13 +185,31 @@ def canonicalize_company_names(rows: list[dict[str, str]]) -> list[dict[str, str
     ]
 
 
+def dedupe_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Keep one row per (company, item_name, category); sum quantity on duplicates."""
+    merged: dict[tuple[str, str, str], dict[str, str]] = {}
+    for row in rows:
+        key = (row["company"].strip(), row["item_name"].strip(), row["category"].strip())
+        if key not in merged:
+            merged[key] = dict(row)
+            continue
+        existing_qty = Decimal(merged[key]["quantity_on_hand"] or "0")
+        incoming_qty = Decimal(row["quantity_on_hand"] or "0")
+        merged[key]["quantity_on_hand"] = str(existing_qty + incoming_qty)
+    return list(merged.values())
+
+
 def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
     buyers = sorted({row["company"].strip() for row in rows})
+    buyer_id_by_name = {
+        name: str(uuid.uuid5(CATALOG_NAMESPACE, f"buyer:{name}")) for name in buyers
+    }
     buyer_records = [
         {
-            "id": str(uuid.uuid5(CATALOG_NAMESPACE, f"buyer:{name}")),
+            "id": buyer_id_by_name[name],
             "name": name,
             "address": "",
+            "is_active": True,
         }
         for name in buyers
     ]
@@ -149,7 +218,7 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
     for row in rows:
         grouped.setdefault(row["company"].strip(), []).append(row)
 
-    products: list[dict[str, str | None]] = []
+    products: list[dict[str, str | None | bool]] = []
     for company in sorted(grouped):
         slug = company_slug(company)
         company_rows = sorted(
@@ -165,6 +234,7 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
                     "item_name": row["item_name"].strip(),
                     "category": row["category"].strip(),
                     "company_name": company,
+                    "buyer_id": buyer_id_by_name[company],
                     "hsn_code": normalize_hsn(row["hsn_code"]),
                     "buying_price": normalize_decimal(row["buying_price"], scale=3, default="0"),
                     "selling_price": normalize_decimal(row["selling_price"], scale=3, default="0"),
@@ -174,6 +244,7 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
                         row["quantity_on_hand"], scale=0, default="0"
                     ),
                     "low_stock_threshold": "0",
+                    "is_active": True,
                 }
             )
 
@@ -197,16 +268,22 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
     }
 
 
+def write_outputs(catalog: dict[str, object]) -> None:
+    OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_JSON.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+    SUPABASE_SEED_JSON.parent.mkdir(parents=True, exist_ok=True)
+    SUPABASE_SEED_JSON.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     if not SOURCE_XLSX.exists():
         raise SystemExit(f"Source spreadsheet not found: {SOURCE_XLSX}")
 
-    rows = canonicalize_company_names(read_rows(SOURCE_XLSX))
+    rows = dedupe_rows(canonicalize_company_names(read_rows(SOURCE_XLSX)))
     catalog = build_catalog(rows)
-    OUTPUT_JSON.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_JSON.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+    write_outputs(catalog)
     print(
-        f"Wrote {OUTPUT_JSON} "
+        f"Wrote {OUTPUT_JSON} and {SUPABASE_SEED_JSON} "
         f"({len(catalog['buyers'])} buyers, {len(catalog['products'])} products)"
     )
 
