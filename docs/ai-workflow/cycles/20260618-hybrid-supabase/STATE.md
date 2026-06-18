@@ -2,74 +2,43 @@
 
 Cycle ID: `20260618-hybrid-supabase`
 
-Parent cycle: `20260614-invoice-collections-backup-analytics`
-
-Objective: Convert Khata from selectable API/local runtimes into one hybrid runtime where Supabase Postgres is the source of truth, Drift is an append/upsert cache, all official writes go through Supabase RPC, and backup/local-only runtime surfaces are removed after parity is proven.
-
-Workflow schema: five-stage-v1
-
 Current stage: `3-implementation`
 
-Stage status: `in-progress`
+Stage status: `complete`
 
 Persistent LLM lane: `paused-after-stage-2`
 
-Current owner: `Stage 3 fresh SLM`
+Current owner: `Stage 4 fresh SLM`
 
-Next owner: `Stage 4 fresh SLM`
+Next owner: `Stage 5 persistent LLM`
 
-Current task: Task 02 — Supabase schema, RLS, RPC, SQL tests
-
-Stage 2 planning baseline SHA: `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1`
+Current task: Stage 4 verification
 
 Stage 3 implementation baseline SHA: `1fe37eee8fa8bc689f1c40fa630853fa8f3daf5a`
 
-## Stage 2 Boundary Audit
-
-- Stage 2 planning commit: `c7fff58`
-- User backup commit atop planning: `1fe37ee backup before hybrid`
-- Implementation baseline for Stage 3: `1fe37ee`
+Stage 3 final HEAD: see `03-implementation-log.md`
 
 ## Git And Worktree Contract
 
 Integration target branch: `main`
 
-Planning checkout absolute path: `/Users/abhishek/python_venv/khata_app`
-
 Feature branch: `codex/hybrid-supabase`
 
-Worktree name/ID: `hybrid-supabase`
-
-Canonical worktree absolute path: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
-
-Feature worktree status: created
-
-Safety backup branch: `main_backup` at `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1` (verified remote)
+Canonical worktree: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
 
 Supabase project ref: `ekwkklcfovwarcvvxtiq`
-
-Merge owner: Stage 5 persistent LLM
-
-Merge authorization: required
 
 Merge status: not-started
 
 ## Completed Tasks
 
-- Task 01: worktree created, safety audit, .env untracked (pending commit)
-
-## Pending Tasks
-
-- Task 02: Supabase schema, RLS, RPC, SQL tests
-- Task 03: catalog canonicalization and seed parity
-- Task 04: mobile hybrid auth, sync, services
-- Task 05: cutover cleanup
-- Task 06: validation and Stage 4 handoff
-
-## Locked Decisions
-
-(Unchanged from Stage 2 — see prior STATE.md sections.)
+- Task 01: worktree setup
+- Task 02: Supabase schema/RLS/RPC
+- Task 03: catalog seed parity
+- Task 04: mobile hybrid services
+- Task 05: hybrid default runtime (backup/local UI gated)
+- Task 06: validation and handoff artifacts
 
 ## Exact Next Action
 
-Implement Task 02: create `supabase/migrations/`, RLS, RPCs, and SQL tests; link and push to remote project `ekwkklcfovwarcvvxtiq`.
+Open fresh Stage 4 context in canonical worktree. Read `04-return-packet.md`, `04-validation-report.md`, `03-implementation-log.md`. Verify diff and run manual Supabase/device scenarios. Do not merge.

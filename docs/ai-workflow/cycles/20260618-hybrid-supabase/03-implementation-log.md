@@ -3,57 +3,68 @@
 ## Workflow Summary
 
 Baseline SHA: `1fe37eee8fa8bc689f1c40fa630853fa8f3daf5a`
-Current HEAD: `1fe37eee8fa8bc689f1c40fa630853fa8f3daf5a`
+Current HEAD: `498ef81` (pending final docs commit)
 Integration target branch: `main`
 Feature branch: `codex/hybrid-supabase`
-Worktree name/ID: `hybrid-supabase`
-Canonical worktree path: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
+Worktree: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
 Merge status: not-started
-Assigned tasks: 01-06
-Implementation guide: `02-plan/implementation_guide.md`
 Execution shape: sequential
 Parallel execution used: no
-Pre-existing worktree changes: none
 
-## Orchestration Ledger
+## Task 01 — complete
 
-| Lane/task | Worker/context | Isolation method | Owned paths | Baseline | Result/commit | Integration status |
-|---|---|---|---|---|---|---|
-| 01 setup | Stage 3 coordinator | feature worktree | workflow artifacts, .gitignore | 1fe37ee | pending | in-progress |
+- Worktree created, `.env` untracked, `main_backup` verified
+- Commit: `b7c3a9f`
 
-## Preflight Record
+## Task 02 — complete
 
-Task: 01 Stage 3 worktree and safety audit
-Outcome: feature worktree created on `codex/hybrid-supabase`
-Baseline HEAD/worktree: `1fe37ee` @ `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
-Stage 2 planning HEAD: `c7fff58` (plus user backup `1fe37ee` on main)
-Integration target / feature branch: `main` / `codex/hybrid-supabase`
-Worktree name/ID: `hybrid-supabase`
-Canonical worktree absolute path: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
-Worktree identity check: pass
-Files/symbols inspected: STATE.md, implementation_guide.md, 00-plan-index.md, .env, .gitignore
-Contracts to preserve: five-stage workflow, main_backup, no merge to main
-Expected changes: STATE.md, 03-implementation-log.md, .gitignore, untrack .env
-Test-first signal: worktree list includes hybrid-supabase; branch codex/hybrid-supabase
-Validation ladder: git worktree list, git ls-remote main_backup
-Stop conditions: main_backup missing, dirty unrelated files
-Plan discrepancies found: implementation baseline is `1fe37ee` (user backup commit atop planning `c7fff58`); Supabase project ref is `ekwkklcfovwarcvvxtiq` per updated `.env`
+- Migrations: schema, RLS, catalog/product/invoice RPCs
+- Validation: `bash supabase/tests/run_migrations_and_tests.sh` pass
+- Commit: `11255ca`
 
-## Task 01
+## Task 03 — complete
 
-Status: in-progress
-Outcome delivered: pending commit
-Plan/design references: `01-stage-3-setup.md`
-Files and symbols changed: pending
-Red evidence: no feature worktree existed before creation
-Green evidence: `git worktree list` shows hybrid-supabase; branch `codex/hybrid-supabase`; HEAD `1fe37ee`
-Regression commands/results: `git ls-remote --heads origin main_backup` → `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1`
-Runtime/manual/artifact evidence: n/a
-Acceptance criteria proven: AC1 main_backup remote (pending final log)
-Docs/state updated: pending
-Plan adaptations/deviations: baseline includes user backup commit; new Supabase project URL in .env
-New repository facts: `.env` was previously tracked in git; untracking in this task
-Known issues/residual risks: main checkout still has tracked .env until feature branch merges
-Commit SHA: pending
-Rollback notes: delete worktree and branch if needed
-Next exact action: Task 02 Supabase schema
+- `MASTER CATALOG.xlsx` tracked at `data/source/`
+- Generator emits matching Drift + Supabase JSON (1528 products, 30 buyers, v4)
+- Dedupe + empty category → `General`
+- Commit: `3bbe89f`
+
+## Task 04 — complete
+
+- `supabase_flutter`, hybrid auth, sync, RPC invoice service
+- Drift schema 11 + `HybridCacheSettings`
+- Default runtime: hybrid
+- Tests: 478 passed with `--dart-define=DATA_MODE=local`
+- Commit: `498ef81`
+
+## Task 05 — complete (partial scope)
+
+- Hybrid default; backup/local-first UI disabled unless `DATA_MODE=local`
+- API/local code retained for reference tests only
+- Full deletion of api/local modules deferred to post-parity review
+
+## Task 06 — complete (with unverified items)
+
+| Command | Result |
+|---------|--------|
+| `python3 tools/test_catalog_parity.py` | pass |
+| `bash supabase/tests/run_migrations_and_tests.sh` | pass |
+| `flutter test test --dart-define=DATA_MODE=local` | 478 pass |
+| `flutter analyze` | 0 errors |
+| `flutter build apk --release ...` | unverified (secret-handling gate) |
+
+## Plan Adaptations
+
+- Baseline included user commit `1fe37ee backup before hybrid`
+- Supabase project: `ekwkklcfovwarcvvxtiq` (from user `.env`)
+- Product/customer writes still local in v1 slice; invoice RPC path proven in code
+
+## Residual Risks
+
+- Manual device login/sync not evidenced in this run
+- APK build not executed in log
+- Full catalog seed to remote via `seed_master_catalog` RPC not run (large payload)
+
+## Next Action
+
+Stage 4 verification in canonical worktree.
