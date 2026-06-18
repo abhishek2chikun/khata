@@ -19,6 +19,12 @@ import '../backup/local_backup_transfer_service.dart';
 import '../backup/secure_backup_secret_store.dart';
 import '../backup/workmanager_schedule_adapter.dart';
 import '../config/api_base_url.dart';
+import '../hybrid/hybrid_auth_service.dart';
+import '../hybrid/hybrid_invoices_service.dart';
+import '../hybrid/hybrid_rpc_client.dart';
+import '../hybrid/hybrid_sync_service.dart';
+import '../hybrid/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../local/local_analytics_service.dart';
 import '../local/local_auth_service.dart';
 import '../local/local_buyers_service.dart';
@@ -107,7 +113,74 @@ class AppDependencies {
           backupSecretStore: backupSecretStore,
           backupScheduleAdapter: backupScheduleAdapter,
         );
+      case DataMode.hybrid:
+        return _createHybridDependencies(
+          database: localDatabase,
+          sessionStore: sessionStore,
+          loadCatalogJson: loadCatalogJson,
+        );
     }
+  }
+
+  static Future<AppDependencies> _createHybridDependencies({
+    LocalDatabase? database,
+    SessionStore? sessionStore,
+    CatalogJsonLoader? loadCatalogJson,
+  }) async {
+    final config = SupabaseConfig.fromEnvironment();
+    if (config == null || !config.isConfigured) {
+      throw StateError(
+        'Hybrid mode requires SUPABASE_URL and SUPABASE_ANON_KEY dart-defines.',
+      );
+    }
+
+    final localDatabase = database ?? LocalDatabase();
+    if (loadCatalogJson != null || database == null) {
+      await LocalProductCatalogSeeder(
+        database: localDatabase,
+        loadCatalogJson: loadCatalogJson ??
+            () => rootBundle.loadString(
+                  LocalProductCatalogSeeder.catalogAssetPath,
+                ),
+      ).seedIfNeeded();
+    }
+
+    final client = Supabase.instance.client;
+    final authService = HybridAuthService(client);
+    final controller = AuthController(
+      authService: authService,
+      sessionStore: sessionStore ?? SecureSessionStore(keyPrefix: 'auth.hybrid'),
+    );
+    final cacheRepository = HybridCacheRepository(localDatabase);
+    final syncService = HybridSyncService(
+      client: client,
+      cacheRepository: cacheRepository,
+    );
+    final rpcClient = HybridRpcClient(client: client);
+    final localInvoicesService = LocalInvoicesService(database: localDatabase);
+
+    Future<void> refreshAfterWrite() async {
+      await syncService.syncAll(forceFull: true);
+    }
+
+    return AppDependencies(
+      mode: DataMode.hybrid,
+      controller: controller,
+      productsService: LocalProductsService(database: localDatabase),
+      customersService: LocalCustomersService(database: localDatabase),
+      buyersService: LocalBuyersService(database: localDatabase),
+      companyProfileService: LocalCompanyProfileService(database: localDatabase),
+      paymentsService: LocalPaymentsService(database: localDatabase),
+      invoicesService: HybridInvoicesService(
+        localInvoicesService: localInvoicesService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
+      analyticsService: LocalAnalyticsService(database: localDatabase),
+      dispose: () async {
+        await localDatabase.close();
+      },
+    );
   }
 
   static Future<AppDependencies> _createLocalDependencies({

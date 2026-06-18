@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 10);
+    expect(database.schemaVersion, 11);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -28,6 +28,7 @@ void main() {
           'local_sessions',
           'backup_events',
           'backup_settings',
+          'hybrid_cache_settings',
         ]));
   });
 

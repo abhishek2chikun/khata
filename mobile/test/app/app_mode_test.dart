@@ -2,8 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
 
 void main() {
-  test('parseDataMode defaults to api', () {
-    expect(parseDataMode(''), DataMode.api);
+  test('parseDataMode defaults to hybrid', () {
+    expect(parseDataMode(''), DataMode.hybrid);
+  });
+
+  test('parseDataMode accepts hybrid', () {
+    expect(parseDataMode('hybrid'), DataMode.hybrid);
   });
 
   test('parseDataMode accepts api', () {
@@ -22,7 +26,7 @@ void main() {
     expect(() => parseDataMode('server'), throwsArgumentError);
   });
 
-  test('resolveDataMode defaults to api', () {
-    expect(resolveDataMode(), DataMode.api);
+  test('resolveDataMode honors compile-time DATA_MODE override', () {
+    expect(resolveDataMode(), DataMode.local);
   });
 }

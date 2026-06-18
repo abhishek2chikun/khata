@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_controller.dart';
 import 'app/app_dependencies.dart';
 import 'app/app_mode.dart';
+import 'hybrid/supabase_config.dart';
 import 'backup/backup_scheduler.dart';
 import 'backup/backup_screen.dart';
 import 'backup/drive_backup_service.dart';
@@ -34,7 +36,19 @@ import 'widgets/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeLocalBackupPlatformServices();
+  final mode = resolveDataMode();
+  if (mode == DataMode.local) {
+    await initializeLocalBackupPlatformServices();
+  }
+  if (mode == DataMode.hybrid) {
+    final config = SupabaseConfig.fromEnvironment();
+    if (config != null) {
+      await Supabase.initialize(
+        url: config.url,
+        anonKey: config.anonKey,
+      );
+    }
+  }
 
   final dependencies = await AppDependencies.create();
   runApp(
@@ -262,6 +276,9 @@ class _BillingAppState extends State<BillingApp> {
   }
 
   Future<void> _checkLocalUsers() async {
+    if (widget.dependencies?.mode != DataMode.local) {
+      return;
+    }
     final hasLocalUsers = widget.dependencies?.hasLocalUsers;
     if (hasLocalUsers == null) {
       return;

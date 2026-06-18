@@ -9951,6 +9951,289 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
   }
 }
 
+class $HybridCacheSettingsTable extends HybridCacheSettings
+    with TableInfo<$HybridCacheSettingsTable, HybridCacheSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HybridCacheSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _initializedMeta =
+      const VerificationMeta('initialized');
+  @override
+  late final GeneratedColumn<bool> initialized = GeneratedColumn<bool>(
+      'initialized', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("initialized" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _lastSyncedAtMeta =
+      const VerificationMeta('lastSyncedAt');
+  @override
+  late final GeneratedColumn<String> lastSyncedAt = GeneratedColumn<String>(
+      'last_synced_at', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, initialized, lastSyncedAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'hybrid_cache_settings';
+  @override
+  VerificationContext validateIntegrity(Insertable<HybridCacheSetting> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('initialized')) {
+      context.handle(
+          _initializedMeta,
+          initialized.isAcceptableOrUnknown(
+              data['initialized']!, _initializedMeta));
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+          _lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(
+              data['last_synced_at']!, _lastSyncedAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  HybridCacheSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HybridCacheSetting(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      initialized: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}initialized'])!,
+      lastSyncedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}last_synced_at']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $HybridCacheSettingsTable createAlias(String alias) {
+    return $HybridCacheSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class HybridCacheSetting extends DataClass
+    implements Insertable<HybridCacheSetting> {
+  final String id;
+  final bool initialized;
+  final String? lastSyncedAt;
+  final String updatedAt;
+  const HybridCacheSetting(
+      {required this.id,
+      required this.initialized,
+      this.lastSyncedAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['initialized'] = Variable<bool>(initialized);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<String>(lastSyncedAt);
+    }
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  HybridCacheSettingsCompanion toCompanion(bool nullToAbsent) {
+    return HybridCacheSettingsCompanion(
+      id: Value(id),
+      initialized: Value(initialized),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory HybridCacheSetting.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HybridCacheSetting(
+      id: serializer.fromJson<String>(json['id']),
+      initialized: serializer.fromJson<bool>(json['initialized']),
+      lastSyncedAt: serializer.fromJson<String?>(json['lastSyncedAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'initialized': serializer.toJson<bool>(initialized),
+      'lastSyncedAt': serializer.toJson<String?>(lastSyncedAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  HybridCacheSetting copyWith(
+          {String? id,
+          bool? initialized,
+          Value<String?> lastSyncedAt = const Value.absent(),
+          String? updatedAt}) =>
+      HybridCacheSetting(
+        id: id ?? this.id,
+        initialized: initialized ?? this.initialized,
+        lastSyncedAt:
+            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  HybridCacheSetting copyWithCompanion(HybridCacheSettingsCompanion data) {
+    return HybridCacheSetting(
+      id: data.id.present ? data.id.value : this.id,
+      initialized:
+          data.initialized.present ? data.initialized.value : this.initialized,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HybridCacheSetting(')
+          ..write('id: $id, ')
+          ..write('initialized: $initialized, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, initialized, lastSyncedAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HybridCacheSetting &&
+          other.id == this.id &&
+          other.initialized == this.initialized &&
+          other.lastSyncedAt == this.lastSyncedAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class HybridCacheSettingsCompanion extends UpdateCompanion<HybridCacheSetting> {
+  final Value<String> id;
+  final Value<bool> initialized;
+  final Value<String?> lastSyncedAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const HybridCacheSettingsCompanion({
+    this.id = const Value.absent(),
+    this.initialized = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HybridCacheSettingsCompanion.insert({
+    required String id,
+    this.initialized = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        updatedAt = Value(updatedAt);
+  static Insertable<HybridCacheSetting> custom({
+    Expression<String>? id,
+    Expression<bool>? initialized,
+    Expression<String>? lastSyncedAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (initialized != null) 'initialized': initialized,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HybridCacheSettingsCompanion copyWith(
+      {Value<String>? id,
+      Value<bool>? initialized,
+      Value<String?>? lastSyncedAt,
+      Value<String>? updatedAt,
+      Value<int>? rowid}) {
+    return HybridCacheSettingsCompanion(
+      id: id ?? this.id,
+      initialized: initialized ?? this.initialized,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (initialized.present) {
+      map['initialized'] = Variable<bool>(initialized.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<String>(lastSyncedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HybridCacheSettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('initialized: $initialized, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -9970,6 +10253,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $LocalSessionsTable localSessions = $LocalSessionsTable(this);
   late final $BackupEventsTable backupEvents = $BackupEventsTable(this);
   late final $BackupSettingsTable backupSettings = $BackupSettingsTable(this);
+  late final $HybridCacheSettingsTable hybridCacheSettings =
+      $HybridCacheSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9987,7 +10272,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
         invoiceItems,
         localSessions,
         backupEvents,
-        backupSettings
+        backupSettings,
+        hybridCacheSettings
       ];
 }
 
@@ -16728,6 +17014,170 @@ typedef $$BackupSettingsTableProcessedTableManager = ProcessedTableManager<
     ),
     BackupSetting,
     PrefetchHooks Function()>;
+typedef $$HybridCacheSettingsTableCreateCompanionBuilder
+    = HybridCacheSettingsCompanion Function({
+  required String id,
+  Value<bool> initialized,
+  Value<String?> lastSyncedAt,
+  required String updatedAt,
+  Value<int> rowid,
+});
+typedef $$HybridCacheSettingsTableUpdateCompanionBuilder
+    = HybridCacheSettingsCompanion Function({
+  Value<String> id,
+  Value<bool> initialized,
+  Value<String?> lastSyncedAt,
+  Value<String> updatedAt,
+  Value<int> rowid,
+});
+
+class $$HybridCacheSettingsTableFilterComposer
+    extends Composer<_$LocalDatabase, $HybridCacheSettingsTable> {
+  $$HybridCacheSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get initialized => $composableBuilder(
+      column: $table.initialized, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$HybridCacheSettingsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $HybridCacheSettingsTable> {
+  $$HybridCacheSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get initialized => $composableBuilder(
+      column: $table.initialized, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$HybridCacheSettingsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $HybridCacheSettingsTable> {
+  $$HybridCacheSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<bool> get initialized => $composableBuilder(
+      column: $table.initialized, builder: (column) => column);
+
+  GeneratedColumn<String> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$HybridCacheSettingsTableTableManager extends RootTableManager<
+    _$LocalDatabase,
+    $HybridCacheSettingsTable,
+    HybridCacheSetting,
+    $$HybridCacheSettingsTableFilterComposer,
+    $$HybridCacheSettingsTableOrderingComposer,
+    $$HybridCacheSettingsTableAnnotationComposer,
+    $$HybridCacheSettingsTableCreateCompanionBuilder,
+    $$HybridCacheSettingsTableUpdateCompanionBuilder,
+    (
+      HybridCacheSetting,
+      BaseReferences<_$LocalDatabase, $HybridCacheSettingsTable,
+          HybridCacheSetting>
+    ),
+    HybridCacheSetting,
+    PrefetchHooks Function()> {
+  $$HybridCacheSettingsTableTableManager(
+      _$LocalDatabase db, $HybridCacheSettingsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HybridCacheSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HybridCacheSettingsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HybridCacheSettingsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<bool> initialized = const Value.absent(),
+            Value<String?> lastSyncedAt = const Value.absent(),
+            Value<String> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HybridCacheSettingsCompanion(
+            id: id,
+            initialized: initialized,
+            lastSyncedAt: lastSyncedAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            Value<bool> initialized = const Value.absent(),
+            Value<String?> lastSyncedAt = const Value.absent(),
+            required String updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HybridCacheSettingsCompanion.insert(
+            id: id,
+            initialized: initialized,
+            lastSyncedAt: lastSyncedAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$HybridCacheSettingsTableProcessedTableManager = ProcessedTableManager<
+    _$LocalDatabase,
+    $HybridCacheSettingsTable,
+    HybridCacheSetting,
+    $$HybridCacheSettingsTableFilterComposer,
+    $$HybridCacheSettingsTableOrderingComposer,
+    $$HybridCacheSettingsTableAnnotationComposer,
+    $$HybridCacheSettingsTableCreateCompanionBuilder,
+    $$HybridCacheSettingsTableUpdateCompanionBuilder,
+    (
+      HybridCacheSetting,
+      BaseReferences<_$LocalDatabase, $HybridCacheSettingsTable,
+          HybridCacheSetting>
+    ),
+    HybridCacheSetting,
+    PrefetchHooks Function()>;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -16758,4 +17208,6 @@ class $LocalDatabaseManager {
       $$BackupEventsTableTableManager(_db, _db.backupEvents);
   $$BackupSettingsTableTableManager get backupSettings =>
       $$BackupSettingsTableTableManager(_db, _db.backupSettings);
+  $$HybridCacheSettingsTableTableManager get hybridCacheSettings =>
+      $$HybridCacheSettingsTableTableManager(_db, _db.hybridCacheSettings);
 }

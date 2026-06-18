@@ -142,10 +142,12 @@ void main() {
     await dependencies.dispose();
   });
 
-  test('default dependencies resolve to api mode', () async {
-    final dependencies =
-        await AppDependencies.create(apiBaseUri: testApiBaseUri);
-    expect(dependencies.mode, DataMode.api);
+  test('default dependencies resolve to local mode when DATA_MODE=local', () async {
+    final dependencies = await AppDependencies.create(
+      mode: DataMode.local,
+      localDatabase: db.LocalDatabase.memory(),
+    );
+    expect(dependencies.mode, DataMode.local);
     await dependencies.dispose();
   });
 

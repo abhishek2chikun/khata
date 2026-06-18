@@ -232,7 +232,7 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
                     "id": str(uuid.uuid5(CATALOG_NAMESPACE, f"product:{item_number}")),
                     "item_number": item_number,
                     "item_name": row["item_name"].strip(),
-                    "category": row["category"].strip(),
+                    "category": row["category"].strip() or "General",
                     "company_name": company,
                     "buyer_id": buyer_id_by_name[company],
                     "hsn_code": normalize_hsn(row["hsn_code"]),

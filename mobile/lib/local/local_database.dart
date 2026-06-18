@@ -337,6 +337,16 @@ class BackupSettings extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+class HybridCacheSettings extends Table {
+  TextColumn get id => text()();
+  BoolColumn get initialized => boolean().withDefault(const Constant(false))();
+  TextColumn get lastSyncedAt => text().nullable()();
+  TextColumn get updatedAt => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   LocalUsers,
   Products,
@@ -351,6 +361,7 @@ class BackupSettings extends Table {
   LocalSessions,
   BackupEvents,
   BackupSettings,
+  HybridCacheSettings,
 ])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(openLocalDatabaseConnection());
@@ -360,11 +371,14 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
+          if (from < 11) {
+            await m.createTable(hybridCacheSettings);
+          }
           if (from < 2) {
             await customStatement('PRAGMA foreign_keys = OFF');
             await customStatement('''
