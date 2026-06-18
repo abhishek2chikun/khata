@@ -67,6 +67,7 @@ class AppDependencies {
     this.driveBackupService,
     this.backupTransferService,
     this.backupScheduler,
+    this.syncService,
     Future<void> Function()? dispose,
   }) : _dispose = dispose;
 
@@ -84,6 +85,7 @@ class AppDependencies {
   final DriveBackupService? driveBackupService;
   final BackupTransferService? backupTransferService;
   final BackupScheduler? backupScheduler;
+  final HybridSyncService? syncService;
   final Future<void> Function()? _dispose;
 
   static Future<AppDependencies> create({
@@ -177,6 +179,7 @@ class AppDependencies {
         refreshAfterWrite: refreshAfterWrite,
       ),
       analyticsService: LocalAnalyticsService(database: localDatabase),
+      syncService: syncService,
       dispose: () async {
         await localDatabase.close();
       },

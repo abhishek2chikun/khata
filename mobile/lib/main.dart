@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -106,26 +108,87 @@ class BillingApp extends StatefulWidget {
   State<BillingApp> createState() => _BillingAppState();
 }
 
-class _BillingAppState extends State<BillingApp> {
+class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
   AppDestination _selectedDestination = AppDestination.inventory;
   bool _isCheckingLocalUsers = false;
   bool _needsLocalFirstUserSetup = false;
   bool _didStartLocalBackupScheduling = false;
+  bool _hybridBootstrapStarted = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.controller.addListener(_maybeBootstrapHybrid);
     _checkLocalUsers();
-    widget.controller.restoreSession();
+    unawaited(widget.controller.restoreSession());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.controller.removeListener(_maybeBootstrapHybrid);
     final dependencies = widget.dependencies;
     if (dependencies != null) {
       Future<void>.microtask(dependencies.dispose);
     }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_syncHybridIfAuthenticated());
+    }
+  }
+
+  void _maybeBootstrapHybrid() {
+    if (!mounted || widget.dependencies?.mode != DataMode.hybrid) {
+      return;
+    }
+    if (!widget.controller.isAuthenticated || _hybridBootstrapStarted) {
+      return;
+    }
+    _hybridBootstrapStarted = true;
+    unawaited(_bootstrapHybridCache());
+  }
+
+  Future<void> _bootstrapHybridCache() async {
+    final syncService = widget.dependencies?.syncService;
+    if (syncService == null) {
+      return;
+    }
+    try {
+      await syncService.initializeHybridCacheIfNeeded();
+      if (mounted) {
+        setState(() {});
+      }
+    } on Object {
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _syncHybridIfAuthenticated() async {
+    if (widget.dependencies?.mode != DataMode.hybrid ||
+        !widget.controller.isAuthenticated) {
+      return;
+    }
+    final syncService = widget.dependencies?.syncService;
+    if (syncService == null) {
+      return;
+    }
+    try {
+      await syncService.syncAll();
+      if (mounted) {
+        setState(() {});
+      }
+    } on Object {
+      if (mounted) {
+        setState(() {});
+      }
+    }
   }
 
   @override

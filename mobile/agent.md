@@ -12,7 +12,8 @@ Role: Flutter client for login, inventory, customer khata ledger, buyer payable 
 
 ## How to use this system
 
-- Default `DATA_MODE=api` uses the FastAPI backend. Start the backend first for API mode.
+- Default runtime is **`DATA_MODE=hybrid`** (Supabase Postgres authority + Drift cache). Requires `--dart-define=SUPABASE_URL` and `--dart-define=SUPABASE_ANON_KEY`.
+- `DATA_MODE=api` uses the FastAPI backend. Start the backend first for API mode.
 - `DATA_MODE=local` runs without FastAPI/PostgreSQL by using Drift/SQLite local services.
 - Prefer running API mode against `8010` right now. Android emulator support is built around `10.0.2.2` and optional `adb reverse`.
 - Keep API request/response field names aligned with backend JSON exactly.
