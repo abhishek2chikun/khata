@@ -139,7 +139,7 @@ None captured in Stage 4. Required before merge: Supabase Auth login, `initializ
 - Blocking gap: hybrid mode still writes master catalog data locally.
 
 ## Known Issues, Unverified Claims, And Residual Risk
-- APK build not finished in Stage 4 window.
+- APK build: **verified** after Stage 4 report — hybrid release APK built successfully (68.7MB).
 - `seed_master_catalog` not run against remote for full catalog.
 - SQL tests do not prove idempotency or concurrent invoice numbering.
 - Stage 3 log claim "478 tests" upgraded to 481 after Stage 4 tests.

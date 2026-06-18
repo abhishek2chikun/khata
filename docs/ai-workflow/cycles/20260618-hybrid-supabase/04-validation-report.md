@@ -97,7 +97,7 @@ Stage 4 confirmed the failure boundary with code inspection, then reproduced gre
 | `flutter test test/hybrid/` | hybrid focused | 13 pass | |
 | `flutter analyze` | static | 0 errors, 44 info/warn | |
 | `rg service_role mobile/` | secret scan | clean | |
-| `flutter build apk --release ...` | AC17 | unverified | build still running at report time |
+| `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=DATA_MODE=hybrid` | AC17 | pass | `app-release.apk` 68.7MB, ~20m build |
 
 ## Runtime And Scenario Validation
 - Happy path (hybrid login → sync → read cache): **not evidenced**; requires Supabase auth users + seeded remote catalog.
