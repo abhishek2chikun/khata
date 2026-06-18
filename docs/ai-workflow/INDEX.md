@@ -6,9 +6,9 @@ Project: Internal Billing and Khata System (`khata_app`)
 
 Workflow root: `docs/ai-workflow/`
 
-Current repository HEAD: `862dc3468005f7e3bd87881090f0ee38f9abe47d`
+Stage 2 starting repository HEAD: `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1`
 
-Active cycle: none
+Active cycle: `20260618-hybrid-supabase` (Stage 2 planning complete; Stage 3 not started)
 
 Last accepted/reviewed cycle: `20260614-invoice-collections-backup-analytics` (integrated at `1d8e5dc`; release followups open)
 
@@ -20,12 +20,14 @@ Last updated: 2026-06-18 IST
 |---|---|---|---|---|---|---|---|---|---|
 | `khata-app-baseline` | first-cycle | GST/non-GST invoicing, adaptive PDFs, sharing, local production audit | accepted-with-followups | `7699ae6` | `de7318a` | historical / superseded by upgrade cycle | invoicing, pdf, sharing | none | `khata-app-baseline/` |
 | `20260614-invoice-collections-backup-analytics` | new-cycle | HSN/precision, invoice UX/PDF, batch collections, Drive backup, owner analytics | accepted-with-followups; merged-and-verified; release-unverified | `837ccbc` | `5b66165` | `1d8e5dc` merged into `main`; post-merge commits through `862dc34` | hsn, collections, drive, analytics, local-mode | `khata-app-baseline` | `cycles/20260614-invoice-collections-backup-analytics/` |
+| `20260618-hybrid-supabase` | new-cycle | Supabase authority, Drift cache, RPC-only writes, hybrid-only runtime cleanup | stage-2-planned; awaiting-stage-3 | `f873c38` | n/a | not-started | supabase, sync, rpc, cache, cleanup | `20260614-invoice-collections-backup-analytics` | `cycles/20260618-hybrid-supabase/` |
 
 ## Active Cross-Cycle Blockers
 
 - Physical Android Google OAuth, WorkManager, Drive backup, and restore remain unverified (AC10/AC11).
 - Production Android application ID and signing remain unresolved.
 - API collection concurrency defect in `backend/app/services/customer_service.py` must be repaired before any future server-mode deployment.
+- Hybrid Supabase implementation is planned but not implemented; Stage 3 must start in a fresh feature worktree.
 
 ## Deferred Opportunities
 
@@ -33,6 +35,7 @@ Last updated: 2026-06-18 IST
 - Physical-device Drive backup/restore evidence matrix.
 - API collection concurrency repair with PostgreSQL-backed proof.
 - Catalog v3 rebuild from corrected source workbook (uncommitted WIP on `main`).
+- Hybrid-only cleanup after Supabase authority parity is proven.
 
 ## Superseded Cycles/Decisions
 
@@ -44,9 +47,10 @@ Last updated: 2026-06-18 IST
 
 - Integration target branch: `main`
 - Planning checkout absolute path: `/Users/abhishek/python_venv/khata_app`
-- Proposed feature branch convention: `feature/<scope-slug>` or `codex/<scope-slug>`
-- Proposed worktree locations: `.worktrees/<scope-slug>` (in-repo) or sibling `/Users/abhishek/python_venv/khata_app-<scope-slug>`
+- Proposed feature branch for active cycle: `codex/hybrid-supabase`
+- Proposed worktree location for active cycle: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
 - Feature branch/worktree creation: pending Stage 3 only
+- Safety backup branch: `main_backup` pushed at `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1`
 
 ### Registered Worktrees (as-of `862dc34`)
 

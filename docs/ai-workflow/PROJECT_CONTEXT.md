@@ -4,15 +4,16 @@ Workflow schema: five-stage-v1
 
 Repository: `/Users/abhishek/python_venv/khata_app`
 
-As-of HEAD: `862dc3468005f7e3bd87881090f0ee38f9abe47d`
+As-of product-code baseline: `f873c3853c263bcbd91dbaab8b72b4f1ed2e8eb1`
 
-Last reconciled by cycle: context-refresh `20260618` (no active feature cycle)
+Last reconciled by cycle: `20260618-hybrid-supabase` Stage 2 planning
 
 Last updated: 2026-06-18 IST
 
 ## Product And Architecture Summary
 
-- Primary deployed product: Flutter Android local mode backed by Drift/SQLite (`DATA_MODE=local`); this release path does not require FastAPI/PostgreSQL at runtime.
+- Current implemented product: Flutter Android local mode backed by Drift/SQLite (`DATA_MODE=local`); this release path does not require FastAPI/PostgreSQL at runtime.
+- Planned next product architecture: hybrid Supabase runtime where Supabase Postgres is source of truth, Drift is cache, and official writes use Supabase RPC only.
 - FastAPI/PostgreSQL remains compatibility code for future server mode; not a deployment gate for local mode.
 - API/local service boundaries remain parallel through `AppDependencies`.
 - Buyers are suppliers/payables; customers are retail shops/receivables.
@@ -31,6 +32,7 @@ Last updated: 2026-06-18 IST
 | Owner analytics dashboard | implemented | `20260614` cycle | `1d8e5dc` | KPIs, trends, rankings |
 | Pre-confirm invoice PDF preview | implemented | post-merge commit | `862dc34` | `InvoicePreviewBuilder`, `printing` package |
 | Preinstalled catalog seeding | implemented | baseline + v3 WIP | `862dc34` | uncommitted catalog rebuild in progress |
+| Hybrid Supabase runtime | planned, not implemented | `20260618-hybrid-supabase` Stage 2 | `f873c38` | Stage 3 must implement from planning packet |
 | API collection concurrency | deferred defect | `20260614` final review | `1d8e5dc` | `customer_service.py:211`, `:346` |
 | Production Android identity/signing | unresolved | baseline audit | historical | release blocker |
 
@@ -60,6 +62,7 @@ Last updated: 2026-06-18 IST
 | Analytics | `mobile/lib/screens/analytics_screen.dart`, `mobile/lib/local/local_analytics_service.dart` | owner KPIs and trends |
 | Backend API | `backend/app/` | FastAPI services, Alembic migrations |
 | Catalog build | `tools/build_preinstalled_catalog.py`, `data/source/products.xlsx` | preinstalled asset generation |
+| Hybrid planning packet | `docs/ai-workflow/cycles/20260618-hybrid-supabase/` | Supabase/Drift/RPC Stage 3 handoff |
 
 ## Canonical Build/Test/Run Commands
 
@@ -80,7 +83,8 @@ Verified at context-refresh `20260618`:
 ## Deployment/Environment State
 
 - Remote: `git@github.com:abhishek2chikun/khata.git`
-- Integration branch: `main` at `862dc34`
+- Integration branch: `main` at `f873c38`
+- Safety branch: `main_backup` pushed at `f873c38`
 - Local-mode release APK build documented; production signing/app ID unresolved.
 - Google Drive OAuth requires external Google Cloud configuration; no committed secrets.
 
@@ -113,4 +117,4 @@ Verified at context-refresh `20260618`:
 
 - `mobile/agent.md` A5 threshold (≤10) vs code/README (≤15).
 - `INDEX.md` prior baseline SHA `837ccbc` superseded by post-merge `main` history.
-- Untracked `docs/hybrid-supabase-architecture.html` is not part of verified workflow or product architecture.
+- `MASTER CATALOG.xlsx` is untracked but selected as the planned canonical catalog source for Stage 3.
