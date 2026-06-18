@@ -23,8 +23,8 @@ def test_generator_produces_matching_outputs() -> None:
     drift = json.loads(DRIFT_JSON.read_text(encoding="utf-8"))
     supabase = json.loads(SUPABASE_JSON.read_text(encoding="utf-8"))
     assert drift == supabase
-    assert drift["catalog_version"] >= 4
-    assert len(drift["products"]) > 0
+    assert drift["catalog_version"] >= 6
+    assert len(drift["products"]) == 1528
     assert len(drift["buyers"]) > 0
     product_ids = {item["id"] for item in drift["products"]}
     buyer_ids = {item["id"] for item in drift["buyers"]}

@@ -268,6 +268,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     try {
       final products = await widget.productsService.fetchProducts(
         filter: ProductFilter(
+          active: true,
           search: _searchController.text.trim(),
           companyName: _companyController.text.trim(),
           category: _categoryController.text.trim(),

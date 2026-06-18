@@ -163,7 +163,7 @@ Before first hybrid login, provision Supabase Auth users (emails/passwords from 
 python3 tools/provision_supabase_auth_users.py
 ```
 
-Seed the master catalog into Supabase (30 buyers, 1528 products from `data/source/MASTER CATALOG.xlsx`):
+Seed the master catalog into Supabase (30 buyers, 1528 unique products from `data/source/MASTER CATALOG.xlsx`):
 
 ```bash
 python3 tools/seed_supabase_master_catalog.py

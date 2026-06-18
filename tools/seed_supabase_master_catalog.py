@@ -91,6 +91,116 @@ def table_counts(database_url: str) -> tuple[int, int, int]:
     return buyers, products, runs
 
 
+def active_product_count(database_url: str) -> int:
+    result = subprocess.run(
+        ["psql", database_url, "-t", "-A", "-c", "SELECT count(*) FROM products WHERE is_active = true;"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(result.stdout.strip())
+
+
+def latest_catalog_version(database_url: str) -> int:
+    result = subprocess.run(
+        [
+            "psql",
+            database_url,
+            "-t",
+            "-A",
+            "-c",
+            "SELECT COALESCE(MAX(catalog_version), 0) FROM catalog_seed_runs;",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(result.stdout.strip())
+
+
+def _parse_psql_count(output: str) -> int:
+    text = output.strip()
+    if text.startswith("DELETE ") or text.startswith("UPDATE "):
+        return int(text.split()[1])
+    return int(text or "0")
+
+
+def stage_catalog_identities_for_reseed(database_url: str, catalog: dict) -> int:
+    """Temporarily rename existing catalog rows so canonical names can upsert cleanly."""
+    catalog_ids = [product["id"] for product in catalog["products"]]
+    if not catalog_ids:
+        return 0
+    quoted_ids = ", ".join(f"'{product_id}'" for product_id in catalog_ids)
+    sql = (
+        "UPDATE products "
+        "SET item_name = id::text || '::__catalog_tmp__', updated_at = NOW() "
+        f"WHERE id IN ({quoted_ids});"
+    )
+    result = subprocess.run(
+        ["psql", database_url, "-t", "-A", "-c", sql],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return _parse_psql_count(result.stdout)
+
+
+def delete_unreferenced_products(database_url: str) -> int:
+    sql = (
+        "DELETE FROM products p "
+        "WHERE NOT EXISTS ("
+        "SELECT 1 FROM invoice_items ii WHERE ii.product_id = p.id"
+        ");"
+    )
+    result = subprocess.run(
+        ["psql", database_url, "-t", "-A", "-c", sql],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return _parse_psql_count(result.stdout)
+
+
+def delete_unreferenced_catalog_orphans(database_url: str, catalog: dict) -> int:
+    catalog_ids = [product["id"] for product in catalog["products"]]
+    if not catalog_ids:
+        return 0
+    quoted_ids = ", ".join(f"'{product_id}'" for product_id in catalog_ids)
+    sql = (
+        "DELETE FROM products p "
+        f"WHERE p.id NOT IN ({quoted_ids}) "
+        "AND NOT EXISTS ("
+        "SELECT 1 FROM invoice_items ii WHERE ii.product_id = p.id"
+        ");"
+    )
+    result = subprocess.run(
+        ["psql", database_url, "-t", "-A", "-c", sql],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return _parse_psql_count(result.stdout)
+
+
+def deactivate_catalog_orphans(database_url: str, catalog: dict) -> int:
+    catalog_ids = [product["id"] for product in catalog["products"]]
+    if not catalog_ids:
+        return 0
+    quoted_ids = ", ".join(f"'{product_id}'" for product_id in catalog_ids)
+    sql = (
+        "UPDATE products "
+        "SET is_active = false, updated_at = NOW() "
+        f"WHERE is_active = true AND id NOT IN ({quoted_ids});"
+    )
+    result = subprocess.run(
+        ["psql", database_url, "-t", "-A", "-c", sql],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return _parse_psql_count(result.stdout)
+
+
 def ensure_catalog_json() -> dict:
     subprocess.run([sys.executable, str(BUILD_SCRIPT)], check=True, cwd=REPO_ROOT)
     catalog = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))
@@ -127,25 +237,53 @@ def main() -> int:
     catalog = ensure_catalog_json()
     expected_buyers = len(catalog["buyers"])
     expected_products = len(catalog["products"])
+    catalog_version = int(catalog["catalog_version"])
 
     buyers_before, products_before, _ = table_counts(database_url)
-    print(f"before: buyers={buyers_before} products={products_before}")
+    active_before = active_product_count(database_url)
+    seeded_version = latest_catalog_version(database_url)
+    print(
+        f"before: buyers={buyers_before} products={products_before} "
+        f"active_products={active_before} catalog_seed_version={seeded_version}"
+    )
 
-    if buyers_before >= expected_buyers and products_before >= expected_products:
+    if seeded_version >= catalog_version and active_before == expected_products:
         print(
             "catalog already present in Supabase "
-            f"(buyers>={expected_buyers}, products>={expected_products}); skipping seed"
+            f"(version>={catalog_version}, active_products={expected_products}); skipping seed"
         )
         return 0
 
     token = auth_token(url, anon_key, email, password)
+    if seeded_version < catalog_version:
+        staged = stage_catalog_identities_for_reseed(database_url, catalog)
+        if staged:
+            print(f"staged {staged} existing catalog product names for reseed")
+        removed = delete_unreferenced_products(database_url)
+        if removed:
+            print(
+                f"removed {removed} unreferenced products before catalog v{catalog_version} seed"
+            )
+    else:
+        removed = delete_unreferenced_catalog_orphans(database_url, catalog)
+        if removed:
+            print(f"removed {removed} unreferenced products outside catalog v{catalog_version}")
+
     result = rpc_seed(url, anon_key, token, catalog)
     print("seed result:", json.dumps(result, sort_keys=True))
 
-    buyers_after, products_after, runs_after = table_counts(database_url)
-    print(f"after: buyers={buyers_after} products={products_after} seed_runs={runs_after}")
+    deactivated = deactivate_catalog_orphans(database_url, catalog)
+    if deactivated:
+        print(f"deactivated {deactivated} products not in catalog v{catalog_version}")
 
-    if buyers_after < expected_buyers or products_after < expected_products:
+    buyers_after, products_after, runs_after = table_counts(database_url)
+    active_after = active_product_count(database_url)
+    print(
+        f"after: buyers={buyers_after} products={products_after} "
+        f"active_products={active_after} seed_runs={runs_after}"
+    )
+
+    if buyers_after < expected_buyers or active_after != expected_products:
         print(
             "seed incomplete: "
             f"expected buyers={expected_buyers} products={expected_products}",

@@ -22,12 +22,18 @@ class AppNavigationDrawer extends StatelessWidget {
     required this.onSelect,
     required this.onLogout,
     this.showLocalBackup = false,
+    this.showSyncCatalog = false,
+    this.onSyncCatalog,
+    this.isSyncing = false,
   });
 
   final AppDestination selected;
   final ValueChanged<AppDestination> onSelect;
   final Future<void> Function() onLogout;
   final bool showLocalBackup;
+  final bool showSyncCatalog;
+  final Future<void> Function()? onSyncCatalog;
+  final bool isSyncing;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +108,30 @@ class AppNavigationDrawer extends StatelessWidget {
                       },
                     ),
                   ),
+                  if (showSyncCatalog) ...<Widget>[
+                    const Divider(),
+                    ListTile(
+                      dense: true,
+                      leading: isSyncing
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            )
+                          : const Icon(Icons.sync),
+                      title: const Text('Sync catalog'),
+                      enabled: !isSyncing && onSyncCatalog != null,
+                      onTap: isSyncing || onSyncCatalog == null
+                          ? null
+                          : () async {
+                              Navigator.of(context).pop();
+                              await onSyncCatalog!();
+                            },
+                    ),
+                  ],
                   const Divider(),
                   ListTile(
                     dense: true,

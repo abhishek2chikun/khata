@@ -379,6 +379,53 @@ void main() {
     );
   });
 
+  test('non-gst pdf includes seller company profile without tax columns',
+      () async {
+    expect(invoicePdfIncludesSellerCompanyProfile(gstFlag: false), isTrue);
+    expect(invoicePdfShowsCustomerGstin(gstFlag: false), isFalse);
+    expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);
+
+    final invoice = _sampleInvoice(
+      gstFlag: false,
+      items:
+          List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final file = File(path);
+
+    expect(await file.exists(), isTrue);
+    expect(await file.length(), greaterThan(0));
+  });
+
+  test('a4 non-gst invoice uses letterhead only without seller column', () async {
+    expect(invoicePdfA4ShowsSeparateSellerColumn(), isFalse);
+
+    final invoice = _sampleInvoice(
+      gstFlag: false,
+      items:
+          List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, _) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(595, 5));
+    expect(await File(path).exists(), isTrue);
+  });
+
+  test('a4 gst invoice uses letterhead only without seller column', () async {
+    expect(invoicePdfA4ShowsSeparateSellerColumn(), isFalse);
+
+    final invoice = _sampleInvoice(
+      items:
+          List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
+    );
+    final path = await service.generateInvoicePdf(invoice);
+    final (_, width, _) = _readPdfMeta(File(path));
+
+    expect(width, closeTo(595, 5));
+    expect(invoicePdfDocumentTitle(gstFlag: true), 'TAX INVOICE');
+  });
+
   test('non-gst invoice omits gst-specific content', () {
     expect(invoicePdfDocumentTitle(gstFlag: false), 'INVOICE');
     expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);

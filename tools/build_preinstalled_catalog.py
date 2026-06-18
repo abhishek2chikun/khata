@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_XLSX = REPO_ROOT / "data" / "source" / "MASTER CATALOG.xlsx"
 OUTPUT_JSON = REPO_ROOT / "mobile" / "assets" / "catalog" / "preinstalled_catalog.json"
 SUPABASE_SEED_JSON = REPO_ROOT / "supabase" / "seed" / "master_catalog.json"
-CATALOG_VERSION = 4
+CATALOG_VERSION = 6
 CATALOG_NAMESPACE = uuid.UUID("8f4e2c1a-9b3d-4f6e-a7c5-1d2e3f4a5b6c")
 
 HEADER_ALIASES = {
@@ -185,11 +185,19 @@ def canonicalize_company_names(rows: list[dict[str, str]]) -> list[dict[str, str
     ]
 
 
+def _product_identity(row: dict[str, str]) -> tuple[str, str, str]:
+    return (
+        row["company"].strip(),
+        row["item_name"].strip(),
+        row["category"].strip() or "General",
+    )
+
+
 def dedupe_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     """Keep one row per (company, item_name, category); sum quantity on duplicates."""
     merged: dict[tuple[str, str, str], dict[str, str]] = {}
     for row in rows:
-        key = (row["company"].strip(), row["item_name"].strip(), row["category"].strip())
+        key = _product_identity(row)
         if key not in merged:
             merged[key] = dict(row)
             continue
@@ -252,13 +260,6 @@ def build_catalog(rows: list[dict[str, str]]) -> dict[str, object]:
     if len(item_numbers) != len(set(item_numbers)):
         duplicates = [key for key, count in Counter(item_numbers).items() if count > 1]
         raise RuntimeError(f"duplicate item_number values: {duplicates[:5]}")
-
-    identity_keys = [
-        (product["company_name"], product["item_name"], product["category"])
-        for product in products
-    ]
-    if len(identity_keys) != len(set(identity_keys)):
-        raise RuntimeError("duplicate (company_name, item_name, category) tuples found")
 
     return {
         "catalog_version": CATALOG_VERSION,

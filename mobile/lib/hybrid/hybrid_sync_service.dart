@@ -1,8 +1,35 @@
 import 'package:drift/drift.dart';
+import 'package:postgrest/postgrest.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../local/local_database.dart';
 import '../debug/agent_debug_log.dart';
+
+Future<int> syncPaginatedTable({
+  required Future<List<Map<String, dynamic>>> Function(int from, int to)
+      fetchPage,
+  required int pageSize,
+  required Future<void> Function(Map<String, dynamic>) upsert,
+}) async {
+  var from = 0;
+  var total = 0;
+  while (true) {
+    final to = from + pageSize - 1;
+    final rows = await fetchPage(from, to);
+    if (rows.isEmpty) {
+      break;
+    }
+    for (final row in rows) {
+      await upsert(row);
+      total++;
+    }
+    if (rows.length < pageSize) {
+      break;
+    }
+    from += pageSize;
+  }
+  return total;
+}
 
 class HybridCacheRepository {
   HybridCacheRepository(this._database);
@@ -53,6 +80,31 @@ class HybridCacheRepository {
     await _database.customStatement('DELETE FROM buyers');
     await _database.customStatement('DELETE FROM company_profiles');
     await _database.customStatement('PRAGMA foreign_keys = ON');
+  }
+
+  Future<int> countActiveProducts() async {
+    final countExpr = _database.products.id.count();
+    final query = _database.selectOnly(_database.products)
+      ..addColumns([countExpr])
+      ..where(_database.products.isActive.equals(true));
+    final row = await query.getSingle();
+    return row.read(countExpr) ?? 0;
+  }
+
+  Future<void> deactivateProductsNotIn(Set<String> activeIds) async {
+    if (activeIds.isEmpty) {
+      return;
+    }
+    await (_database.update(_database.products)
+          ..where(
+            (product) =>
+                product.isActive.equals(true) & product.id.isNotIn(activeIds),
+          ))
+        .write(
+      const ProductsCompanion(
+        isActive: Value(false),
+      ),
+    );
   }
 
   Future<void> upsertProduct(Map<String, dynamic> row) async {
@@ -368,9 +420,11 @@ class HybridSyncService {
 
   bool _isSyncing = false;
   String? _lastError;
+  Map<String, int>? _lastSyncedCounts;
 
   bool get isSyncing => _isSyncing;
   String? get lastError => _lastError;
+  Map<String, int>? get lastSyncedCounts => _lastSyncedCounts;
 
   Future<void> initializeHybridCacheIfNeeded() async {
     if (await _cacheRepository.isHybridInitialized()) {
@@ -382,6 +436,7 @@ class HybridSyncService {
         data: {'skipped': true},
       );
       // #endregion
+      await _recoverStaleProductCatalogIfNeeded();
       return;
     }
     // #region agent log
@@ -404,7 +459,7 @@ class HybridSyncService {
     // #endregion
   }
 
-  static const _syncPageSize = 1000;
+  static const _syncPageSize = 2000;
 
   Future<void> syncAll({bool forceFull = false}) async {
     if (_client.auth.currentSession == null) {
@@ -421,14 +476,14 @@ class HybridSyncService {
 
     _isSyncing = true;
     _lastError = null;
+    _lastSyncedCounts = null;
     final syncedCounts = <String, int>{};
     try {
       syncedCounts['buyers'] =
           await _syncTable('buyers', _cacheRepository.upsertBuyer);
       syncedCounts['customers'] =
           await _syncTable('customers', _cacheRepository.upsertCustomer);
-      syncedCounts['products'] =
-          await _syncTable('products', _cacheRepository.upsertProduct);
+      syncedCounts['products'] = await _syncActiveProducts();
       syncedCounts['company_profiles'] = await _syncTable(
         'company_profiles',
         _cacheRepository.upsertCompanyProfile,
@@ -448,6 +503,8 @@ class HybridSyncService {
         'buyer_transactions',
         _cacheRepository.upsertBuyerTransaction,
       );
+      await _ensureProductCatalogComplete(syncedCounts);
+      _lastSyncedCounts = Map<String, int>.from(syncedCounts);
       final now = DateTime.now().toUtc().toIso8601String();
       await _cacheRepository.updateLastSyncedAt(now);
       // #region agent log
@@ -476,49 +533,119 @@ class HybridSyncService {
     }
   }
 
-  Future<int> _syncTable(
-    String table,
-    Future<void> Function(Map<String, dynamic>) upsert,
-  ) async {
-    var from = 0;
-    var total = 0;
-    while (true) {
-      final to = from + _syncPageSize - 1;
-      final rows = await _client.from(table).select().range(from, to);
-      if (rows.isEmpty) {
-        break;
-      }
-      for (final row in rows) {
-        await upsert(Map<String, dynamic>.from(row as Map));
-        total++;
-      }
-      if (rows.length < _syncPageSize) {
-        break;
-      }
-      from += _syncPageSize;
-    }
+  Future<int> _syncActiveProducts() async {
+    final activeIds = <String>{};
+    final total = await syncPaginatedTable(
+      pageSize: _syncPageSize,
+      fetchPage: (from, to) async {
+        final rows = await _client
+            .from('products')
+            .select()
+            .eq('is_active', true)
+            .range(from, to);
+        return rows
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+      },
+      upsert: (row) async {
+        activeIds.add(row['id'] as String);
+        await _cacheRepository.upsertProduct(row);
+      },
+    );
+    await _cacheRepository.deactivateProductsNotIn(activeIds);
     return total;
   }
 
+  Future<int> _syncTable(
+    String table,
+    Future<void> Function(Map<String, dynamic>) upsert, {
+    bool activeOnly = false,
+  }) async {
+    return syncPaginatedTable(
+      pageSize: _syncPageSize,
+      fetchPage: (from, to) async {
+        var query = _client.from(table).select();
+        if (activeOnly) {
+          query = query.eq('is_active', true);
+        }
+        final rows = await query.range(from, to);
+        return rows
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+      },
+      upsert: upsert,
+    );
+  }
+
   Future<int> _syncInvoiceItems() async {
-    var from = 0;
-    var total = 0;
-    while (true) {
-      final to = from + _syncPageSize - 1;
-      final rows = await _client.from('invoice_items').select().range(from, to);
-      if (rows.isEmpty) {
-        break;
-      }
-      for (final row in rows) {
-        await _cacheRepository
-            .upsertInvoiceItem(Map<String, dynamic>.from(row as Map));
-        total++;
-      }
-      if (rows.length < _syncPageSize) {
-        break;
-      }
-      from += _syncPageSize;
+    return syncPaginatedTable(
+      pageSize: _syncPageSize,
+      fetchPage: (from, to) async {
+        final rows =
+            await _client.from('invoice_items').select().range(from, to);
+        return rows
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+      },
+      upsert: _cacheRepository.upsertInvoiceItem,
+    );
+  }
+
+  Future<int?> _fetchRemoteProductCount() async {
+    try {
+      return await _client
+          .from('products')
+          .count(CountOption.exact)
+          .eq('is_active', true);
+    } on Object catch (error) {
+      AgentDebugLog.write(
+        location: 'hybrid_sync_service.dart:_fetchRemoteProductCount',
+        message: 'remote product count failed',
+        hypothesisId: 'H-sync',
+        data: {'error': error.toString()},
+      );
+      return null;
     }
-    return total;
+  }
+
+  Future<void> _recoverStaleProductCatalogIfNeeded() async {
+    if (_client.auth.currentSession == null) {
+      return;
+    }
+    final localCount = await _cacheRepository.countActiveProducts();
+    final remoteCount = await _fetchRemoteProductCount();
+    if (remoteCount == null) {
+      return;
+    }
+    if (localCount == 1000 && remoteCount > 1000) {
+      await syncAll();
+    }
+  }
+
+  Future<void> _ensureProductCatalogComplete(
+    Map<String, int> syncedCounts,
+  ) async {
+    final remoteCount = await _fetchRemoteProductCount();
+    if (remoteCount == null) {
+      return;
+    }
+    var localCount = await _cacheRepository.countActiveProducts();
+    if (localCount >= remoteCount) {
+      return;
+    }
+
+    AgentDebugLog.write(
+      location: 'hybrid_sync_service.dart:_ensureProductCatalogComplete',
+      message: 'product catalog incomplete, re-syncing products',
+      hypothesisId: 'H-sync',
+      data: {'localCount': localCount, 'remoteCount': remoteCount},
+    );
+
+    syncedCounts['products'] = await _syncActiveProducts();
+    localCount = await _cacheRepository.countActiveProducts();
+    if (localCount < remoteCount) {
+      _lastError =
+          'Catalog sync incomplete: $localCount of $remoteCount products cached locally';
+    }
   }
 }

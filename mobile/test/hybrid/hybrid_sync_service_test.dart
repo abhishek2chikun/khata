@@ -78,4 +78,63 @@ void main() {
     expect(settings?.initialized, isTrue);
     expect(settings?.lastSyncedAt, timestamp);
   });
+
+  test('countActiveProducts returns active local product row count', () async {
+    final database = db.LocalDatabase.memory();
+    final repository = HybridCacheRepository(database);
+    final now = DateTime.utc(2026, 1, 1).toIso8601String();
+
+    expect(await repository.countActiveProducts(), 0);
+
+    await database.into(database.products).insert(
+          db.ProductsCompanion.insert(
+            id: 'product-1',
+            itemNumber: 'P-1',
+            itemName: 'Widget',
+            category: 'General',
+            companyName: 'Acme',
+            buyingPrice: '10.000',
+            sellingPrice: '12.000',
+            gstRate: '18.00',
+            quantityOnHand: '5',
+            lowStockThreshold: '0',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+    expect(await repository.countActiveProducts(), 1);
+  });
+
+  test('syncPaginatedTable fetches all pages until short page', () async {
+    final upserted = <Map<String, dynamic>>[];
+    var fetchCalls = 0;
+
+    final total = await syncPaginatedTable(
+      pageSize: 1000,
+      fetchPage: (from, to) async {
+        fetchCalls += 1;
+        if (from == 0) {
+          return List<Map<String, dynamic>>.generate(
+            1000,
+            (index) => {'id': 'row-$index'},
+          );
+        }
+        if (from == 1000) {
+          return List<Map<String, dynamic>>.generate(
+            528,
+            (index) => {'id': 'row-${index + 1000}'},
+          );
+        }
+        return const <Map<String, dynamic>>[];
+      },
+      upsert: (row) async {
+        upserted.add(row);
+      },
+    );
+
+    expect(total, 1528);
+    expect(fetchCalls, 2);
+    expect(upserted.length, 1528);
+  });
 }

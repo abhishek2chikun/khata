@@ -23,6 +23,12 @@ bool invoicePdfShowsCanceledBanner({required String status}) =>
 
 bool invoicePdfShowsTaxableTotal({required bool gstFlag}) => gstFlag;
 
+bool invoicePdfShowsCustomerGstin({required bool gstFlag}) => gstFlag;
+
+bool invoicePdfIncludesSellerCompanyProfile({required bool gstFlag}) => true;
+
+bool invoicePdfA4ShowsSeparateSellerColumn() => false;
+
 bool invoicePdfShowsHistoricalDiscount(double discountTotal) =>
     discountTotal > 0;
 
@@ -118,7 +124,7 @@ class InvoicePdfService {
                 pw.SizedBox(height: majorGap),
                 _buildInvoiceInfo(invoice),
                 pw.SizedBox(height: sectionGap),
-                _buildPartyInfo(invoice, isGst),
+                _buildBillToInfo(invoice, isGst),
                 if (isGst) ...<pw.Widget>[
                   pw.SizedBox(height: sectionGap),
                   _buildGstSupplyInfo(invoice),
@@ -184,8 +190,11 @@ class InvoicePdfService {
               ]),
               style: pw.TextStyle(fontSize: 6.5),
             ),
-            if (isGst && (invoice.companyGstin ?? '').isNotEmpty)
+            if ((invoice.companyGstin ?? '').isNotEmpty)
               pw.Text('GSTIN: ${invoice.companyGstin}',
+                  style: pw.TextStyle(fontSize: 6.5)),
+            if ((invoice.companyPhone ?? '').isNotEmpty)
+              pw.Text('Phone: ${invoice.companyPhone}',
                   style: pw.TextStyle(fontSize: 6.5)),
           ],
         ),
@@ -434,9 +443,7 @@ class InvoicePdfService {
             _joinNonEmpty([invoice.companyCity, invoice.companyState]),
             style: pw.TextStyle(fontSize: 10),
           ),
-        if (isGst &&
-            invoice.companyGstin != null &&
-            invoice.companyGstin!.isNotEmpty)
+        if (invoice.companyGstin != null && invoice.companyGstin!.isNotEmpty)
           pw.Text('GSTIN: ${invoice.companyGstin}',
               style: pw.TextStyle(fontSize: 10)),
         if (invoice.companyPhone != null && invoice.companyPhone!.isNotEmpty)
@@ -446,8 +453,40 @@ class InvoicePdfService {
     );
   }
 
-  pw.Widget _buildPartyInfo(InvoiceDetail invoice, bool isGst) {
-    return _buildCustomerAndCompanyInfo(invoice, isGst);
+  pw.Widget _buildBillToInfo(InvoiceDetail invoice, bool isGst) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: <pw.Widget>[
+          pw.Text('Bill To',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+          pw.SizedBox(height: 4),
+          pw.Text(invoice.customerName,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          if (invoice.customerAddress.isNotEmpty)
+            pw.Text(invoice.customerAddress, style: pw.TextStyle(fontSize: 9)),
+          if (invoice.customerState != null &&
+              invoice.customerState!.isNotEmpty)
+            pw.Text(
+              '${invoice.customerState}${invoice.customerStateCode != null ? ' (${invoice.customerStateCode})' : ''}',
+              style: pw.TextStyle(fontSize: 9),
+            ),
+          if (isGst &&
+              invoice.customerGstin != null &&
+              invoice.customerGstin!.isNotEmpty)
+            pw.Text('GSTIN: ${invoice.customerGstin}',
+                style: pw.TextStyle(fontSize: 9)),
+          if (invoice.customerPhone != null &&
+              invoice.customerPhone!.isNotEmpty)
+            pw.Text('Phone: ${invoice.customerPhone}',
+                style: pw.TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
   }
 
   pw.Widget _buildGstSupplyInfo(InvoiceDetail invoice) {
@@ -497,85 +536,6 @@ class InvoicePdfService {
           ),
         ],
       ),
-    );
-  }
-
-  pw.Widget _buildCustomerAndCompanyInfo(InvoiceDetail invoice, bool isGst) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: <pw.Widget>[
-        pw.Expanded(
-          child: pw.Container(
-            padding: const pw.EdgeInsets.all(8),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey400),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: <pw.Widget>[
-                pw.Text('Bill To',
-                    style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                pw.SizedBox(height: 4),
-                pw.Text(invoice.customerName,
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                if (invoice.customerAddress.isNotEmpty)
-                  pw.Text(invoice.customerAddress,
-                      style: pw.TextStyle(fontSize: 9)),
-                if (invoice.customerState != null &&
-                    invoice.customerState!.isNotEmpty)
-                  pw.Text(
-                    '${invoice.customerState}${invoice.customerStateCode != null ? ' (${invoice.customerStateCode})' : ''}',
-                    style: pw.TextStyle(fontSize: 9),
-                  ),
-                if (isGst &&
-                    invoice.customerGstin != null &&
-                    invoice.customerGstin!.isNotEmpty)
-                  pw.Text('GSTIN: ${invoice.customerGstin}',
-                      style: pw.TextStyle(fontSize: 9)),
-                if (invoice.customerPhone != null &&
-                    invoice.customerPhone!.isNotEmpty)
-                  pw.Text('Phone: ${invoice.customerPhone}',
-                      style: pw.TextStyle(fontSize: 9)),
-              ],
-            ),
-          ),
-        ),
-        pw.SizedBox(width: 12),
-        pw.Expanded(
-          child: pw.Container(
-            padding: const pw.EdgeInsets.all(8),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey400),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: <pw.Widget>[
-                pw.Text('Seller',
-                    style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                pw.SizedBox(height: 4),
-                pw.Text(invoice.companyName,
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                if (invoice.companyAddress.isNotEmpty)
-                  pw.Text(invoice.companyAddress,
-                      style: pw.TextStyle(fontSize: 9)),
-                if (invoice.companyCity.isNotEmpty ||
-                    invoice.companyState.isNotEmpty)
-                  pw.Text(
-                    _joinNonEmpty([invoice.companyCity, invoice.companyState]),
-                    style: pw.TextStyle(fontSize: 9),
-                  ),
-                if (isGst &&
-                    invoice.companyGstin != null &&
-                    invoice.companyGstin!.isNotEmpty)
-                  pw.Text('GSTIN: ${invoice.companyGstin}',
-                      style: pw.TextStyle(fontSize: 9)),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 

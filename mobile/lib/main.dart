@@ -208,6 +208,43 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _handleSyncCatalog(BuildContext context) async {
+    final syncService = widget.dependencies?.syncService;
+    if (syncService == null) {
+      return;
+    }
+    setState(() {});
+    try {
+      await syncService.syncAll();
+      _hybridSyncError = null;
+      if (!mounted) {
+        return;
+      }
+      final productCount = syncService.lastSyncedCounts?['products'];
+      final message = productCount == null
+          ? 'Catalog synced from Supabase'
+          : 'Catalog synced: $productCount products';
+      if (syncService.lastError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(syncService.lastError!)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+      setState(() {});
+    } on Object catch (error) {
+      _hybridSyncError = error.toString();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $error')),
+        );
+        setState(() {});
+      }
+    }
+  }
+
   Future<void> _syncHybridIfAuthenticated() async {
     if (widget.dependencies?.mode != DataMode.hybrid ||
         !widget.controller.isAuthenticated) {
@@ -274,6 +311,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
       _startLocalBackupSchedulingOnce();
       _maybeBootstrapHybrid();
 
+      final syncService = widget.dependencies?.syncService;
       final drawer = AppNavigationDrawer(
         selected: _selectedDestination,
         onSelect: (destination) {
@@ -283,6 +321,11 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
         },
         onLogout: widget.controller.logout,
         showLocalBackup: widget.dependencies?.mode == DataMode.local,
+        showSyncCatalog: widget.dependencies?.mode == DataMode.hybrid,
+        onSyncCatalog: syncService == null
+            ? null
+            : () => _handleSyncCatalog(context),
+        isSyncing: syncService?.isSyncing ?? false,
       );
 
       Widget screen;
