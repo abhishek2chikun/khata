@@ -6,8 +6,9 @@ void main() {
     expect(parseDataMode(''), DataMode.hybrid);
   });
 
-  test('legacy api/local modes remain parseable for reference tests only', () {
-    expect(parseDataMode('api'), DataMode.api);
-    expect(parseDataMode('local'), DataMode.local);
+  test('legacy api/local DATA_MODE values are not production runtime options',
+      () {
+    expect(() => parseDataMode('api'), throwsArgumentError);
+    expect(() => parseDataMode('local'), throwsArgumentError);
   });
 }

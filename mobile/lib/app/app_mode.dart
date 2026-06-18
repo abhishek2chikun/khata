@@ -7,13 +7,11 @@ DataMode parseDataMode(String rawValue) {
   if (normalized.isEmpty || normalized == 'hybrid') {
     return DataMode.hybrid;
   }
-  if (normalized == 'api') {
-    return DataMode.api;
-  }
-  if (normalized == 'local') {
-    return DataMode.local;
-  }
-  throw ArgumentError.value(rawValue, 'DATA_MODE', 'Expected api, local, or hybrid');
+  throw ArgumentError.value(
+    rawValue,
+    'DATA_MODE',
+    'Hybrid-only runtime accepts only empty or hybrid',
+  );
 }
 
 DataMode resolveDataMode() {

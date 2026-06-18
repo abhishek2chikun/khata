@@ -298,6 +298,7 @@ DECLARE
   v_user UUID;
   v_existing customer_transactions%ROWTYPE;
   v_row customer_transactions%ROWTYPE;
+  v_customer customers%ROWTYPE;
 BEGIN
   v_user := public.require_authenticated();
 
@@ -307,10 +308,14 @@ BEGIN
     RETURN to_jsonb(v_existing);
   END IF;
 
+  SELECT * INTO v_customer FROM customers WHERE id = (p_collection->>'customer_id')::UUID FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND: customer'; END IF;
+  IF NOT v_customer.is_active THEN RAISE EXCEPTION 'CUSTOMER_ARCHIVED'; END IF;
+
   INSERT INTO customer_transactions (
     customer_id, request_id, request_hash, entry_type, amount, occurred_on, notes, created_by_user_id
   ) VALUES (
-    (p_collection->>'customer_id')::UUID,
+    v_customer.id,
     p_request_id,
     p_request_hash,
     'COLLECTION',
@@ -350,6 +355,7 @@ BEGIN
 
   SELECT * INTO v_product FROM products WHERE id = (p_adjustment->>'product_id')::UUID FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'NOT_FOUND: product'; END IF;
+  IF NOT v_product.is_active THEN RAISE EXCEPTION 'PRODUCT_ARCHIVED'; END IF;
 
   INSERT INTO stock_movements (
     product_id, request_id, request_hash, movement_type, quantity_delta, reason, created_by_user_id
@@ -359,7 +365,8 @@ BEGIN
   ) RETURNING * INTO v_row;
 
   UPDATE products SET quantity_on_hand = quantity_on_hand + v_delta, updated_at = NOW()
-  WHERE id = v_product.id;
+  WHERE id = v_product.id
+  RETURNING * INTO v_product;
 
   RETURN jsonb_build_object('stock_movement', to_jsonb(v_row), 'product', to_jsonb(v_product));
 END;

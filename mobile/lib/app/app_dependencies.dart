@@ -23,6 +23,7 @@ import '../hybrid/hybrid_auth_service.dart';
 import '../hybrid/hybrid_invoices_service.dart';
 import '../hybrid/hybrid_rpc_client.dart';
 import '../hybrid/hybrid_sync_service.dart';
+import '../hybrid/hybrid_write_services.dart';
 import '../hybrid/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../local/local_analytics_service.dart';
@@ -151,7 +152,8 @@ class AppDependencies {
     final authService = HybridAuthService(client);
     final controller = AuthController(
       authService: authService,
-      sessionStore: sessionStore ?? SecureSessionStore(keyPrefix: 'auth.hybrid'),
+      sessionStore:
+          sessionStore ?? SecureSessionStore(keyPrefix: 'auth.hybrid'),
     );
     final cacheRepository = HybridCacheRepository(localDatabase);
     final syncService = HybridSyncService(
@@ -159,6 +161,13 @@ class AppDependencies {
       cacheRepository: cacheRepository,
     );
     final rpcClient = HybridRpcClient(client: client);
+    final localProductsService = LocalProductsService(database: localDatabase);
+    final localCustomersService =
+        LocalCustomersService(database: localDatabase);
+    final localBuyersService = LocalBuyersService(database: localDatabase);
+    final localCompanyProfileService =
+        LocalCompanyProfileService(database: localDatabase);
+    final localPaymentsService = LocalPaymentsService(database: localDatabase);
     final localInvoicesService = LocalInvoicesService(database: localDatabase);
 
     Future<void> refreshAfterWrite() async {
@@ -168,11 +177,31 @@ class AppDependencies {
     return AppDependencies(
       mode: DataMode.hybrid,
       controller: controller,
-      productsService: LocalProductsService(database: localDatabase),
-      customersService: LocalCustomersService(database: localDatabase),
-      buyersService: LocalBuyersService(database: localDatabase),
-      companyProfileService: LocalCompanyProfileService(database: localDatabase),
-      paymentsService: LocalPaymentsService(database: localDatabase),
+      productsService: HybridProductsService(
+        localProductsService: localProductsService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
+      customersService: HybridCustomersService(
+        localCustomersService: localCustomersService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
+      buyersService: HybridBuyersService(
+        localBuyersService: localBuyersService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
+      companyProfileService: HybridCompanyProfileService(
+        localCompanyProfileService: localCompanyProfileService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
+      paymentsService: HybridPaymentsService(
+        localPaymentsService: localPaymentsService,
+        rpcClient: rpcClient,
+        refreshAfterWrite: refreshAfterWrite,
+      ),
       invoicesService: HybridInvoicesService(
         localInvoicesService: localInvoicesService,
         rpcClient: rpcClient,
@@ -207,10 +236,9 @@ class AppDependencies {
     final authService = LocalAuthService(database: localDatabase);
     final backupTransferService =
         LocalBackupTransferService(database: localDatabase);
-    final googleAuthGateway =
-        authGateway is GoogleSignInAuthGateway
-            ? authGateway
-            : GoogleSignInAuthGateway();
+    final googleAuthGateway = authGateway is GoogleSignInAuthGateway
+        ? authGateway
+        : GoogleSignInAuthGateway();
     final resolvedSecretStore =
         backupSecretStore ?? FlutterSecureBackupSecretStore();
     final scheduleAdapter =

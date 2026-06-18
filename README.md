@@ -152,65 +152,31 @@ If login fails, make sure you already created the bootstrap user with the comman
 
 If you get `{"detail":"Not Found"}` from `/auth/login`, you are hitting the wrong server. Verify the process with `lsof -iTCP:8010 -sTCP:LISTEN -n -P` and restart the FastAPI app from this repo.
 
-## Run In API Mode
+## Run In Hybrid Mode
 
-API mode is the default Flutter data mode. It uses the FastAPI backend for auth,
-products, customers, collections, company profile, invoices, and ledger data.
-
-```bash
-(cd mobile && flutter pub get)
-(cd mobile && flutter run -d <device-id>)
-```
-
-You can also make the mode explicit:
-
-```bash
-(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=api)
-```
-
-Pin a specific backend URL when auto-detection is not enough:
-
-```bash
-(cd mobile && flutter run -d <device-id> \
-  --dart-define=DATA_MODE=api \
-  --dart-define=API_BASE_URL=http://10.0.2.2:8010/)
-```
-
-For a USB-connected Android device using `adb reverse`, use:
-
-```bash
-adb reverse tcp:8010 tcp:8010
-(cd mobile && flutter run -d <device-id> \
-  --dart-define=DATA_MODE=api \
-  --dart-define=API_BASE_URL=http://localhost:8010/)
-```
-
-## Run In Local Mode
-
-Local mode runs without the FastAPI backend or PostgreSQL. It stores business
-data in the device-local Drift/SQLite database and uses the same screen/service
-boundaries as API mode.
+Hybrid mode is the only production runtime. Supabase Postgres is the authority,
+Drift is the local cache, and official writes go through Supabase RPCs.
 
 ```bash
 (cd mobile && flutter pub get)
-(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=local)
+(cd mobile && flutter run -d <device-id> \
+  --dart-define=SUPABASE_URL=<url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
 
-On a fresh local database, the app shows `Set up local user` before login.
-Create the first local account there, then log in with that username and
-password. After login, local mode exposes the same core flows for products,
-customers, collections, company profile, invoices, and ledger history without a
-backend process.
+`DATA_MODE=api` and `DATA_MODE=local` are no longer accepted production runtime
+options. API/local code may remain as historical reference and test fixtures
+while the hybrid migration is being reviewed.
 
-### Preinstalled product catalog (local mode)
+### Preinstalled product catalog
 
-Fresh local installs ship with **1,199 products** and **29 buyers** bundled in
-the APK. On first launch, `LocalProductCatalogSeeder` loads
+Fresh installs ship with **1,528 products** and **30 buyers** bundled in the APK.
+On first launch, `LocalProductCatalogSeeder` loads
 `mobile/assets/catalog/preinstalled_catalog.json` and inserts any missing buyers
-and products into the local Drift database. Seeded rows behave like manually
-added inventory: they support edit, archive, stock adjustment, and invoice use.
+and products into the Drift cache. First hybrid sync reconciles those rows to
+Supabase authority.
 
-Source spreadsheet: `data/source/products.xlsx`. Rebuild the bundled JSON after
+Source spreadsheet: `data/source/MASTER CATALOG.xlsx`. Rebuild the bundled JSON after
 updating the spreadsheet:
 
 ```bash
@@ -257,17 +223,16 @@ three-decimal unit prices, and `gst_flag` on company profiles and invoices
 
 ### Backup and Migration Compatibility
 
-Backups are encrypted (AES-256-GCM, PBKDF2-HMAC-SHA256) JSON envelopes
+Legacy local backups are encrypted (AES-256-GCM, PBKDF2-HMAC-SHA256) JSON envelopes
 containing `schema_version`, `backend_compatibility_version`, `exported_at`,
 and per-table payloads. Import validates both version fields and required
-tables before replacing local data in a transaction. A backup from one device
-can restore on another device running the same schema version. Future schema
-changes must bump `schema_version` and/or `backend_compatibility_version` to
-prevent cross-version restore corruption.
+tables before replacing local data in a transaction. This is retained for
+historical tests/reference only; Supabase is the production master and backup UI
+is not reachable in the hybrid runtime.
 
 ### Drive backup and scheduling
 
-Local mode supports encrypted Google Drive backup via `google_sign_in` (Drive file
+Legacy local mode supports encrypted Google Drive backup via `google_sign_in` (Drive file
 scope), upload to visible folder `Khata Backups`, secure password storage
 (`flutter_secure_storage`), WorkManager periodic scheduling (default **02:00**
 local time) with startup catch-up, verified upload (SHA-256), and 30-backup
@@ -282,10 +247,12 @@ claims.
 
 ## Build Release APK
 
-Build a local-mode release APK:
+Build a hybrid release APK:
 
 ```bash
-(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+(cd mobile && flutter build apk --release \
+  --dart-define=SUPABASE_URL=<url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
 
 The APK is output at `mobile/build/app/outputs/flutter-apk/app-release.apk`.
@@ -303,7 +270,9 @@ Then set `JAVA_HOME` before building:
 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || echo /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home)
-(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+(cd mobile && flutter build apk --release \
+  --dart-define=SUPABASE_URL=<url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
 
 Alternatively, install Android Studio which bundles a JDK.

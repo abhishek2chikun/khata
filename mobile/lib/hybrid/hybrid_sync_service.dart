@@ -157,7 +157,8 @@ class HybridCacheRepository {
             customerState: Value(row['customer_state'] as String?),
             customerStateCode: Value(row['customer_state_code'] as String?),
             customerPhone: Value(row['customer_phone'] as String?),
-            customerWhatsappNumber: Value(row['customer_whatsapp_number'] as String?),
+            customerWhatsappNumber:
+                Value(row['customer_whatsapp_number'] as String?),
             customerGstin: Value(row['customer_gstin'] as String?),
             placeOfSupplyState: row['place_of_supply_state'] as String,
             placeOfSupplyStateCode: row['place_of_supply_state_code'] as String,
@@ -176,7 +177,9 @@ class HybridCacheRepository {
             companyJurisdiction: Value(row['company_jurisdiction'] as String?),
             gstFlag: Value((row['gst_flag'] as bool?) ?? false),
             invoiceDate: (row['invoice_date'] as String).substring(0, 10),
-            invoiceDatetime: Value(row['invoice_datetime'] as String? ?? row['created_at'] as String? ?? _asIso(null)),
+            invoiceDatetime: Value(row['invoice_datetime'] as String? ??
+                row['created_at'] as String? ??
+                _asIso(null)),
             taxRegime: row['tax_regime'] as String,
             status: row['status'] as String,
             paymentState: Value(row['payment_state'] as String),
@@ -206,19 +209,27 @@ class HybridCacheRepository {
             invoiceId: row['invoice_id'] as String,
             productId: row['product_id'] as String,
             lineNumber: (row['line_number'] as num).toInt(),
-            productName: row['product_name'] as String? ?? row['product_item_name'] as String,
-            productCode: row['product_code'] as String? ?? row['product_item_number'] as String,
-            productItemNumber: Value(row['product_item_number'] as String? ?? ''),
+            productName: row['product_name'] as String? ??
+                row['product_item_name'] as String,
+            productCode: row['product_code'] as String? ??
+                row['product_item_number'] as String,
+            productItemNumber:
+                Value(row['product_item_number'] as String? ?? ''),
             productItemName: Value(row['product_item_name'] as String? ?? ''),
             productCategory: Value(row['product_category'] as String? ?? ''),
             productBuyerId: Value(row['product_buyer_id'] as String?),
-            productCompanyName: Value(row['product_company_name'] as String? ?? ''),
+            productCompanyName:
+                Value(row['product_company_name'] as String? ?? ''),
             productHsnCode: Value(row['product_hsn_code'] as String?),
             buyingPrice: Value('${row['buying_price']}'),
             sellingPrice: Value('${row['selling_price']}'),
             unit: Value(row['unit'] as String?),
-            company: row['company'] as String? ?? row['product_company_name'] as String? ?? '',
-            category: row['category'] as String? ?? row['product_category'] as String? ?? '',
+            company: row['company'] as String? ??
+                row['product_company_name'] as String? ??
+                '',
+            category: row['category'] as String? ??
+                row['product_category'] as String? ??
+                '',
             quantity: '${row['quantity']}',
             pricingMode: row['pricing_mode'] as String,
             enteredUnitPrice: '${row['entered_unit_price']}',
@@ -239,6 +250,79 @@ class HybridCacheRepository {
             revenueAmount: Value('${row['revenue_amount']}'),
             buyingAmount: Value('${row['buying_amount']}'),
             profitAmount: Value('${row['profit_amount']}'),
+          ),
+        );
+  }
+
+  Future<void> upsertStockMovement(Map<String, dynamic> row) async {
+    await ensureOperatorUser(
+      userId: row['created_by_user_id'] as String,
+      username: row['created_by_user_id'] as String,
+      displayName: row['created_by_user_id'] as String,
+    );
+    await _database.into(_database.stockMovements).insertOnConflictUpdate(
+          StockMovementsCompanion.insert(
+            id: row['id'] as String,
+            productId: row['product_id'] as String,
+            invoiceId: Value(row['invoice_id'] as String?),
+            requestId: Value(row['request_id'] as String?),
+            requestHash: Value(row['request_hash'] as String?),
+            movementType: row['movement_type'] as String,
+            quantityDelta: '${row['quantity_delta']}',
+            reason: Value(row['reason'] as String?),
+            createdByUserId: row['created_by_user_id'] as String,
+            createdAt: _asIso(row['created_at']),
+          ),
+        );
+  }
+
+  Future<void> upsertCustomerTransaction(Map<String, dynamic> row) async {
+    await ensureOperatorUser(
+      userId: row['created_by_user_id'] as String,
+      username: row['created_by_user_id'] as String,
+      displayName: row['created_by_user_id'] as String,
+    );
+    await _database.into(_database.customerTransactions).insertOnConflictUpdate(
+          CustomerTransactionsCompanion.insert(
+            id: row['id'] as String,
+            customerId: row['customer_id'] as String,
+            invoiceId: Value(row['invoice_id'] as String?),
+            requestId: Value(row['request_id'] as String?),
+            requestHash: Value(row['request_hash'] as String?),
+            openingBalanceCustomerId:
+                Value(row['opening_balance_customer_id'] as String?),
+            entryType: row['entry_type'] as String,
+            amount: '${row['amount']}',
+            occurredOn: (row['occurred_on'] as String).substring(0, 10),
+            notes: Value(row['notes'] as String?),
+            createdByUserId: row['created_by_user_id'] as String,
+            createdAt: _asIso(row['created_at']),
+          ),
+        );
+  }
+
+  Future<void> upsertBuyerTransaction(Map<String, dynamic> row) async {
+    await ensureOperatorUser(
+      userId: row['created_by_user_id'] as String,
+      username: row['created_by_user_id'] as String,
+      displayName: row['created_by_user_id'] as String,
+    );
+    final entryType = row['entry_type'] as String;
+    await _database.into(_database.buyerTransactions).insertOnConflictUpdate(
+          BuyerTransactionsCompanion.insert(
+            id: row['id'] as String,
+            buyerId: row['buyer_id'] as String,
+            requestId: Value(row['request_id'] as String?),
+            requestHash: Value(row['request_hash'] as String?),
+            openingPayableBuyerId: Value(
+              entryType == 'OPENING_PAYABLE' ? row['buyer_id'] as String : null,
+            ),
+            entryType: entryType,
+            amount: '${row['amount']}',
+            occurredAt: _asIso(row['occurred_at']),
+            notes: Value(row['notes'] as String?),
+            createdByUserId: row['created_by_user_id'] as String,
+            createdAt: _asIso(row['created_at']),
           ),
         );
   }
@@ -308,9 +392,19 @@ class HybridSyncService {
       await _syncTable('buyers', _cacheRepository.upsertBuyer);
       await _syncTable('customers', _cacheRepository.upsertCustomer);
       await _syncTable('products', _cacheRepository.upsertProduct);
-      await _syncTable('company_profiles', _cacheRepository.upsertCompanyProfile);
+      await _syncTable(
+          'company_profiles', _cacheRepository.upsertCompanyProfile);
       await _syncTable('invoices', _cacheRepository.upsertInvoice);
       await _syncInvoiceItems();
+      await _syncTable('stock_movements', _cacheRepository.upsertStockMovement);
+      await _syncTable(
+        'customer_transactions',
+        _cacheRepository.upsertCustomerTransaction,
+      );
+      await _syncTable(
+        'buyer_transactions',
+        _cacheRepository.upsertBuyerTransaction,
+      );
       final now = DateTime.now().toUtc().toIso8601String();
       await _cacheRepository.updateLastSyncedAt(now);
     } on Object catch (error) {
@@ -334,7 +428,8 @@ class HybridSyncService {
   Future<void> _syncInvoiceItems() async {
     final rows = await _client.from('invoice_items').select();
     for (final row in rows) {
-      await _cacheRepository.upsertInvoiceItem(Map<String, dynamic>.from(row as Map));
+      await _cacheRepository
+          .upsertInvoiceItem(Map<String, dynamic>.from(row as Map));
     }
   }
 }

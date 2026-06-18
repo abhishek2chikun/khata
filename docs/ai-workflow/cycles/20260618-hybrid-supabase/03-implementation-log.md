@@ -68,3 +68,17 @@ Parallel execution used: no
 ## Next Action
 
 Stage 4 verification in canonical worktree.
+
+## Stage 5 Review-And-Fix Continuation
+
+The Task 04-06 notes above are historical Stage 3 implementation evidence and
+were superseded by the Stage 4 fix-required review. Current production runtime
+evidence is tracked below and in the Stage 5 final review.
+
+- Baseline for this pass: `9263520ff18faf7e23fddc137c8a88adc46fa530`.
+- AC9 fix: hybrid mode now wires `HybridProductsService`, `HybridCustomersService`, `HybridBuyersService`, `HybridCompanyProfileService`, `HybridPaymentsService`, and `HybridInvoicesService`.
+- Supabase RPC additions: buyer CRUD/archive/reactivate, customer ledger entries, batch collections, and buyer ledger entries.
+- Sync completeness: stock movements, customer transactions, and buyer transactions now upsert into Drift.
+- Runtime cleanup: `DATA_MODE=api` and `DATA_MODE=local` now fail parsing; hybrid/default is the production runtime.
+- Validation: `bash supabase/tests/run_migrations_and_tests.sh` pass; `python3 tools/test_catalog_parity.py` pass; `flutter test test/hybrid test/app/app_mode_test.dart` pass with 17 tests; `flutter test test` pass with 485 tests; `flutter analyze` reports no errors but existing warnings/info keep nonzero analyzer output; `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` pass, APK at `mobile/build/app/outputs/flutter-apk/app-release.apk`.
+- Final Stage 5 artifact: `05-final-review.md`.

@@ -2,7 +2,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'hybrid_auth_service.dart';
 
-class HybridRpcClient {
+abstract class HybridRpcExecutor {
+  Future<Map<String, dynamic>> invokeWrite(
+    String functionName,
+    Map<String, dynamic> params,
+  );
+}
+
+class HybridRpcClient implements HybridRpcExecutor {
   HybridRpcClient({
     required SupabaseClient client,
     HybridConnectivityGate? connectivityGate,
@@ -12,6 +19,7 @@ class HybridRpcClient {
   final SupabaseClient _client;
   final HybridConnectivityGate _connectivityGate;
 
+  @override
   Future<Map<String, dynamic>> invokeWrite(
     String functionName,
     Map<String, dynamic> params,
@@ -27,7 +35,8 @@ class HybridRpcClient {
       }
       throw HybridRpcException('Unexpected RPC response from $functionName');
     } on PostgrestException catch (error) {
-      if (error.code == '23505' || error.message.contains('IDEMPOTENCY_CONFLICT')) {
+      if (error.code == '23505' ||
+          error.message.contains('IDEMPOTENCY_CONFLICT')) {
         throw HybridIdempotencyConflictException(error.message);
       }
       throw HybridRpcException(error.message, code: error.code);
@@ -48,5 +57,6 @@ class HybridRpcException implements Exception {
 }
 
 class HybridIdempotencyConflictException extends HybridRpcException {
-  HybridIdempotencyConflictException(super.message) : super(code: 'IDEMPOTENCY_CONFLICT');
+  HybridIdempotencyConflictException(super.message)
+      : super(code: 'IDEMPOTENCY_CONFLICT');
 }

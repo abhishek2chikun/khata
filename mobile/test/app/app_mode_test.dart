@@ -10,23 +10,23 @@ void main() {
     expect(parseDataMode('hybrid'), DataMode.hybrid);
   });
 
-  test('parseDataMode accepts api', () {
-    expect(parseDataMode('api'), DataMode.api);
+  test('parseDataMode rejects api', () {
+    expect(() => parseDataMode('api'), throwsArgumentError);
   });
 
-  test('parseDataMode accepts local', () {
-    expect(parseDataMode('local'), DataMode.local);
+  test('parseDataMode rejects local', () {
+    expect(() => parseDataMode('local'), throwsArgumentError);
   });
 
-  test('parseDataMode trims and normalizes case', () {
-    expect(parseDataMode(' LOCAL '), DataMode.local);
+  test('parseDataMode trims and normalizes hybrid case', () {
+    expect(parseDataMode(' HYBRID '), DataMode.hybrid);
   });
 
   test('parseDataMode rejects unknown values', () {
     expect(() => parseDataMode('server'), throwsArgumentError);
   });
 
-  test('resolveDataMode honors compile-time DATA_MODE override', () {
-    expect(resolveDataMode(), DataMode.local);
+  test('resolveDataMode defaults to hybrid', () {
+    expect(resolveDataMode(), DataMode.hybrid);
   });
 }

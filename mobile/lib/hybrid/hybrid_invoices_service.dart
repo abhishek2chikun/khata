@@ -15,14 +15,14 @@ import 'hybrid_rpc_client.dart';
 class HybridInvoicesService implements InvoicesService {
   HybridInvoicesService({
     required LocalInvoicesService localInvoicesService,
-    required HybridRpcClient rpcClient,
+    required HybridRpcExecutor rpcClient,
     required Future<void> Function() refreshAfterWrite,
   })  : _localInvoicesService = localInvoicesService,
         _rpcClient = rpcClient,
         _refreshAfterWrite = refreshAfterWrite;
 
   final LocalInvoicesService _localInvoicesService;
-  final HybridRpcClient _rpcClient;
+  final HybridRpcExecutor _rpcClient;
   final Future<void> Function() _refreshAfterWrite;
 
   @override
@@ -36,8 +36,18 @@ class HybridInvoicesService implements InvoicesService {
     required String requestId,
   }) async {
     final quote = await quoteInvoice(draft);
-    final requestHash = _buildRequestHash(draft: draft, quote: quote);
-    final payload = _buildRpcPayload(draft: draft, quote: quote);
+    final invoiceDatetime =
+        '${draft.invoiceDate}T${DateTime.now().toUtc().toIso8601String().substring(11)}';
+    final requestHash = _buildRequestHash(
+      draft: draft,
+      quote: quote,
+      invoiceDatetime: invoiceDatetime,
+    );
+    final payload = _buildRpcPayload(
+      draft: draft,
+      quote: quote,
+      invoiceDatetime: invoiceDatetime,
+    );
     final result = await _rpcClient.invokeWrite(
       'create_invoice',
       <String, dynamic>{
@@ -47,7 +57,8 @@ class HybridInvoicesService implements InvoicesService {
       },
     );
     await _refreshAfterWrite();
-    final invoiceId = (result['invoice'] as Map<String, dynamic>)['id'] as String;
+    final invoiceId =
+        (result['invoice'] as Map<String, dynamic>)['id'] as String;
     final invoice = await _localInvoicesService.fetchInvoiceDetail(invoiceId);
     return CreateInvoiceResult(invoice: invoice, warnings: quote.warnings);
   }
@@ -94,10 +105,9 @@ class HybridInvoicesService implements InvoicesService {
   Map<String, dynamic> _buildRpcPayload({
     required InvoiceDraft draft,
     required InvoiceQuote quote,
+    required String invoiceDatetime,
   }) {
     final customer = draft.customer!;
-    final invoiceDatetime =
-        '${draft.invoiceDate}T${DateTime.now().toUtc().toIso8601String().substring(11)}';
     return <String, dynamic>{
       'customer_id': customer.id,
       'customer_name': customer.name,
@@ -143,7 +153,8 @@ class HybridInvoicesService implements InvoicesService {
               'line_total': line.lineTotal,
               'revenue_amount': line.taxableAmount,
               'buying_amount': line.buyingPrice * line.quantity,
-              'profit_amount': line.taxableAmount - (line.buyingPrice * line.quantity),
+              'profit_amount':
+                  line.taxableAmount - (line.buyingPrice * line.quantity),
             },
           )
           .toList(),
@@ -153,11 +164,11 @@ class HybridInvoicesService implements InvoicesService {
   String _buildRequestHash({
     required InvoiceDraft draft,
     required InvoiceQuote quote,
+    required String invoiceDatetime,
   }) {
     final payload = <String, dynamic>{
       'customer_id': draft.customer?.id,
-      'invoice_datetime':
-          '${draft.invoiceDate}T${DateTime.now().toUtc().toIso8601String().substring(11)}',
+      'invoice_datetime': invoiceDatetime,
       'payment_state': draft.paymentState,
       'paid_amount': draft.paidAmount.toStringAsFixed(2),
       'place_of_supply_state_code': quote.placeOfSupplyStateCode,

@@ -1,6 +1,6 @@
 # Mobile — agent.md
 
-Role: Flutter client for login, inventory, customer khata ledger, buyer payable ledger, collections, invoice creation, analytics dashboard, and offline-first local mode.
+Role: Flutter client for login, inventory, customer khata ledger, buyer payable ledger, collections, invoice creation, analytics dashboard, and hybrid Supabase/Drift runtime.
 
 ## Wholesaler Terminology
 
@@ -12,27 +12,29 @@ Role: Flutter client for login, inventory, customer khata ledger, buyer payable 
 
 ## How to use this system
 
-- Default runtime is **`DATA_MODE=hybrid`** (Supabase Postgres authority + Drift cache). Requires `--dart-define=SUPABASE_URL` and `--dart-define=SUPABASE_ANON_KEY`.
-- `DATA_MODE=api` uses the FastAPI backend. Start the backend first for API mode.
-- `DATA_MODE=local` runs without FastAPI/PostgreSQL by using Drift/SQLite local services.
-- Prefer running API mode against `8010` right now. Android emulator support is built around `10.0.2.2` and optional `adb reverse`.
-- Keep API request/response field names aligned with backend JSON exactly.
-- Keep local Drift tables backend-aligned so future server migration can map local IDs, request IDs, invoice numbers, ledger rows, stock movements, and decimal string fields to the backend/Postgres model.
+- Default and only production runtime is **hybrid** (Supabase Postgres authority + Drift cache). Requires `--dart-define=SUPABASE_URL` and `--dart-define=SUPABASE_ANON_KEY`.
+- `DATA_MODE=api` and `DATA_MODE=local` are rejected by runtime parsing; API/local services remain only as historical reference/test fixtures until final cleanup.
+- Keep Supabase RPC names/payloads aligned with `supabase/migrations/`.
+- Keep local Drift tables aligned with Supabase rows so sync can cache IDs, request IDs, invoice numbers, ledger rows, stock movements, and decimal string fields.
 - Secure storage is for auth session data. Invoice draft state is transient in memory.
 
-### Build Release APK (local mode)
+### Build Release APK
 
 ```bash
-(cd mobile && flutter build apk --release --dart-define=DATA_MODE=local)
+(cd mobile && flutter build apk --release \
+  --dart-define=SUPABASE_URL=<url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
 
 Requires JDK 17+. If the build fails with `Unable to locate a Java Runtime`, install `openjdk@17` via Homebrew or Android Studio and set `JAVA_HOME`.
 
-### Run In API Mode
+### Run Hybrid
 
 ```bash
 (cd mobile && flutter pub get)
-(cd mobile && flutter run -d <device-id> --dart-define=DATA_MODE=api)
+(cd mobile && flutter run -d <device-id> \
+  --dart-define=SUPABASE_URL=<url> \
+  --dart-define=SUPABASE_ANON_KEY=<anon>)
 ```
 
 ## Project overview
@@ -41,7 +43,6 @@ The app currently supports:
 
 - username/password login
 - secure session restore via refresh token
-- local first-user setup when `DATA_MODE=local` has no users
 - inventory list with add/edit product flow (V2: buyer_id, company_name, buying_price, selling_price)
 - customer list and customer khata detail
 - buyer list and buyer payable ledger detail
@@ -50,16 +51,14 @@ The app currently supports:
 - invoice list and invoice detail screens with adaptive GST/non-GST PDFs (A5 ≤10 lines, A4 >10) and PDF+caption sharing
 - customer balance sharing (individual and daily positive-balance summary)
 - analytics dashboard (revenue/profit by buyer/company/customer, top products, low stock, khata balances)
-- local Backup/Restore UI and automatic backup scheduler plumbing
+- legacy Backup/Restore code retained for reference tests only; not reachable in hybrid runtime
 
 Important live behavior:
 
-- API base URL is auto-discovered at startup from common local development targets, or can be forced with `--dart-define=API_BASE_URL=...`.
-- App data mode is selected with `--dart-define=DATA_MODE=api` or `--dart-define=DATA_MODE=local`; empty/default is API mode.
-- Auth uses `HttpAuthService`, `SecureSessionStore`, and `AuthController`.
-- All non-auth API calls go through `ApiClient`, which retries once after token refresh on `401`.
+- Hybrid auth uses Supabase email/password through `HybridAuthService`, `SecureSessionStore`, and `AuthController`.
+- Official writes go through Supabase RPC wrappers in `mobile/lib/hybrid/hybrid_write_services.dart` and `hybrid_invoices_service.dart`; reads use Drift cache services.
 - Customer detail doubles as the current invoice-history surface.
-- Local mode composes `LocalAuthService`, Drift-backed local services, `EncryptedDriveBackupService`, and `BackupScheduler` through `AppDependencies`.
+- Hybrid mode composes `Hybrid*Service` wrappers through `AppDependencies`; local services are read/cache delegates inside wrappers.
 
 ## Directory structure
 
@@ -124,21 +123,22 @@ mobile/
 - Local backup payloads must keep `schema_version` and `backend_compatibility_version` checks before import.
 - Do not commit real Google Drive OAuth credentials, Firebase config, signing secrets, or Drive API tokens.
 
-## Local mode setup
+## Hybrid runtime setup
 
-Run without a backend:
+Run against Supabase with no `DATA_MODE` override:
 
 ```bash
 (cd mobile && \
-  flutter run -d emulator-5554 --dart-define=DATA_MODE=local)
+  flutter run -d emulator-5554 \
+    --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+    --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
 ```
 
-On a fresh local database, the app shows `Set up local user`. Create the first
-local username/password there, then log in. Local mode uses the same main flows
-as API mode but persists data through Drift/SQLite on the device.
+Supabase Auth owns login/session restore. Drift/SQLite is a hybrid-managed cache
+for reads, draft invoice preview, PDF/share, and post-write refresh.
 
-**Preinstalled catalog:** release/local builds bundle ~1,199 products and 29
-buyers from `data/source/products.xlsx` (compiled to
+**Preinstalled catalog:** hybrid builds bundle 1,528 products and 30 buyers from
+`data/source/MASTER CATALOG.xlsx` (compiled to
 `assets/catalog/preinstalled_catalog.json`). `AppDependencies` seeds missing
 catalog rows on startup via `LocalProductCatalogSeeder`; seeded inventory is
 fully editable. Rebuild with `python3 tools/build_preinstalled_catalog.py`.
@@ -212,18 +212,11 @@ consent screen, and production secrets must be configured outside this repositor
 # Install dependencies
 (cd mobile && flutter pub get)
 
-# Run on Android emulator against the current backend port
+# Run hybrid mode on Android emulator
 (cd mobile && \
-  flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:8010/)
-
-# Run local mode without API/backend
-(cd mobile && \
-  flutter run -d emulator-5554 --dart-define=DATA_MODE=local)
-
-# Run using adb reverse instead
-adb reverse tcp:8010 tcp:8010
-(cd mobile && \
-  flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://localhost:8010/)
+  flutter run -d emulator-5554 \
+    --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+    --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
 
 # Run mobile tests (full suite — 458 tests)
 (cd mobile && flutter test test)
@@ -237,7 +230,7 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 
 ## Progress
 
-- **2026-06-18 (hybrid-supabase, Stage 4):** Feature branch `codex/hybrid-supabase` adds Supabase schema/RPCs, catalog seed parity, hybrid default runtime, invoice create/cancel via RPC, Drift cache sync service. Stage 4 fixed login/resume sync wiring. **Blocking:** product/customer/buyer/payment writes still local in hybrid mode; Task 05 cleanup pending. **481** mobile tests passing with `DATA_MODE=local`.
+- **2026-06-18 (hybrid-supabase, Stage 5 fix pass):** Hybrid mode now wires product/customer/buyer/payment/company/invoice official writes through Supabase RPC wrappers; sync includes stock movements, customer transactions, and buyer transactions; `DATA_MODE=api/local` is rejected by runtime parsing. SQL RPC smoke tests pass against remote Postgres; 485 mobile tests pass.
 - **2026-06-18:** Invoice preview improvements — pre-confirm **View PDF** on quote screen (actual generated PDF via `printing`); non-GST PDFs drop Code column; place of supply auto-resolves customer → company state (optional override on create form, hidden for non-GST).
 - **2026-06-15:** Preinstalled catalog v3 — rebuilt from corrected `Invoices (3).xlsx` source (`data/source/products.xlsx`); 1,199 products / 29 buyers; buying prices and HSN fixes; case-insensitive company merge (`Linc` → `linc`); existing local installs upgrade prices/HSN on startup.
 - **2026-06-14 (Task 07):** Integration handoff — signed stock-delta fix, 5 cross-slice regression tests, stale fixture refresh; **458** mobile + **55** pure tests green; release APK SHA-256 recorded; Postgres/device gates documented.
@@ -251,7 +244,7 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 - Inventory and customer flows now have realistic dev data available through the backend demo seed command.
 - The app can create and confirm invoices, and customer khata detail refreshes can reflect resulting ledger changes.
 - Local backend discovery now handles `8010` and emulator-friendly hosts.
-- Offline-first local mode is available through `DATA_MODE=local` with first-user setup, Drift-backed services, encrypted backup import/export foundations, and automatic Drive backup scheduler plumbing.
+- Offline-first local mode remains as historical reference/test code but is not selectable by production runtime parsing.
 - Wholesaler workflow complete: buyer CRUD and payable ledger, invoice list/detail screens, multi-line invoice creation, product V2 fields, analytics dashboard (both API and local modes).
 - 458 mobile tests passing (includes 5 cross-slice integration regressions).
 

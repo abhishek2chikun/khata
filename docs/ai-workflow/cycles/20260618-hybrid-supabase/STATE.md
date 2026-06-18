@@ -2,9 +2,9 @@
 
 Cycle ID: `20260618-hybrid-supabase`
 
-Current stage: `4-independent-validation`
+Current stage: `5-final-review-and-fix`
 
-Stage status: `complete`
+Stage status: `accept-with-manual-cutover-validation`
 
 Persistent LLM lane: `paused-after-stage-2`
 
@@ -12,7 +12,7 @@ Current owner: `Stage 5 persistent LLM`
 
 Next owner: `Stage 5 persistent LLM`
 
-Current task: Final senior review and merge preflight (blocked on AC9 / Task 05)
+Current task: Run manual Supabase login/initial-sync/two-device cutover validation before merge
 
 Stage 2 planning baseline SHA: `c7fff583b72b4f1ed2e8eb1` (docs commit on main)
 
@@ -22,8 +22,10 @@ Stage 3 final HEAD: `ec9afd9b7dca4e03296f602c8489287d9409dc63`
 
 Stage 4 final HEAD: `d6eb15b2b2e8b11437d121650ff6d30dfd137320` (docs SHA); feature fix at `420d7ae`
 
+Stage 5 fix baseline HEAD: `9263520ff18faf7e23fddc137c8a88adc46fa530`
+
 ## Verdict
-fix-required
+accept-with-manual-cutover-validation
 
 ## Git And Worktree Contract
 
@@ -43,21 +45,35 @@ Merge authorization: required
 
 Merge status: not-started
 
-Worktree cleanliness: clean after Stage 4 commit
+Worktree cleanliness: dirty with Stage 5 review-and-fix changes and final review artifact
 
 ## Stage 4 Summary
 
 Independent validation reran catalog parity, remote SQL migrations, full Flutter suite (481 pass), and analyze (0 errors). Stage 4 fixed hybrid sync lifecycle wiring and added cache cutover tests.
 
-Blocking gaps:
-- AC9: product/customer/buyer/payment/company writes still use local Drift services in hybrid mode.
-- Task 05 incomplete: `DATA_MODE=api|local` and backup code remain reachable.
-- SQL/hybrid integration tests thin; no manual multi-device Supabase proof; APK build unverified in Stage 4.
+Stage 5 fixes completed:
+- AC9: hybrid mode now wires product/customer/buyer/payment/company/invoice official writes through Supabase RPC wrappers.
+- Sync completeness: `HybridSyncService` now syncs stock movements, customer transactions, and buyer transactions.
+- Task 05 runtime reachability: `DATA_MODE=api|local` now throws; production runtime accepts only empty/hybrid.
+- SQL proof: smoke tests now exercise invoice create/idempotency/conflict, second invoice numbering, cancel stock/ledger reversal, collection, customer ledger, and buyer ledger RPCs.
+
+Final validation evidence:
+- `bash supabase/tests/run_migrations_and_tests.sh`: pass.
+- `flutter test test/hybrid test/app/app_mode_test.dart`: pass, 17 tests.
+- `flutter test test`: pass, 485 tests.
+- `python3 tools/test_catalog_parity.py`: pass, 30 buyers and 1528 products.
+- `flutter analyze`: no errors; existing 44 warnings/info remain.
+- `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`: pass, `build/app/outputs/flutter-apk/app-release.apk` 68.7 MB.
+
+Remaining evidence required before production merge/release:
+- Manual Supabase login/seed/two-device scenario remains unverified.
+- Confirm invoice on one device, sync second device, cancel invoice, sync back, and verify invoice/stock/customer-ledger rows match Supabase.
 
 Artifacts:
 - `04-validation-report.md`
 - `04-return-packet.md`
 - `03-implementation-log.md` (Stage 3; partially stale)
+- `05-final-review.md`
 
 ## Minimum Read Set For Stage 5
 
@@ -65,8 +81,9 @@ Artifacts:
 2. `02-llm-review-anchor.md`
 3. `04-return-packet.md`
 4. `04-validation-report.md`
-5. Diff `1fe37ee..420d7ae`
+5. `05-final-review.md`
+6. Diff `1fe37ee..HEAD`
 
 ## Exact Next Action
 
-Return to Stage 2 persistent LLM for Stage 5. Open canonical worktree, read anchor + return packet, inspect diff, **do not merge** until AC9 and Task 05 are resolved (likely Stage 3 continuation). Rerun validation ladder and manual Supabase login/sync before merge authorization.
+Run the manual Supabase login/initial-sync/two-device checklist using the built release APK. Do not merge as production release until that checklist passes or the merge owner explicitly accepts the manual-validation gap.

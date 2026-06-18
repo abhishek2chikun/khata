@@ -142,7 +142,8 @@ void main() {
     await dependencies.dispose();
   });
 
-  test('default dependencies resolve to local mode when DATA_MODE=local', () async {
+  test('explicit local dependencies remain available for reference tests',
+      () async {
     final dependencies = await AppDependencies.create(
       mode: DataMode.local,
       localDatabase: db.LocalDatabase.memory(),
@@ -367,6 +368,7 @@ class _FakePaymentsService implements PaymentsService {
   Future<void> recordCollection(RecordCollectionInput input) {
     throw UnimplementedError();
   }
+
   @override
   Future<CollectionGridData> loadCollectionGrid({
     required String fromDate,
@@ -376,10 +378,10 @@ class _FakePaymentsService implements PaymentsService {
   }
 
   @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input) {
     throw UnimplementedError();
   }
-
 }
 
 class _FakeInvoicesService implements InvoicesService {
