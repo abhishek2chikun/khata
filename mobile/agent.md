@@ -237,6 +237,7 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 
 ## Progress
 
+- **2026-06-18 (hybrid-supabase, Stage 4):** Feature branch `codex/hybrid-supabase` adds Supabase schema/RPCs, catalog seed parity, hybrid default runtime, invoice create/cancel via RPC, Drift cache sync service. Stage 4 fixed login/resume sync wiring. **Blocking:** product/customer/buyer/payment writes still local in hybrid mode; Task 05 cleanup pending. **481** mobile tests passing with `DATA_MODE=local`.
 - **2026-06-18:** Invoice preview improvements — pre-confirm **View PDF** on quote screen (actual generated PDF via `printing`); non-GST PDFs drop Code column; place of supply auto-resolves customer → company state (optional override on create form, hidden for non-GST).
 - **2026-06-15:** Preinstalled catalog v3 — rebuilt from corrected `Invoices (3).xlsx` source (`data/source/products.xlsx`); 1,199 products / 29 buyers; buying prices and HSN fixes; case-insensitive company merge (`Linc` → `linc`); existing local installs upgrade prices/HSN on startup.
 - **2026-06-14 (Task 07):** Integration handoff — signed stock-delta fix, 5 cross-slice regression tests, stale fixture refresh; **458** mobile + **55** pure tests green; release APK SHA-256 recorded; Postgres/device gates documented.
