@@ -22,6 +22,9 @@ build/
 # Local infrastructure
 .postgres/
 .worktrees/
+.env
+.env.*
+!.env.example
 
 # Local Google/Firebase credentials and release signing material
 **/google-services.json
