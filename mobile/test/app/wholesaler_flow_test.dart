@@ -1,21 +1,7 @@
-// Task 17 E2E QA — Environment Smoke Test Blockers
-//
-// APK smoke test (attempted `flutter build apk --release --dart-define=DATA_MODE=local`):
-//   BLOCKED: No Java runtime on this host. Gradle exits with:
-//     "The operation couldn't be completed. Unable to locate a Java Runtime."
-//     Gradle task assembleRelease failed with exit code 1
-//
-// Backend API smoke test (attempted `pytest tests/api/test_wholesaler_end_to_end.py`):
-//   BLOCKED: Database URL is postgresql+psycopg://localhost/internal_billing
-//   which does not contain "test" in its name, so conftest.py refuses to run:
-//     "Refusing to run backend tests against a non-test database."
-//   Requires either a test-named database or BILLING_ALLOW_TEST_DATABASE_RESET=1.
-
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/local/local_analytics_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_auth_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_buyers_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_customers_service.dart';
@@ -32,7 +18,6 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
 void main() {
   late LocalDatabase database;
-  late LocalAuthService authService;
   late LocalCompanyProfileService companyService;
   late LocalBuyersService buyersService;
   late LocalProductsService productsService;
@@ -43,7 +28,6 @@ void main() {
 
   setUp(() {
     database = LocalDatabase.memory();
-    authService = LocalAuthService(database: database);
     companyService = LocalCompanyProfileService(database: database);
     buyersService = LocalBuyersService(database: database);
     productsService = LocalProductsService(database: database);
@@ -59,14 +43,6 @@ void main() {
 
   test('full wholesaler flow from empty database to verified analytics',
       () async {
-    final user = await authService.createFirstUser(
-      username: 'owner',
-      password: 'secret123',
-      displayName: 'Owner',
-    );
-    expect(user.username, 'owner');
-    expect(user.displayName, 'Owner');
-
     await companyService.upsertCompanyProfile(UpsertCompanyProfileInput(
       name: 'Acme Traders',
       address: 'Main Road',
@@ -217,12 +193,6 @@ void main() {
   });
 
   test('full flow with buyer pending payable reflects in analytics', () async {
-    await authService.createFirstUser(
-      username: 'owner2',
-      password: 'secret123',
-      displayName: 'Owner2',
-    );
-
     await companyService.upsertCompanyProfile(UpsertCompanyProfileInput(
       name: 'Test Co',
       address: 'Addr',

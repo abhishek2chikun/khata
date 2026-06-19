@@ -80,5 +80,22 @@ evidence is tracked below and in the Stage 5 final review.
 - Supabase RPC additions: buyer CRUD/archive/reactivate, customer ledger entries, batch collections, and buyer ledger entries.
 - Sync completeness: stock movements, customer transactions, and buyer transactions now upsert into Drift.
 - Runtime cleanup: `DATA_MODE=api` and `DATA_MODE=local` now fail parsing; hybrid/default is the production runtime.
+
+## Task 05 Final Cleanup And Live Validation — complete (2026-06-19)
+
+- Removed mobile API/local-auth/Drive/local-backup runtime code, WorkManager and
+  Google dependencies, routes/screens, and obsolete runtime tests.
+- Kept Drift local business services because hybrid reads, quote calculation,
+  analytics, PDF, and RPC-result cache hydration depend on them.
+- Added Drift schema 12 migration from legacy backup catalog metadata to
+  `catalog_cache_settings` and verified v11 upgrade behavior.
+- Added `tools/check_hybrid_runtime_cleanup.sh` and a credential-gated live
+  two-client test under `mobile/live_test/`.
+- The live run found and fixed Supabase's 1,000-row response-cap pagination bug;
+  repeated validation loaded all 1,530 current active products on both caches.
+- Live father/brother sessions passed create invoice, second-client sync, cancel,
+  and reverse sync. Temporary rows were cleaned.
+- Final evidence: 379 Flutter tests pass, SQL tests pass, catalog parity passes,
+  analyzer reports no issues, and the release APK builds successfully.
 - Validation: `bash supabase/tests/run_migrations_and_tests.sh` pass; `python3 tools/test_catalog_parity.py` pass; `flutter test test/hybrid test/app/app_mode_test.dart` pass with 17 tests; `flutter test test` pass with 485 tests; `flutter analyze` reports no errors but existing warnings/info keep nonzero analyzer output; `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` pass, APK at `mobile/build/app/outputs/flutter-apk/app-release.apk`.
 - Final Stage 5 artifact: `05-final-review.md`.

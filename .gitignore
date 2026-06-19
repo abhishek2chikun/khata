@@ -18,6 +18,7 @@ build/
 .DS_Store
 .idea/
 .vscode/
+.cursor/
 
 # Local infrastructure
 .postgres/

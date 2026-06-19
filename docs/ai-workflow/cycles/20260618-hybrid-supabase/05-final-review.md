@@ -12,17 +12,17 @@ Review mode: `review_and_fix`
 
 ## Verdict
 
-`merged-ready-for-device-testing`
+`production-code-validated-awaiting-physical-device-smoke`
 
 The Stage 4 code blockers are fixed and merged into `main`. Hybrid production
 runtime now uses Supabase as the write authority for official business writes,
 Drift as the read/cache layer, and row-level sync for all business tables needed
 by invoice create/cancel and ledger visibility.
 
-The main-branch APK is ready for controlled device testing. Do not treat it as
-family-production-validated until the manual Supabase login/initial
-sync/two-device scenario is run against the built APK. The remaining gap is
-operational evidence, not an automated code-test failure found in this pass.
+The main-branch APK is ready for controlled physical-device testing. A real
+Supabase two-client run now proves login, full cache sync, RPC create, second
+client sync, RPC cancel, and reverse sync using independent Drift databases.
+The remaining gap is Android phone/UI evidence, not data-authority evidence.
 
 ## Fixes Applied
 
@@ -98,16 +98,33 @@ operational evidence, not an automated code-test failure found in this pass.
    `codex/main-pre-sanitize`; it was not pushed because an old ancestor
    contained a committed `.env`.
 
+9. Final runtime cleanup
+
+   Removed compiled mobile API/local-auth/backup runtime code, Google/Drive and
+   WorkManager dependencies, local setup and backup screens, and obsolete tests.
+   Drift schema 12 migrates the catalog version out of `backup_settings` and
+   removes old session/backup tables.
+
+10. Live Supabase pagination and two-client validation
+
+   A first real run exposed that Supabase capped a requested 2,000-row page at
+   1,000 rows. Sync treated that as the final page and cached only 1,000 of 1,530
+   active products. The client now uses 1,000-row pages ordered by stable `id`.
+   The repeated live run loaded all 1,530 products on both clients and passed
+   create invoice, second-client sync, cancel, and reverse sync. Cleanup left no
+   temporary product or customer rows.
+
 ## Validation Evidence
 
 | Check | Result |
 | --- | --- |
 | `bash supabase/tests/run_migrations_and_tests.sh` | pass |
-| `flutter test test/hybrid test/app/app_mode_test.dart` | pass, 22 tests |
-| `flutter test test` | pass, 493 tests |
+| `flutter test test` | pass, 379 current-runtime tests |
+| `bash tools/run_remote_two_client_smoke.sh` | pass, father/brother auth plus create/sync/cancel/resync |
 | `python3 tools/test_catalog_parity.py` | pass, 30 buyers and 1528 products |
-| `flutter analyze` | no errors; 51 warnings/info remain |
-| `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` | pass, `build/app/outputs/flutter-apk/app-release.apk` 68.7 MB |
+| `bash tools/check_hybrid_runtime_cleanup.sh` | pass |
+| `flutter analyze` | pass, no issues |
+| `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` | pass, `build/app/outputs/flutter-apk/app-release.apk` 66.4 MB |
 | Static scan: `service_role`, client `max(invoice_number)`, `invoice_number + 1` | no hits in `mobile/lib`, `supabase`, `tools` |
 
 ## Remaining Manual Evidence
@@ -130,14 +147,13 @@ Before family cutover, run this exact-device checklist:
 
 ## Residual Risks
 
-- Manual Supabase Auth/device session proof was not run in this automated pass.
+- Physical Android install/navigation/share/resume proof remains pending.
 - Realtime subscriptions remain intentionally out of scope for V1; sync is
   startup/resume/manual/post-write.
 - Offline official writes remain intentionally blocked; offline draft/preview
   reads remain supported from Drift cache.
-- API/local/backup implementation files still exist for historical tests and
-  reference, but production runtime parsing and hybrid dependency wiring make
-  them unreachable from the default app path.
+- The historical FastAPI backend remains in `backend/` as a non-runtime oracle;
+  the Flutter package no longer contains API/local-auth/backup runtime adapters.
 
 ## Release Guidance
 

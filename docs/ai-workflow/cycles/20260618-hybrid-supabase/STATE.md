@@ -4,7 +4,7 @@ Cycle ID: `20260618-hybrid-supabase`
 
 Current stage: `5-final-review-and-fix`
 
-Stage status: `merged-ready-for-device-testing`
+Stage status: `production-code-validated-awaiting-physical-device-smoke`
 
 Persistent LLM lane: `paused-after-stage-2`
 
@@ -12,7 +12,7 @@ Current owner: `Stage 5 persistent LLM`
 
 Next owner: `Stage 5 persistent LLM`
 
-Current task: Run manual Supabase login/initial-sync/two-device validation from the main-branch release APK
+Current task: Install the final main-branch APK on both family phones and run the physical-device UI smoke
 
 Stage 2 planning baseline SHA: `c7fff583b72b4f1ed2e8eb1` (docs commit on main)
 
@@ -25,7 +25,7 @@ Stage 4 final HEAD: `d6eb15b2b2e8b11437d121650ff6d30dfd137320` (docs SHA); featu
 Stage 5 fix baseline HEAD: `9263520ff18faf7e23fddc137c8a88adc46fa530`
 
 ## Verdict
-merged-ready-for-device-testing
+production-code-validated-awaiting-physical-device-smoke
 
 ## Git And Worktree Contract
 
@@ -61,18 +61,35 @@ Stage 5 fixes completed:
 - Integration: the reviewed feature tree was applied as a clean squash onto
   `origin/main`, preserving the newer main catalog, pagination, authentication,
   and PDF fixes without importing an old commit that contained `.env`.
+- Final Task 05 cleanup: removed mobile FastAPI adapters, local-only auth/setup,
+  Drive/local backup UI and services, WorkManager hooks, backup dependencies,
+  and obsolete tests. The historical `backend/` directory remains reference-only.
+- Drift v12: replaced misuse of `backup_settings` for catalog metadata with
+  `catalog_cache_settings`; the v11 migration preserves the catalog version and
+  drops legacy session/backup tables.
+- Live pagination correction: real Supabase validation exposed the project
+  1,000-row response cap. Sync now requests 1,000-row pages with deterministic
+  `id` ordering and loads all 1,530 active remote products.
+- Live two-client proof: father and brother test users used independent Supabase
+  sessions and independent in-memory Drift caches to create/sync/cancel/resync an
+  invoice. Temporary rows were removed with zero test artifacts remaining.
 
 Final validation evidence:
 - `bash supabase/tests/run_migrations_and_tests.sh`: pass.
-- `flutter test test/hybrid test/app/app_mode_test.dart`: pass, 22 tests.
-- `flutter test test`: pass, 493 tests.
+- `flutter test test/hybrid test/app/app_mode_test.dart`: pass.
+- `flutter test test`: pass, 379 current-runtime tests.
+- `bash tools/run_remote_two_client_smoke.sh`: pass, two authenticated clients.
 - `python3 tools/test_catalog_parity.py`: pass, 30 buyers and 1528 products.
-- `flutter analyze`: no errors; 51 warnings/info remain.
-- `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`: pass, `build/app/outputs/flutter-apk/app-release.apk` 68.7 MB.
+- `bash tools/check_hybrid_runtime_cleanup.sh`: pass.
+- `flutter analyze`: pass, no issues.
+- `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`: pass, `build/app/outputs/flutter-apk/app-release.apk` 66.4 MB.
 
 Remaining evidence required before family production cutover:
-- Manual Supabase login/seed/two-device scenario remains unverified.
-- Confirm invoice on one device, sync second device, cancel invoice, sync back, and verify invoice/stock/customer-ledger rows match Supabase.
+- Install and UI smoke on the two physical family phones remains unverified.
+- Confirm login, drawer/navigation, PDF/share chooser, resume sync, and acceptable
+  foreground latency on the actual Android builds.
+- Replace debug signing with a stable, backed-up release keystore before the
+  final long-lived family installation (not required for this test APK).
 
 Artifacts:
 - `04-validation-report.md`
@@ -91,4 +108,4 @@ Artifacts:
 
 ## Exact Next Action
 
-Install the main-branch release APK and run the manual Supabase login/initial-sync/two-device checklist. Treat the build as test-ready, not family-production-validated, until that checklist passes.
+Install the final main-branch APK on both phones and run the physical-device UI checklist in `07-production-readiness-validation.md`. The authority, RPC, two-client cache sync, create, and cancel paths now have real Supabase evidence; only device/UI behavior remains.

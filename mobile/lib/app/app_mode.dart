@@ -1,4 +1,4 @@
-enum DataMode { api, local, hybrid }
+enum DataMode { hybrid }
 
 const String configuredDataMode = String.fromEnvironment('DATA_MODE');
 

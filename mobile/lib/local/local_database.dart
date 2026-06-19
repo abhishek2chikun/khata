@@ -288,49 +288,17 @@ class InvoiceItems extends Table {
   TextColumn get sgstAmount => text()();
   TextColumn get igstAmount => text()();
   TextColumn get lineTotal => text()();
-  TextColumn get revenueAmount =>
-      text().withDefault(const Constant('0.00'))();
-  TextColumn get buyingAmount =>
-      text().withDefault(const Constant('0.00'))();
-  TextColumn get profitAmount =>
-      text().withDefault(const Constant('0.00'))();
+  TextColumn get revenueAmount => text().withDefault(const Constant('0.00'))();
+  TextColumn get buyingAmount => text().withDefault(const Constant('0.00'))();
+  TextColumn get profitAmount => text().withDefault(const Constant('0.00'))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
 
-class LocalSessions extends Table {
+class CatalogCacheSettings extends Table {
   TextColumn get id => text()();
-  TextColumn get localUserId => text().references(LocalUsers, #id)();
-  TextColumn get sessionTokenHash => text()();
-  TextColumn get refreshTokenHash => text()();
-  TextColumn get createdAt => text()();
-  TextColumn get expiresAt => text().nullable()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {id};
-}
-
-class BackupEvents extends Table {
-  TextColumn get id => text()();
-  TextColumn get eventType => text()();
-  TextColumn get status => text()();
-  TextColumn get filePath => text().nullable()();
-  TextColumn get message => text().nullable()();
-  TextColumn get createdAt => text()();
-
-  @override
-  Set<Column<Object>> get primaryKey => {id};
-}
-
-class BackupSettings extends Table {
-  TextColumn get id => text()();
-  TextColumn get backupDirectory => text().nullable()();
-  BoolColumn get automaticBackupsEnabled =>
-      boolean().withDefault(const Constant(false))();
-  TextColumn get dailyBackupTime =>
-      text().withDefault(const Constant('00:00'))();
-  TextColumn get lastBackupAt => text().nullable()();
+  IntColumn get catalogVersion => integer().withDefault(const Constant(0))();
   TextColumn get updatedAt => text()();
 
   @override
@@ -358,9 +326,7 @@ class HybridCacheSettings extends Table {
   CompanyProfiles,
   Invoices,
   InvoiceItems,
-  LocalSessions,
-  BackupEvents,
-  BackupSettings,
+  CatalogCacheSettings,
   HybridCacheSettings,
 ])
 class LocalDatabase extends _$LocalDatabase {
@@ -371,13 +337,32 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forConnection(super.connection);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
           if (from < 11) {
             await m.createTable(hybridCacheSettings);
+          }
+          if (from < 12) {
+            await m.createTable(catalogCacheSettings);
+            if (await _tableExists('backup_settings')) {
+              await customStatement('''
+                INSERT OR REPLACE INTO catalog_cache_settings (
+                  id, catalog_version, updated_at
+                )
+                SELECT
+                  id,
+                  CAST(COALESCE(last_backup_at, '0') AS INTEGER),
+                  updated_at
+                FROM backup_settings
+                WHERE id = 'preinstalled-catalog'
+              ''');
+            }
+            await customStatement('DROP TABLE IF EXISTS local_sessions');
+            await customStatement('DROP TABLE IF EXISTS backup_events');
+            await customStatement('DROP TABLE IF EXISTS backup_settings');
           }
           if (from < 2) {
             await customStatement('PRAGMA foreign_keys = OFF');

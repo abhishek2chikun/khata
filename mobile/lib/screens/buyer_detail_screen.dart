@@ -418,7 +418,7 @@ class _BuyerLedgerEntryScreenState extends State<_BuyerLedgerEntryScreen> {
             if (widget.showDirection) ...<Widget>[
               DropdownButtonFormField<String>(
                 key: const Key('buyerLedgerDirectionField'),
-                value: _direction,
+                initialValue: _direction,
                 decoration: const InputDecoration(
                   labelText: 'Direction',
                   border: OutlineInputBorder(),

@@ -6,15 +6,14 @@ class InvoiceDraft {
   const InvoiceDraft({
     this.customer,
     this.invoiceDate = '',
-    String paymentState = 'CREDIT',
+    this.paymentState = 'CREDIT',
     this.paidAmount = 0,
     String? paymentMode,
     this.placeOfSupplyStateCode,
     this.notes,
     this.gstFlag,
     this.items = const <InvoiceDraftItem>[InvoiceDraftItem()],
-  })  : paymentState = paymentState,
-        paymentMode = paymentMode ?? settlementModeCredit;
+  }) : paymentMode = paymentMode ?? settlementModeCredit;
 
   final Customer? customer;
   final String invoiceDate;

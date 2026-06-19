@@ -39,11 +39,11 @@ class LocalBuyersService implements BuyersService {
               updatedAt: now,
             ),
           );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicate(name: input.name, phone: input.phone)) {
         throw _duplicateBuyerError();
       }
-      throw error;
+      rethrow;
     }
 
     final buyer = await (_database.select(_database.buyers)
@@ -89,12 +89,12 @@ class LocalBuyersService implements BuyersService {
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicateExcluding(
           name: input.name, phone: input.phone, excludeId: id)) {
         throw _duplicateBuyerError();
       }
-      throw error;
+      rethrow;
     }
 
     final balances = await _pendingPayablesByBuyerId();
@@ -279,7 +279,7 @@ class LocalBuyersService implements BuyersService {
               createdAt: DateTime.now().toUtc().toIso8601String(),
             ),
           );
-    } on Object catch (error) {
+    } on Object catch (_) {
       final existing = await (_database.select(_database.buyerTransactions)
             ..where((transaction) => transaction.requestId.equals(requestId)))
           .getSingleOrNull();
@@ -290,7 +290,7 @@ class LocalBuyersService implements BuyersService {
           await _hasOpeningPayable(buyerId: buyerId)) {
         throw _openingPayableExistsError();
       }
-      throw error;
+      rethrow;
     }
   }
 

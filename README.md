@@ -1,424 +1,93 @@
-# Internal Billing and Khata System
+# Khata
 
-Flutter + FastAPI + PostgreSQL internal billing system with an optional
-offline-first Flutter local mode backed by Drift/SQLite.
+Khata is a hybrid Flutter billing and ledger app for a small wholesaler. Supabase
+Postgres is the business source of truth; Drift/SQLite is the on-device read
+cache used for fast screens, invoice drafts, analytics, PDFs, and sharing.
 
-Implementation is tracked in:
+## Runtime Contract
 
-- `docs/superpowers/specs/2026-04-19-internal-billing-khata-design.md`
-- `docs/superpowers/plans/2026-04-19-internal-billing-khata-implementation.md`
+- Supabase Auth owns operator login and sessions.
+- Official writes use transactional Supabase RPC functions.
+- Drift never assigns official invoice numbers or authorizes a write.
+- RPC results are upserted into Drift immediately; background sync reconciles
+  changes from other devices.
+- Startup/login, app resume, manual refresh, post-write debounce, and a 10-minute
+  in-app timer trigger sync.
+- Offline cached reads and invoice preview are supported. Official offline writes
+  are blocked.
+- There is no local-only, FastAPI, Google Drive backup, or restore runtime.
 
-## Wholesaler Workflow Terminology
+## Repository Map
 
-The app models a wholesaler (distributor) business. Key entity names:
+| Path | Purpose |
+| --- | --- |
+| `mobile/` | Flutter app and Drift cache |
+| `supabase/migrations/` | Canonical schema, RLS, and RPC functions |
+| `supabase/tests/` | Postgres migration/RPC smoke tests |
+| `data/source/MASTER CATALOG.xlsx` | Canonical product and buyer catalog |
+| `tools/build_preinstalled_catalog.py` | Generates Drift JSON and Supabase seed SQL |
+| `backend/` | Historical pre-hybrid reference; not used by the app |
+| `docs/ai-workflow/cycles/20260618-hybrid-supabase/` | Design and release evidence |
 
-- **Buyer**: a supplier/vendor from whom the wholesaler purchases goods. Each product is associated with a buyer. Buyers have their own payable ledger (opening payables, purchase amounts, payments made, adjustments).
-- **Customer**: a retail customer/shop that buys goods from the wholesaler. Customers have their own receivable ledger (opening balance, collections, balance adjustments, invoice debits).
-- **Product**: an inventory item with `item_number`, `item_name`, `category`, `buyer_id`, `company_name`, `buying_price` (purchase cost from buyer), and `selling_price` (sale price to customer). Prices are GST-inclusive.
-- **Invoice**: a sale document to a customer with line items, tax computation, payment state (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`), and stock/ledger side effects.
-- **Analytics**: owner dashboard with KPI totals (revenue, profit, receivables, payables, active invoice count, average invoice value), zero-filled daily trend, ranked products/customers, and date presets. Low-stock remains in API/local payloads for compatibility but is excluded from the analytics UI.
+## Configure Supabase
 
-### Product, HSN, and invoice precision (Stage 3 upgrade)
-
-- Products carry nullable, non-unique `hsn_code`; invoice lines snapshot `product_hsn_code`.
-- GST invoice creation rejects products missing HSN; non-GST invoices allow missing HSN.
-- New invoice and stock-adjustment quantities must be whole numbers; historical fractional values remain readable.
-- Unit prices use three-decimal precision (`12.008`); monetary totals remain two-decimal currency values.
-- New invoice writes require zero discount; historical discounted invoices remain readable in PDFs.
-
-### GST invoicing (Stage 3 baseline + upgrade)
-
-- Seller profile and each invoice snapshot persist `gst_flag` (GST vs non-GST).
-- Non-GST invoices force zero tax; GST sellers may issue non-GST only when all line GST rates are zero.
-- Mobile invoice creation sends date-only `invoice_date`; PDFs adapt A5 (≤15 lines) / A4 (>15) with GST or non-GST layouts.
-- Pre-confirm **View PDF** on the invoice preview screen shows the exact PDF that will be generated before confirming.
-- Place of supply resolves from customer state (if set), else company state; optional override on GST create form; hidden for non-GST sellers.
-- Non-GST invoice PDFs use a simplified item table without a Code column.
-- Invoice PDF sharing uses the OS chooser with attachment plus a safe caption; customer pending balances can be shared individually or as a daily positive-only summary.
-
-## PostgreSQL Setup
-
-Start the local PostgreSQL test database container:
+Keep credentials outside Git. The app build needs only the project URL and
+public anonymous/publishable key:
 
 ```bash
-docker run --name khata-postgres \
-  -e POSTGRES_USER=khata \
-  -e POSTGRES_PASSWORD=khata \
-  -e POSTGRES_DB=internal_billing \
-  -p 55432:5432 \
-  -d postgres:16
+export SUPABASE_URL='https://<project-ref>.supabase.co'
+export SUPABASE_ANON_KEY='<public-key>'
+export DATABASE_URL='postgresql://...'
 ```
 
-If the container already exists, start it with:
+Apply migrations and seed the canonical catalog:
 
 ```bash
-docker start khata-postgres
-```
-
-Backend commands below assume this database URL:
-
-```bash
-export BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing'
-```
-
-## Backend Setup
-
-Create and activate a virtual environment, then install backend dependencies:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e backend
-```
-
-## Alembic Migrations
-
-Run migrations from the backend directory:
-
-```bash
-(cd backend && BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' ../.venv/bin/python -m alembic upgrade head)
-```
-
-Check the current revision:
-
-```bash
-(cd backend && BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' ../.venv/bin/python -m alembic current)
-```
-
-## First User Bootstrap
-
-Create the initial backend user before logging in from the app:
-
-```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
-  PYTHONPATH=backend \
-  .venv/bin/python -m app.commands.bootstrap_user \
-  --username owner \
-  --password secret123 \
-  --display-name Owner
-```
-
-## Seed Demo Data
-
-Once the bootstrap user exists, seed a realistic manual-testing dataset:
-
-```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
-  PYTHONPATH=backend \
-  .venv/bin/python -m app.commands.seed_demo_data \
-  --username owner
-```
-
-This is safe to re-run. It upserts the active company profile, creates sample customers/products if missing, and creates the same demo ledger/invoice events idempotently.
-
-## Run The API
-
-The Flutter app now auto-detects a local FastAPI backend by checking these common development URLs in order:
-
-- Android emulator: `http://10.0.2.2:8010/`, `http://10.0.2.2:8000/`
-- Other targets / adb reverse: `http://localhost:8010/`, `http://localhost:8000/`
-
-You can also override this explicitly at launch time with `--dart-define=API_BASE_URL=...`.
-
-Start the FastAPI app from the repository root in a separate terminal:
-
-```bash
-docker start khata-postgres
-
-export BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing'
-
-# Optional if this is the first time on a fresh database
-PYTHONPATH=backend .venv/bin/python -m app.commands.bootstrap_user \
-  --username owner \
-  --password secret123 \
-  --display-name Owner
-
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing' \
-  PYTHONPATH=backend \
-  .venv/bin/python -m uvicorn app.main:app --app-dir backend --reload --port 8010
-```
-
-Quick API smoke tests:
-
-```bash
-curl http://localhost:8010/health
-
-curl -X POST http://localhost:8010/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"owner","password":"secret123"}'
-```
-
-If login fails, make sure you already created the bootstrap user with the command in the section above.
-
-If you get `{"detail":"Not Found"}` from `/auth/login`, you are hitting the wrong server. Verify the process with `lsof -iTCP:8010 -sTCP:LISTEN -n -P` and restart the FastAPI app from this repo.
-
-## Run In Hybrid Mode
-
-Hybrid mode is the only production runtime. Supabase Postgres is the authority,
-Drift is the local cache, and official writes go through Supabase RPCs.
-
-Before first hybrid login, provision Supabase Auth users (emails/passwords from `.env`):
-
-```bash
-python3 tools/provision_supabase_auth_users.py
-```
-
-Seed the master catalog into Supabase (30 buyers, 1528 unique products from `data/source/MASTER CATALOG.xlsx`):
-
-```bash
-python3 tools/seed_supabase_master_catalog.py
-```
-
-Build/install a release APK with Supabase dart-defines from `.env`:
-
-```bash
-bash tools/build_hybrid_apk.sh
-```
-
-Or run on a connected device:
-
-```bash
-(cd mobile && flutter pub get)
-(cd mobile && flutter run -d <device-id> \
-  --dart-define=SUPABASE_URL=<url> \
-  --dart-define=SUPABASE_ANON_KEY=<anon>)
-```
-
-Sign in with the **email** and password from your Supabase Auth user (not a local username).
-
-`DATA_MODE=api` and `DATA_MODE=local` are no longer accepted production runtime
-options. API/local code may remain as historical reference and test fixtures
-while the hybrid migration is being reviewed.
-
-### Preinstalled product catalog
-
-Fresh installs ship with **1,528 products** and **30 buyers** bundled in the APK.
-On first launch, `LocalProductCatalogSeeder` loads
-`mobile/assets/catalog/preinstalled_catalog.json` and inserts any missing buyers
-and products into the Drift cache. First hybrid sync reconciles those rows to
-Supabase authority.
-
-Source spreadsheet: `data/source/MASTER CATALOG.xlsx`. Rebuild the bundled JSON after
-updating the spreadsheet:
-
-```bash
+bash supabase/tests/run_migrations_and_tests.sh
 python3 tools/build_preinstalled_catalog.py
+python3 tools/test_catalog_parity.py
 ```
 
-Column mapping: Company → buyer + `company_name`; Category → `category`; Item
-Name → `item_name`; HSN → nullable `hsn_code` (125 source rows intentionally
-blank); Buying Price → GST-inclusive `buying_price`; Selling Price (DP) →
-GST-inclusive `selling_price`; Unit `1.0` → `pcs`; GST Rate →
-`gst_rate`; Quantity on Hand → `quantity_on_hand`; generated
-`item_number` per company (e.g. `DOMS-0001`); default `low_stock_threshold`
-`0`. Re-seeding is idempotent and never overwrites existing rows.
+Provision operator accounts in Supabase Auth before device login. The app expects
+email/password credentials.
 
-The local schema is intentionally backend-aligned for future server migration:
-local tables keep stable IDs, request IDs/request hashes, invoice numbers,
-ledger transactions, stock movements, user references, and decimal values as
-string payloads so exported data can be mapped to the Postgres/API model later.
-
-### Local/Server Schema Alignment
-
-Both local (Drift/SQLite) and server (PostgreSQL) schemas share the same table
-and column naming. Local mode stores all monetary values as canonical decimal
-strings (e.g. `"123.45"`) to preserve precision; the server uses `Numeric`
-columns. Key alignment expectations:
-
-- Local `products` V2 columns (`buyer_id`, `company_name`, `buying_price`,
-  `selling_price`) match server `products` columns exactly.
-- Local `invoice_items` snapshot columns (`product_item_number`,
-  `product_buyer_id`, `product_company_name`, `buying_price`, `selling_price`)
-  match server columns. The server additionally computes `revenue_amount`,
-  `buying_amount`, and `profit_amount` during migration.
-- Local `invoices.payment_state` (`CREDIT`, `PARTIAL_PAID`, `TOTAL_PAID`) and
-  `invoices.paid_amount` match server semantics.
-- Local `buyer_transactions` and `customer_transactions` have full column
-  alignment with server counterparts.
-- Local text IDs map to server UUIDs during migration; `salt` and
-  `password_hash_version` are local-only.
-
-Backup schema version: **10**. Backend compatibility version: **`local-v2`**.
-Includes `hsn_code` on products, `product_hsn_code` on invoice items,
-three-decimal unit prices, and `gst_flag` on company profiles and invoices
-(Drift v10 / Alembic 0010). Version 9 backups import with null HSN fields.
-
-### Backup and Migration Compatibility
-
-Legacy local backups are encrypted (AES-256-GCM, PBKDF2-HMAC-SHA256) JSON envelopes
-containing `schema_version`, `backend_compatibility_version`, `exported_at`,
-and per-table payloads. Import validates both version fields and required
-tables before replacing local data in a transaction. This is retained for
-historical tests/reference only; Supabase is the production master and backup UI
-is not reachable in the hybrid runtime.
-
-### Drive backup and scheduling
-
-Legacy local mode supports encrypted Google Drive backup via `google_sign_in` (Drive file
-scope), upload to visible folder `Khata Backups`, secure password storage
-(`flutter_secure_storage`), WorkManager periodic scheduling (default **02:00**
-local time) with startup catch-up, verified upload (SHA-256), and 30-backup
-retention. Manual export/import remains available.
-
-**External setup required:** Google Cloud Drive API, Android OAuth client
-(package + signing SHA fingerprints), consent screen/test users. No secrets in
-repo. Physical-device OAuth/background evidence required before production
-claims.
-
-### Drive/Background limitations (legacy note)
-
-## Build Release APK
-
-Build a hybrid release APK:
+## Run And Build
 
 ```bash
-(cd mobile && flutter build apk --release \
-  --dart-define=SUPABASE_URL=<url> \
-  --dart-define=SUPABASE_ANON_KEY=<anon>)
+cd mobile
+flutter pub get
+flutter run -d <device-id> \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 ```
 
-The APK is output at `mobile/build/app/outputs/flutter-apk/app-release.apk`.
-
-### APK Build Blocker: Java Runtime
-
-The `flutter build apk` command requires a JDK (Gradle needs `java`). If the
-build fails with `Unable to locate a Java Runtime`, install JDK 17+:
+Build the sideloadable family-test APK:
 
 ```bash
-brew install openjdk@17
+cd mobile
+flutter build apk --release \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 ```
 
-Then set `JAVA_HOME` before building:
+Output: `mobile/build/app/outputs/flutter-apk/app-release.apk`.
+
+## Validate
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || echo /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home)
-(cd mobile && flutter build apk --release \
-  --dart-define=SUPABASE_URL=<url> \
-  --dart-define=SUPABASE_ANON_KEY=<anon>)
-```
-
-Alternatively, install Android Studio which bundles a JDK.
-
-## Run The Flutter App
-
-Install Dart and Flutter dependencies from the Flutter project root, then launch the mobile app:
-
-For a full Android emulator and physical Pixel testing guide, see `docs/android-testing-guide.md`.
-
-```bash
-(cd mobile && flutter pub get)
-(cd mobile && flutter run -d <device-id>)
-```
-
-If you want to pin a specific backend URL instead of relying on auto-detection:
-
-```bash
-(cd mobile && flutter run -d <device-id> --dart-define=API_BASE_URL=http://10.0.2.2:8010/)
-```
-
-For a USB-connected Android device using `adb reverse`, use:
-
-```bash
-adb reverse tcp:8010 tcp:8010
-(cd mobile && flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:8010/)
-```
-
-## Local Backup, Restore, And Drive Plumbing
-
-Local mode adds a `Backup & Restore` drawer destination. The backup package is
-an encrypted JSON envelope using AES-256-GCM and PBKDF2-HMAC-SHA256. The
-decrypted payload contains `schema_version`, `backend_compatibility_version`,
-`exported_at`, and table payloads for local users, products, customers, buyers,
-company profiles, invoices, invoice items, stock movements, customer
-transactions, buyer transactions, backup settings, and backup events.
-
-### Local-to-server table mapping
-
-Every local Drift/SQLite table maps to a backend PostgreSQL table or is
-intentionally local-only:
-
-| Local Drift table | Server Postgres table | Notes |
-|---|---|---|
-| `local_users` | `app_users` | Local IDs are text strings; server uses UUID. Salt and password_hash_version columns are local-only. |
-| `products` | `products` | Aligned since product V2 schema (buyer_id, company_name, buying_price, selling_price). |
-| `customers` | `customers` | Full column alignment. |
-| `buyers` | `buyers` | Full column alignment. |
-| `company_profiles` | `company_profiles` | Full column alignment. |
-| `invoices` | `invoices` | Aligned including payment_state, paid_amount, invoice_datetime. Local payment_mode maps to server payment_state. |
-| `invoice_items` | `invoice_items` | Aligned with V2 snapshot fields (product_item_number, product_buyer_id, product_company_name, buying_price, selling_price). Server also has computed analytics columns (revenue_amount, buying_amount, profit_amount). |
-| `stock_movements` | `stock_movements` | Full column alignment. |
-| `customer_transactions` | `customer_transactions` | Full column alignment. |
-| `buyer_transactions` | `buyer_transactions` | Full column alignment. |
-| `local_sessions` | `user_sessions` | **Local-only.** Not exported in backup. Cleared on import. Server manages sessions independently. |
-| `backup_settings` | — | **Local-only.** No server equivalent. |
-| `backup_events` | — | **Local-only.** No server equivalent. |
-
-Backup/restore behavior:
-
-- The backup core (`LocalBackupService`) can export and import encrypted backup
-  packages for local table data.
-- The current `Backup & Restore` UI is wired to the Drive backup interface. Until
-  a configured Drive/file implementation is supplied, its export/import actions
-  show a configuration-required message instead of writing or reading files.
-- Restore validates backup schema version, backend compatibility version, and
-  required tables before replacing local data in a transaction.
-
-Automatic backup behavior:
-
-- Local mode stores backup settings in `backup_settings`.
-- Automatic backups are off by default and default to `00:00` when enabled.
-- `BackupScheduler` can detect a missed scheduled backup on app launch and records
-  failures to `backup_events`.
-- In the current repository wiring, automatic backup attempts call the Drive
-  backup skeleton and fail with a configuration-required event until a real
-  Drive/file export implementation is provided.
-- Platform background scheduling is represented by `BackupScheduleAdapter` and
-  currently requires platform task configuration before it can run outside app
-  launch.
-
-Google Drive backup note: the repository currently provides the
-`DriveBackupService` interface, local settings persistence, scheduler plumbing,
-Backup/Restore UI, and a Google Drive service skeleton. Real Google Drive OAuth,
-Drive file selection, and upload/download require external Google Cloud,
-Firebase, app signing, consent screen, and runtime configuration that must not be
-committed to this repository.
-
-## Run Tests
-
-Reset the database schema before a full backend verification run:
-
-```bash
-docker exec khata-postgres psql -U khata -d internal_billing -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-```
-
-Backend tests are destructive. Prefer a separate PostgreSQL database for tests, such as `internal_billing_test`.
-
-Run the full backend suite:
-
-```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing_test' \
-  PYTHONPATH=backend \
-  .venv/bin/python -m pytest backend/tests -q
-```
-
-Run the targeted end-to-end backend test:
-
-```bash
-BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing_test' \
-  PYTHONPATH=backend \
-  .venv/bin/python -m pytest backend/tests/api/test_end_to_end_flow.py -q
-```
-
-If you intentionally want to run destructive tests against a non-test database, add `BILLING_ALLOW_TEST_DATABASE_RESET=1`.
-
-Run the mobile test suite:
-
-```bash
+python3 tools/test_catalog_parity.py
+bash supabase/tests/run_migrations_and_tests.sh
 (cd mobile && flutter test test)
+(cd mobile && flutter analyze)
 ```
 
-For the full expanded mobile suite used by the offline-first local mode plan:
+Before family cutover, install the same APK on two devices and verify this flow:
 
-```bash
-(cd mobile && flutter test test -r expanded)
-```
+1. Login and complete initial sync on both devices.
+2. Create a product/customer and confirm an invoice on device A.
+3. Sync device B and compare invoice, stock movement, quantity, and customer ledger.
+4. Cancel the invoice on device B.
+5. Sync device A and compare the canceled invoice, stock reversal, and ledger reversal.
+
+The pre-hybrid recovery branch is `main_backup`. Once real production writes
+exist in Supabase, preserve/export that database before attempting rollback.

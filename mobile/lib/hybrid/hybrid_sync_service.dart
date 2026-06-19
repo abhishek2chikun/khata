@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:postgrest/postgrest.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../local/local_database.dart';
@@ -554,7 +553,10 @@ class HybridSyncService {
     // #endregion
   }
 
-  static const _syncPageSize = 2000;
+  // Supabase projects commonly cap REST responses at 1,000 rows even when the
+  // requested range is larger. Keep the client page at that cap so a short page
+  // remains a reliable end-of-table signal.
+  static const _syncPageSize = 1000;
 
   Future<void> syncAll({bool forceFull = false}) async {
     if (_isSyncing) {
@@ -662,6 +664,7 @@ class HybridSyncService {
             .from('products')
             .select()
             .eq('is_active', true)
+            .order('id')
             .range(from, to);
         return rows
             .map((row) => Map<String, dynamic>.from(row as Map))
@@ -688,7 +691,7 @@ class HybridSyncService {
         if (activeOnly) {
           query = query.eq('is_active', true);
         }
-        final rows = await query.range(from, to);
+        final rows = await query.order('id').range(from, to);
         return rows
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList();
@@ -701,8 +704,11 @@ class HybridSyncService {
     return syncPaginatedTable(
       pageSize: _syncPageSize,
       fetchPage: (from, to) async {
-        final rows =
-            await _client.from('invoice_items').select().range(from, to);
+        final rows = await _client
+            .from('invoice_items')
+            .select()
+            .order('id')
+            .range(from, to);
         return rows
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList();

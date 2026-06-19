@@ -6,8 +6,7 @@ enum AppDestination {
   buyers('Buyers', Icons.storefront_outlined),
   invoices('Invoices', Icons.receipt_long_outlined),
   analytics('Analytics', Icons.bar_chart_outlined),
-  companyProfile('Company profile', Icons.business_outlined),
-  backup('Backup & Restore', Icons.backup_outlined);
+  companyProfile('Company profile', Icons.business_outlined);
 
   const AppDestination(this.label, this.icon);
 
@@ -21,7 +20,6 @@ class AppNavigationDrawer extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.onLogout,
-    this.showLocalBackup = false,
     this.showSyncCatalog = false,
     this.onSyncCatalog,
     this.isSyncing = false,
@@ -30,7 +28,6 @@ class AppNavigationDrawer extends StatelessWidget {
   final AppDestination selected;
   final ValueChanged<AppDestination> onSelect;
   final Future<void> Function() onLogout;
-  final bool showLocalBackup;
   final bool showSyncCatalog;
   final Future<void> Function()? onSyncCatalog;
   final bool isSyncing;
@@ -92,7 +89,7 @@ class AppNavigationDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 children: [
-                  ..._destinations.map(
+                  ...AppDestination.values.map(
                     (destination) => ListTile(
                       dense: true,
                       leading: Icon(destination.icon),
@@ -149,14 +146,5 @@ class AppNavigationDrawer extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  List<AppDestination> get _destinations {
-    if (showLocalBackup) {
-      return AppDestination.values;
-    }
-    return AppDestination.values
-        .where((destination) => destination != AppDestination.backup)
-        .toList();
   }
 }

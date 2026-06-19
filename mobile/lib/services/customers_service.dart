@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import '../models/customer.dart';
 import '../models/customer_ledger.dart';
-import 'api_client.dart';
 
 class CreateCustomerInput {
   const CreateCustomerInput({
@@ -80,43 +77,4 @@ abstract class CustomersService {
 
   Future<CustomerLedger> fetchCustomerLedger(String customerId,
       {String? onDate});
-}
-
-class ApiCustomersService implements CustomersService {
-  ApiCustomersService({required ApiClient apiClient}) : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  @override
-  Future<Customer> createCustomer(CreateCustomerInput input) async {
-    final response = await _apiClient.post('/customers', body: input.toJson());
-    return Customer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<Customer> updateCustomer({
-    required String id,
-    required UpdateCustomerInput input,
-  }) async {
-    final response =
-        await _apiClient.put('/customers/$id', body: input.toJson());
-    return Customer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<CustomerLedger> fetchCustomerLedger(String customerId,
-      {String? onDate}) async {
-    final query = onDate == null ? '' : '?on_date=$onDate';
-    final response =
-        await _apiClient.get('/customers/$customerId/ledger$query');
-    return CustomerLedger.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<List<Customer>> fetchCustomers({String search = ''}) async {
-    final response = await _apiClient.get('/customers');
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded.cast<Map<String, dynamic>>().map(Customer.fromJson).toList();
-  }
 }

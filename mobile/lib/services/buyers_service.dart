@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'dart:math';
 
 import '../models/buyer.dart';
 import '../models/buyer_ledger.dart';
-import 'api_client.dart';
 import 'money_validator.dart';
 
 class CreateBuyerInput {
@@ -142,79 +140,6 @@ abstract class BuyersService {
     required String buyerId,
     required BuyerPayableAdjustmentInput input,
   });
-}
-
-class ApiBuyersService implements BuyersService {
-  ApiBuyersService({required ApiClient apiClient}) : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  @override
-  Future<Buyer> createBuyer(CreateBuyerInput input) async {
-    final response = await _apiClient.post('/buyers', body: input.toJson());
-    return Buyer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<Buyer> updateBuyer(
-      {required String id, required UpdateBuyerInput input}) async {
-    final response =
-        await _apiClient.put('/buyers/$id', body: input.toJson());
-    return Buyer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<List<Buyer>> fetchBuyers({String search = ''}) async {
-    final path = search.trim().isEmpty
-        ? '/buyers'
-        : '/buyers?search=${Uri.encodeQueryComponent(search.trim())}';
-    final response = await _apiClient.get(path);
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded.cast<Map<String, dynamic>>().map(Buyer.fromJson).toList();
-  }
-
-  @override
-  Future<BuyerLedger> fetchBuyerLedger(String buyerId) async {
-    final response = await _apiClient.get('/buyers/$buyerId/ledger');
-    return BuyerLedger.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<void> addOpeningPayable({
-    required String buyerId,
-    required BuyerLedgerEntryInput input,
-  }) async {
-    await _apiClient.post('/buyers/$buyerId/opening-payable',
-        body: input.toJson());
-  }
-
-  @override
-  Future<void> addPayableAdjustment({
-    required String buyerId,
-    required BuyerPayableAdjustmentInput input,
-  }) async {
-    await _apiClient.post('/buyers/$buyerId/payable-adjustments',
-        body: input.toJson());
-  }
-
-  @override
-  Future<void> addPaymentMade({
-    required String buyerId,
-    required BuyerLedgerEntryInput input,
-  }) async {
-    await _apiClient.post('/buyers/$buyerId/payments-made',
-        body: input.toJson());
-  }
-
-  @override
-  Future<void> addPurchaseAmount({
-    required String buyerId,
-    required BuyerLedgerEntryInput input,
-  }) async {
-    await _apiClient.post('/buyers/$buyerId/purchase-amounts',
-        body: input.toJson());
-  }
 }
 
 String generateBuyerRequestId() {

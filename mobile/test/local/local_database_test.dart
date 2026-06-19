@@ -11,7 +11,7 @@ void main() {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 11);
+    expect(database.schemaVersion, 12);
     expect(
         database.allTables.map((table) => table.actualTableName),
         containsAll(<String>[
@@ -25,9 +25,7 @@ void main() {
           'company_profiles',
           'invoices',
           'invoice_items',
-          'local_sessions',
-          'backup_events',
-          'backup_settings',
+          'catalog_cache_settings',
           'hybrid_cache_settings',
         ]));
   });
@@ -269,14 +267,75 @@ void main() {
     );
   });
 
-  test('backup settings stores automatic backup flag and daily time', () async {
+  test('catalog cache settings stores the bundled catalog version', () async {
     final database = LocalDatabase.memory();
     addTearDown(database.close);
 
-    expect(database.backupSettings.automaticBackupsEnabled,
-        isA<GeneratedColumn<bool>>());
-    expect(database.backupSettings.dailyBackupTime,
-        isA<GeneratedColumn<String>>());
+    expect(database.catalogCacheSettings.catalogVersion,
+        isA<GeneratedColumn<int>>());
+  });
+
+  test('schema 11 migrates catalog version and removes backup tables',
+      () async {
+    final directory = await Directory.systemTemp.createTemp('khata-v11-');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/local.sqlite');
+
+    final current = LocalDatabase.forConnection(NativeDatabase(file));
+    await current.customSelect('SELECT 1').get();
+    await current.close();
+
+    final raw = sqlite.sqlite3.open(file.path);
+    raw.execute('DROP TABLE catalog_cache_settings');
+    raw.execute('''
+      CREATE TABLE backup_settings (
+        id TEXT NOT NULL PRIMARY KEY,
+        backup_directory TEXT NULL,
+        automatic_backups_enabled INTEGER NOT NULL DEFAULT 0,
+        daily_backup_time TEXT NOT NULL DEFAULT '00:00',
+        last_backup_at TEXT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    raw.execute('''
+      INSERT INTO backup_settings (
+        id, last_backup_at, updated_at
+      ) VALUES (
+        'preinstalled-catalog', '6', '2026-06-18T00:00:00.000Z'
+      )
+    ''');
+    raw.execute('''
+      CREATE TABLE backup_events (
+        id TEXT NOT NULL PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        file_path TEXT NULL,
+        message TEXT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    raw.execute('''
+      CREATE TABLE local_sessions (
+        id TEXT NOT NULL PRIMARY KEY,
+        local_user_id TEXT NOT NULL,
+        session_token_hash TEXT NOT NULL,
+        refresh_token_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NULL
+      )
+    ''');
+    raw.execute('PRAGMA user_version = 11');
+    raw.close();
+
+    final migrated = LocalDatabase.forConnection(NativeDatabase(file));
+    addTearDown(migrated.close);
+    final metadata =
+        await migrated.select(migrated.catalogCacheSettings).getSingle();
+    expect(metadata.id, 'preinstalled-catalog');
+    expect(metadata.catalogVersion, 6);
+    expect(await _tableExists(migrated, 'backup_settings'), isFalse);
+    expect(await _tableExists(migrated, 'backup_events'), isFalse);
+    expect(await _tableExists(migrated, 'local_sessions'), isFalse);
   });
 
   test('business table nullability and column types match backend models',
@@ -640,6 +699,14 @@ void _expectNullable(
       reason: '$tableName.$columnName should not require insert values');
 }
 
+Future<bool> _tableExists(LocalDatabase database, String tableName) async {
+  final row = await database.customSelect(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+    variables: <Variable<Object>>[Variable<String>(tableName)],
+  ).getSingleOrNull();
+  return row != null;
+}
+
 void _seedSchemaV1Database(File file) {
   final database = sqlite.sqlite3.open(file.path);
   try {
@@ -697,7 +764,7 @@ void _seedSchemaV1Database(File file) {
     );
     database.execute('PRAGMA user_version = 1');
   } finally {
-    database.dispose();
+    database.close();
   }
 }
 
@@ -824,6 +891,6 @@ void _seedSchemaV4InvoiceDatabase(File file, {required String paymentMode}) {
     ''');
     database.execute('PRAGMA user_version = 4');
   } finally {
-    database.dispose();
+    database.close();
   }
 }

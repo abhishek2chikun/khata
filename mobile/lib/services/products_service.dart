@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import '../models/product.dart';
-import 'api_client.dart';
 
 class ProductFilter {
   const ProductFilter({
@@ -25,8 +22,8 @@ class ProductFilter {
       'company_name': companyName,
       'category': category,
       'search': search,
-      'active': active == null ? null : active.toString(),
-      'low_stock_only': lowStockOnly == null ? null : lowStockOnly.toString(),
+      'active': active?.toString(),
+      'low_stock_only': lowStockOnly?.toString(),
       'buyer_id': buyerId,
     };
   }
@@ -190,57 +187,4 @@ abstract class ProductsService {
     required String id,
     required AdjustStockInput input,
   });
-}
-
-class ApiProductsService implements ProductsService {
-  ApiProductsService({required ApiClient apiClient}) : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  @override
-  Future<Product> createProduct(CreateProductInput input) async {
-    final response = await _apiClient.post('/products', body: input.toJson());
-    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<List<Product>> fetchProducts({ProductFilter? filter}) async {
-    final response = await _apiClient.get(
-      '/products',
-      queryParameters: filter?.toQueryParameters(),
-    );
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded.cast<Map<String, dynamic>>().map(Product.fromJson).toList();
-  }
-
-  @override
-  Future<Product> updateProduct(
-      {required String id, required UpdateProductInput input}) async {
-    final response =
-        await _apiClient.put('/products/$id', body: input.toJson());
-    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<Product> archiveProduct({required String id}) async {
-    final response = await _apiClient.delete('/products/$id');
-    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<Product> reactivateProduct({required String id}) {
-    throw UnsupportedError('Product reactivation is only available locally.');
-  }
-
-  @override
-  Future<Product> adjustStock({
-    required String id,
-    required AdjustStockInput input,
-  }) async {
-    final response = await _apiClient.post(
-      '/products/$id/adjust-stock',
-      body: input.toJson(),
-    );
-    return Product.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
 }

@@ -47,6 +47,11 @@ a full Supabase-to-Drift refresh before the UI could continue.
 6. While the app is authenticated and open, a simple 10-minute periodic
    background sync also runs. App resume still triggers sync as before.
 
+Remote table reads use deterministic `id` ordering and 1,000-row pages. This is
+not merely a tuning choice: the configured Supabase REST API caps responses at
+1,000 rows. Requesting 2,000 caused the first 1,000-row response to look like a
+short final page and silently truncated the 1,530-product cache.
+
 ## RPC Response Completeness
 
 Invoice create/cancel now return updated `products` alongside invoice, item,
@@ -60,10 +65,11 @@ for a background table scan.
 | --- | --- |
 | `bash supabase/tests/run_migrations_and_tests.sh` | pass |
 | `flutter test test/hybrid test/app/app_mode_test.dart` | pass, 22 tests |
-| `flutter test test` | pass, 493 tests |
+| `flutter test test` | pass, 379 current-runtime tests |
 | `python3 tools/test_catalog_parity.py` | pass, 30 buyers and 1528 products |
-| `flutter analyze` | no errors; 51 warnings/info remain |
-| `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` | pass, `build/app/outputs/flutter-apk/app-release.apk` 68.7 MB |
+| `flutter analyze` | pass, no issues |
+| `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` | pass, `build/app/outputs/flutter-apk/app-release.apk` 66.4 MB |
+| `bash tools/run_remote_two_client_smoke.sh` | pass; both caches loaded 1,530 active products and create/cancel propagated both ways |
 
 ## Manual Check
 

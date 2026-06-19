@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/customer.dart';
 import 'package:internal_billing_khata_mobile/models/customer_ledger.dart';
 import 'package:internal_billing_khata_mobile/screens/customer_detail_screen.dart';
@@ -88,7 +87,8 @@ void main() {
 
     expect(find.text('Edit customer'), findsOneWidget);
     expect(
-        (tester.widget<TextField>(find.byKey(const Key('customerNameField')))
+        (tester
+                .widget<TextField>(find.byKey(const Key('customerNameField')))
                 .controller
                 ?.text ??
             ''),
@@ -219,8 +219,8 @@ class FakePaymentsServiceForEdit implements PaymentsService {
   }
 
   @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input) {
     throw UnimplementedError();
   }
-
 }

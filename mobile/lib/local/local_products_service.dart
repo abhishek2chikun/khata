@@ -42,15 +42,14 @@ class LocalProductsService implements ProductsService {
               unit: Value(input.unit),
               gstRate: _normalizeDecimal(input.gstRate),
               hsnCode: Value(normalizeHsn(input.hsnCode)),
-              quantityOnHand:
-                  _normalizeIntegralQuantity(input.quantityOnHand),
+              quantityOnHand: _normalizeIntegralQuantity(input.quantityOnHand),
               lowStockThreshold:
                   _normalizeIntegralQuantity(input.lowStockThreshold),
               createdAt: now,
               updatedAt: now,
             ),
           );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicate(
         companyName: input.companyName,
         category: input.category,
@@ -59,7 +58,7 @@ class LocalProductsService implements ProductsService {
       )) {
         throw _duplicateProductError();
       }
-      throw error;
+      rethrow;
     }
 
     final product = await (_database.select(_database.products)
@@ -150,7 +149,7 @@ class LocalProductsService implements ProductsService {
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicate(
         companyName: input.companyName,
         category: input.category,
@@ -160,7 +159,7 @@ class LocalProductsService implements ProductsService {
       )) {
         throw _duplicateProductError();
       }
-      throw error;
+      rethrow;
     }
 
     final product = await (_database.select(_database.products)
@@ -264,7 +263,8 @@ class LocalProductsService implements ProductsService {
               productId: id,
               requestId: Value(input.requestId),
               movementType: 'MANUAL_ADJUSTMENT',
-              quantityDelta: _normalizeSignedIntegralQuantity(input.quantityDelta),
+              quantityDelta:
+                  _normalizeSignedIntegralQuantity(input.quantityDelta),
               reason: Value(input.reason),
               createdByUserId: _systemUserId,
               createdAt: now,

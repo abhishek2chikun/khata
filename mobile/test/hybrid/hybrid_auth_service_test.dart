@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gotrue/gotrue.dart' as gotrue;
 import 'package:internal_billing_khata_mobile/hybrid/hybrid_auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 void main() {
   test('maps invalid credentials to friendly message', () {
     expect(
       mapGotrueAuthError(
-        gotrue.AuthException(
+        supabase.AuthException(
           'Invalid login credentials',
           statusCode: '400',
           code: 'invalid_credentials',

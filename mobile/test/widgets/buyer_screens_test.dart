@@ -18,7 +18,6 @@ void main() {
             selected: AppDestination.buyers,
             onSelect: (_) {},
             onLogout: () async {},
-            showLocalBackup: true,
           ),
           appBar: AppBar(),
         ),
@@ -29,6 +28,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Buyers'), findsOneWidget);
+    expect(find.text('Backup & Restore'), findsNothing);
   });
 
   testWidgets('Buyer list loads', (tester) async {
@@ -319,7 +319,8 @@ void main() {
 
     expect(find.text('Edit buyer'), findsOneWidget);
     expect(
-        (tester.widget<TextField>(find.byKey(const Key('buyerNameField')))
+        (tester
+                .widget<TextField>(find.byKey(const Key('buyerNameField')))
                 .controller
                 ?.text ??
             ''),
@@ -400,7 +401,8 @@ class FakeBuyersService implements BuyersService {
     updateInputs.add((id: id, input: input));
     final index = buyers.indexWhere((b) => b.id == id);
     if (index == -1) {
-      throw const ApiError(code: 'NOT_FOUND', message: 'Buyer not found', statusCode: 404);
+      throw const ApiError(
+          code: 'NOT_FOUND', message: 'Buyer not found', statusCode: 404);
     }
     final updated = buyers[index].copyWith(
       name: input.name,
@@ -449,7 +451,7 @@ class FakeBuyersService implements BuyersService {
   Future<BuyerLedger> fetchBuyerLedger(String buyerId) async {
     final index = fetchBuyerLedgerCount;
     fetchBuyerLedgerCount += 1;
-    return ledgers[index.clamp(0, ledgers.length - 1) as int];
+    return ledgers[index.clamp(0, ledgers.length - 1)];
   }
 
   @override

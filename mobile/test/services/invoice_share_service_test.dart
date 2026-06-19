@@ -21,7 +21,7 @@ void main() {
     );
   });
 
-  InvoiceDetail _sampleInvoice({bool gstFlag = true}) {
+  InvoiceDetail sampleInvoice({bool gstFlag = true}) {
     return InvoiceDetail(
       id: 'inv-1',
       customerId: 'cust-1',
@@ -45,14 +45,15 @@ void main() {
   }
 
   test('shares pdf and formatted caption', () async {
-    final invoice = _sampleInvoice();
+    final invoice = sampleInvoice();
     final caption = formatInvoiceShareCaption(invoice);
     await service.shareInvoicePdf('/tmp/invoice_42.pdf', text: caption);
 
     expect(shareCalls, hasLength(1));
     expect(shareCalls.single.path, '/tmp/invoice_42.pdf');
     expect(shareCalls.single.text, contains('Khata Traders'));
-    expect(shareCalls.single.text, contains('Tax Invoice #42 dated 2026-01-10'));
+    expect(
+        shareCalls.single.text, contains('Tax Invoice #42 dated 2026-01-10'));
     expect(shareCalls.single.text, contains('Customer: Acme Stores'));
     expect(shareCalls.single.text, contains('Grand Total: 236.00'));
     expect(shareCalls.single.text, contains('Balance Due: 236.00'));
@@ -62,7 +63,7 @@ void main() {
   });
 
   test('non-gst caption uses invoice document type', () {
-    final caption = formatInvoiceShareCaption(_sampleInvoice(gstFlag: false));
+    final caption = formatInvoiceShareCaption(sampleInvoice(gstFlag: false));
     expect(caption, contains('Invoice #42 dated 2026-01-10'));
     expect(caption, isNot(contains('Tax Invoice')));
   });

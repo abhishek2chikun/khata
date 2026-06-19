@@ -8853,763 +8853,25 @@ class InvoiceItemsCompanion extends UpdateCompanion<InvoiceItem> {
   }
 }
 
-class $LocalSessionsTable extends LocalSessions
-    with TableInfo<$LocalSessionsTable, LocalSession> {
+class $CatalogCacheSettingsTable extends CatalogCacheSettings
+    with TableInfo<$CatalogCacheSettingsTable, CatalogCacheSetting> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $LocalSessionsTable(this.attachedDatabase, [this._alias]);
+  $CatalogCacheSettingsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _localUserIdMeta =
-      const VerificationMeta('localUserId');
+  static const VerificationMeta _catalogVersionMeta =
+      const VerificationMeta('catalogVersion');
   @override
-  late final GeneratedColumn<String> localUserId = GeneratedColumn<String>(
-      'local_user_id', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('REFERENCES local_users (id)'));
-  static const VerificationMeta _sessionTokenHashMeta =
-      const VerificationMeta('sessionTokenHash');
-  @override
-  late final GeneratedColumn<String> sessionTokenHash = GeneratedColumn<String>(
-      'session_token_hash', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _refreshTokenHashMeta =
-      const VerificationMeta('refreshTokenHash');
-  @override
-  late final GeneratedColumn<String> refreshTokenHash = GeneratedColumn<String>(
-      'refresh_token_hash', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
-  @override
-  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _expiresAtMeta =
-      const VerificationMeta('expiresAt');
-  @override
-  late final GeneratedColumn<String> expiresAt = GeneratedColumn<String>(
-      'expires_at', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        localUserId,
-        sessionTokenHash,
-        refreshTokenHash,
-        createdAt,
-        expiresAt
-      ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'local_sessions';
-  @override
-  VerificationContext validateIntegrity(Insertable<LocalSession> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('local_user_id')) {
-      context.handle(
-          _localUserIdMeta,
-          localUserId.isAcceptableOrUnknown(
-              data['local_user_id']!, _localUserIdMeta));
-    } else if (isInserting) {
-      context.missing(_localUserIdMeta);
-    }
-    if (data.containsKey('session_token_hash')) {
-      context.handle(
-          _sessionTokenHashMeta,
-          sessionTokenHash.isAcceptableOrUnknown(
-              data['session_token_hash']!, _sessionTokenHashMeta));
-    } else if (isInserting) {
-      context.missing(_sessionTokenHashMeta);
-    }
-    if (data.containsKey('refresh_token_hash')) {
-      context.handle(
-          _refreshTokenHashMeta,
-          refreshTokenHash.isAcceptableOrUnknown(
-              data['refresh_token_hash']!, _refreshTokenHashMeta));
-    } else if (isInserting) {
-      context.missing(_refreshTokenHashMeta);
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('expires_at')) {
-      context.handle(_expiresAtMeta,
-          expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta));
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  LocalSession map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LocalSession(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      localUserId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}local_user_id'])!,
-      sessionTokenHash: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}session_token_hash'])!,
-      refreshTokenHash: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}refresh_token_hash'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
-      expiresAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}expires_at']),
-    );
-  }
-
-  @override
-  $LocalSessionsTable createAlias(String alias) {
-    return $LocalSessionsTable(attachedDatabase, alias);
-  }
-}
-
-class LocalSession extends DataClass implements Insertable<LocalSession> {
-  final String id;
-  final String localUserId;
-  final String sessionTokenHash;
-  final String refreshTokenHash;
-  final String createdAt;
-  final String? expiresAt;
-  const LocalSession(
-      {required this.id,
-      required this.localUserId,
-      required this.sessionTokenHash,
-      required this.refreshTokenHash,
-      required this.createdAt,
-      this.expiresAt});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['local_user_id'] = Variable<String>(localUserId);
-    map['session_token_hash'] = Variable<String>(sessionTokenHash);
-    map['refresh_token_hash'] = Variable<String>(refreshTokenHash);
-    map['created_at'] = Variable<String>(createdAt);
-    if (!nullToAbsent || expiresAt != null) {
-      map['expires_at'] = Variable<String>(expiresAt);
-    }
-    return map;
-  }
-
-  LocalSessionsCompanion toCompanion(bool nullToAbsent) {
-    return LocalSessionsCompanion(
-      id: Value(id),
-      localUserId: Value(localUserId),
-      sessionTokenHash: Value(sessionTokenHash),
-      refreshTokenHash: Value(refreshTokenHash),
-      createdAt: Value(createdAt),
-      expiresAt: expiresAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(expiresAt),
-    );
-  }
-
-  factory LocalSession.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LocalSession(
-      id: serializer.fromJson<String>(json['id']),
-      localUserId: serializer.fromJson<String>(json['localUserId']),
-      sessionTokenHash: serializer.fromJson<String>(json['sessionTokenHash']),
-      refreshTokenHash: serializer.fromJson<String>(json['refreshTokenHash']),
-      createdAt: serializer.fromJson<String>(json['createdAt']),
-      expiresAt: serializer.fromJson<String?>(json['expiresAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'localUserId': serializer.toJson<String>(localUserId),
-      'sessionTokenHash': serializer.toJson<String>(sessionTokenHash),
-      'refreshTokenHash': serializer.toJson<String>(refreshTokenHash),
-      'createdAt': serializer.toJson<String>(createdAt),
-      'expiresAt': serializer.toJson<String?>(expiresAt),
-    };
-  }
-
-  LocalSession copyWith(
-          {String? id,
-          String? localUserId,
-          String? sessionTokenHash,
-          String? refreshTokenHash,
-          String? createdAt,
-          Value<String?> expiresAt = const Value.absent()}) =>
-      LocalSession(
-        id: id ?? this.id,
-        localUserId: localUserId ?? this.localUserId,
-        sessionTokenHash: sessionTokenHash ?? this.sessionTokenHash,
-        refreshTokenHash: refreshTokenHash ?? this.refreshTokenHash,
-        createdAt: createdAt ?? this.createdAt,
-        expiresAt: expiresAt.present ? expiresAt.value : this.expiresAt,
-      );
-  LocalSession copyWithCompanion(LocalSessionsCompanion data) {
-    return LocalSession(
-      id: data.id.present ? data.id.value : this.id,
-      localUserId:
-          data.localUserId.present ? data.localUserId.value : this.localUserId,
-      sessionTokenHash: data.sessionTokenHash.present
-          ? data.sessionTokenHash.value
-          : this.sessionTokenHash,
-      refreshTokenHash: data.refreshTokenHash.present
-          ? data.refreshTokenHash.value
-          : this.refreshTokenHash,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LocalSession(')
-          ..write('id: $id, ')
-          ..write('localUserId: $localUserId, ')
-          ..write('sessionTokenHash: $sessionTokenHash, ')
-          ..write('refreshTokenHash: $refreshTokenHash, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('expiresAt: $expiresAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, localUserId, sessionTokenHash,
-      refreshTokenHash, createdAt, expiresAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is LocalSession &&
-          other.id == this.id &&
-          other.localUserId == this.localUserId &&
-          other.sessionTokenHash == this.sessionTokenHash &&
-          other.refreshTokenHash == this.refreshTokenHash &&
-          other.createdAt == this.createdAt &&
-          other.expiresAt == this.expiresAt);
-}
-
-class LocalSessionsCompanion extends UpdateCompanion<LocalSession> {
-  final Value<String> id;
-  final Value<String> localUserId;
-  final Value<String> sessionTokenHash;
-  final Value<String> refreshTokenHash;
-  final Value<String> createdAt;
-  final Value<String?> expiresAt;
-  final Value<int> rowid;
-  const LocalSessionsCompanion({
-    this.id = const Value.absent(),
-    this.localUserId = const Value.absent(),
-    this.sessionTokenHash = const Value.absent(),
-    this.refreshTokenHash = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.expiresAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  LocalSessionsCompanion.insert({
-    required String id,
-    required String localUserId,
-    required String sessionTokenHash,
-    required String refreshTokenHash,
-    required String createdAt,
-    this.expiresAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        localUserId = Value(localUserId),
-        sessionTokenHash = Value(sessionTokenHash),
-        refreshTokenHash = Value(refreshTokenHash),
-        createdAt = Value(createdAt);
-  static Insertable<LocalSession> custom({
-    Expression<String>? id,
-    Expression<String>? localUserId,
-    Expression<String>? sessionTokenHash,
-    Expression<String>? refreshTokenHash,
-    Expression<String>? createdAt,
-    Expression<String>? expiresAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (localUserId != null) 'local_user_id': localUserId,
-      if (sessionTokenHash != null) 'session_token_hash': sessionTokenHash,
-      if (refreshTokenHash != null) 'refresh_token_hash': refreshTokenHash,
-      if (createdAt != null) 'created_at': createdAt,
-      if (expiresAt != null) 'expires_at': expiresAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  LocalSessionsCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? localUserId,
-      Value<String>? sessionTokenHash,
-      Value<String>? refreshTokenHash,
-      Value<String>? createdAt,
-      Value<String?>? expiresAt,
-      Value<int>? rowid}) {
-    return LocalSessionsCompanion(
-      id: id ?? this.id,
-      localUserId: localUserId ?? this.localUserId,
-      sessionTokenHash: sessionTokenHash ?? this.sessionTokenHash,
-      refreshTokenHash: refreshTokenHash ?? this.refreshTokenHash,
-      createdAt: createdAt ?? this.createdAt,
-      expiresAt: expiresAt ?? this.expiresAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (localUserId.present) {
-      map['local_user_id'] = Variable<String>(localUserId.value);
-    }
-    if (sessionTokenHash.present) {
-      map['session_token_hash'] = Variable<String>(sessionTokenHash.value);
-    }
-    if (refreshTokenHash.present) {
-      map['refresh_token_hash'] = Variable<String>(refreshTokenHash.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<String>(createdAt.value);
-    }
-    if (expiresAt.present) {
-      map['expires_at'] = Variable<String>(expiresAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LocalSessionsCompanion(')
-          ..write('id: $id, ')
-          ..write('localUserId: $localUserId, ')
-          ..write('sessionTokenHash: $sessionTokenHash, ')
-          ..write('refreshTokenHash: $refreshTokenHash, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('expiresAt: $expiresAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $BackupEventsTable extends BackupEvents
-    with TableInfo<$BackupEventsTable, BackupEvent> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $BackupEventsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _eventTypeMeta =
-      const VerificationMeta('eventType');
-  @override
-  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
-      'event_type', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-      'status', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _filePathMeta =
-      const VerificationMeta('filePath');
-  @override
-  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
-      'file_path', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _messageMeta =
-      const VerificationMeta('message');
-  @override
-  late final GeneratedColumn<String> message = GeneratedColumn<String>(
-      'message', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
-  @override
-  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  @override
-  List<GeneratedColumn> get $columns =>
-      [id, eventType, status, filePath, message, createdAt];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'backup_events';
-  @override
-  VerificationContext validateIntegrity(Insertable<BackupEvent> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('event_type')) {
-      context.handle(_eventTypeMeta,
-          eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta));
-    } else if (isInserting) {
-      context.missing(_eventTypeMeta);
-    }
-    if (data.containsKey('status')) {
-      context.handle(_statusMeta,
-          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
-    } else if (isInserting) {
-      context.missing(_statusMeta);
-    }
-    if (data.containsKey('file_path')) {
-      context.handle(_filePathMeta,
-          filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta));
-    }
-    if (data.containsKey('message')) {
-      context.handle(_messageMeta,
-          message.isAcceptableOrUnknown(data['message']!, _messageMeta));
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  BackupEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return BackupEvent(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      eventType: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}event_type'])!,
-      status: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      filePath: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}file_path']),
-      message: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}message']),
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
-    );
-  }
-
-  @override
-  $BackupEventsTable createAlias(String alias) {
-    return $BackupEventsTable(attachedDatabase, alias);
-  }
-}
-
-class BackupEvent extends DataClass implements Insertable<BackupEvent> {
-  final String id;
-  final String eventType;
-  final String status;
-  final String? filePath;
-  final String? message;
-  final String createdAt;
-  const BackupEvent(
-      {required this.id,
-      required this.eventType,
-      required this.status,
-      this.filePath,
-      this.message,
-      required this.createdAt});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['event_type'] = Variable<String>(eventType);
-    map['status'] = Variable<String>(status);
-    if (!nullToAbsent || filePath != null) {
-      map['file_path'] = Variable<String>(filePath);
-    }
-    if (!nullToAbsent || message != null) {
-      map['message'] = Variable<String>(message);
-    }
-    map['created_at'] = Variable<String>(createdAt);
-    return map;
-  }
-
-  BackupEventsCompanion toCompanion(bool nullToAbsent) {
-    return BackupEventsCompanion(
-      id: Value(id),
-      eventType: Value(eventType),
-      status: Value(status),
-      filePath: filePath == null && nullToAbsent
-          ? const Value.absent()
-          : Value(filePath),
-      message: message == null && nullToAbsent
-          ? const Value.absent()
-          : Value(message),
-      createdAt: Value(createdAt),
-    );
-  }
-
-  factory BackupEvent.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return BackupEvent(
-      id: serializer.fromJson<String>(json['id']),
-      eventType: serializer.fromJson<String>(json['eventType']),
-      status: serializer.fromJson<String>(json['status']),
-      filePath: serializer.fromJson<String?>(json['filePath']),
-      message: serializer.fromJson<String?>(json['message']),
-      createdAt: serializer.fromJson<String>(json['createdAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'eventType': serializer.toJson<String>(eventType),
-      'status': serializer.toJson<String>(status),
-      'filePath': serializer.toJson<String?>(filePath),
-      'message': serializer.toJson<String?>(message),
-      'createdAt': serializer.toJson<String>(createdAt),
-    };
-  }
-
-  BackupEvent copyWith(
-          {String? id,
-          String? eventType,
-          String? status,
-          Value<String?> filePath = const Value.absent(),
-          Value<String?> message = const Value.absent(),
-          String? createdAt}) =>
-      BackupEvent(
-        id: id ?? this.id,
-        eventType: eventType ?? this.eventType,
-        status: status ?? this.status,
-        filePath: filePath.present ? filePath.value : this.filePath,
-        message: message.present ? message.value : this.message,
-        createdAt: createdAt ?? this.createdAt,
-      );
-  BackupEvent copyWithCompanion(BackupEventsCompanion data) {
-    return BackupEvent(
-      id: data.id.present ? data.id.value : this.id,
-      eventType: data.eventType.present ? data.eventType.value : this.eventType,
-      status: data.status.present ? data.status.value : this.status,
-      filePath: data.filePath.present ? data.filePath.value : this.filePath,
-      message: data.message.present ? data.message.value : this.message,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('BackupEvent(')
-          ..write('id: $id, ')
-          ..write('eventType: $eventType, ')
-          ..write('status: $status, ')
-          ..write('filePath: $filePath, ')
-          ..write('message: $message, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(id, eventType, status, filePath, message, createdAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is BackupEvent &&
-          other.id == this.id &&
-          other.eventType == this.eventType &&
-          other.status == this.status &&
-          other.filePath == this.filePath &&
-          other.message == this.message &&
-          other.createdAt == this.createdAt);
-}
-
-class BackupEventsCompanion extends UpdateCompanion<BackupEvent> {
-  final Value<String> id;
-  final Value<String> eventType;
-  final Value<String> status;
-  final Value<String?> filePath;
-  final Value<String?> message;
-  final Value<String> createdAt;
-  final Value<int> rowid;
-  const BackupEventsCompanion({
-    this.id = const Value.absent(),
-    this.eventType = const Value.absent(),
-    this.status = const Value.absent(),
-    this.filePath = const Value.absent(),
-    this.message = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  BackupEventsCompanion.insert({
-    required String id,
-    required String eventType,
-    required String status,
-    this.filePath = const Value.absent(),
-    this.message = const Value.absent(),
-    required String createdAt,
-    this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        eventType = Value(eventType),
-        status = Value(status),
-        createdAt = Value(createdAt);
-  static Insertable<BackupEvent> custom({
-    Expression<String>? id,
-    Expression<String>? eventType,
-    Expression<String>? status,
-    Expression<String>? filePath,
-    Expression<String>? message,
-    Expression<String>? createdAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (eventType != null) 'event_type': eventType,
-      if (status != null) 'status': status,
-      if (filePath != null) 'file_path': filePath,
-      if (message != null) 'message': message,
-      if (createdAt != null) 'created_at': createdAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  BackupEventsCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? eventType,
-      Value<String>? status,
-      Value<String?>? filePath,
-      Value<String?>? message,
-      Value<String>? createdAt,
-      Value<int>? rowid}) {
-    return BackupEventsCompanion(
-      id: id ?? this.id,
-      eventType: eventType ?? this.eventType,
-      status: status ?? this.status,
-      filePath: filePath ?? this.filePath,
-      message: message ?? this.message,
-      createdAt: createdAt ?? this.createdAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (eventType.present) {
-      map['event_type'] = Variable<String>(eventType.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
-    if (filePath.present) {
-      map['file_path'] = Variable<String>(filePath.value);
-    }
-    if (message.present) {
-      map['message'] = Variable<String>(message.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<String>(createdAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('BackupEventsCompanion(')
-          ..write('id: $id, ')
-          ..write('eventType: $eventType, ')
-          ..write('status: $status, ')
-          ..write('filePath: $filePath, ')
-          ..write('message: $message, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $BackupSettingsTable extends BackupSettings
-    with TableInfo<$BackupSettingsTable, BackupSetting> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $BackupSettingsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _backupDirectoryMeta =
-      const VerificationMeta('backupDirectory');
-  @override
-  late final GeneratedColumn<String> backupDirectory = GeneratedColumn<String>(
-      'backup_directory', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _automaticBackupsEnabledMeta =
-      const VerificationMeta('automaticBackupsEnabled');
-  @override
-  late final GeneratedColumn<bool> automaticBackupsEnabled =
-      GeneratedColumn<bool>('automatic_backups_enabled', aliasedName, false,
-          type: DriftSqlType.bool,
-          requiredDuringInsert: false,
-          defaultConstraints: GeneratedColumn.constraintIsAlways(
-              'CHECK ("automatic_backups_enabled" IN (0, 1))'),
-          defaultValue: const Constant(false));
-  static const VerificationMeta _dailyBackupTimeMeta =
-      const VerificationMeta('dailyBackupTime');
-  @override
-  late final GeneratedColumn<String> dailyBackupTime = GeneratedColumn<String>(
-      'daily_backup_time', aliasedName, false,
-      type: DriftSqlType.string,
+  late final GeneratedColumn<int> catalogVersion = GeneratedColumn<int>(
+      'catalog_version', aliasedName, false,
+      type: DriftSqlType.int,
       requiredDuringInsert: false,
-      defaultValue: const Constant('00:00'));
-  static const VerificationMeta _lastBackupAtMeta =
-      const VerificationMeta('lastBackupAt');
-  @override
-  late final GeneratedColumn<String> lastBackupAt = GeneratedColumn<String>(
-      'last_backup_at', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      defaultValue: const Constant(0));
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
@@ -9617,21 +8879,15 @@ class $BackupSettingsTable extends BackupSettings
       'updated_at', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        backupDirectory,
-        automaticBackupsEnabled,
-        dailyBackupTime,
-        lastBackupAt,
-        updatedAt
-      ];
+  List<GeneratedColumn> get $columns => [id, catalogVersion, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'backup_settings';
+  static const String $name = 'catalog_cache_settings';
   @override
-  VerificationContext validateIntegrity(Insertable<BackupSetting> instance,
+  VerificationContext validateIntegrity(
+      Insertable<CatalogCacheSetting> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -9640,30 +8896,11 @@ class $BackupSettingsTable extends BackupSettings
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('backup_directory')) {
+    if (data.containsKey('catalog_version')) {
       context.handle(
-          _backupDirectoryMeta,
-          backupDirectory.isAcceptableOrUnknown(
-              data['backup_directory']!, _backupDirectoryMeta));
-    }
-    if (data.containsKey('automatic_backups_enabled')) {
-      context.handle(
-          _automaticBackupsEnabledMeta,
-          automaticBackupsEnabled.isAcceptableOrUnknown(
-              data['automatic_backups_enabled']!,
-              _automaticBackupsEnabledMeta));
-    }
-    if (data.containsKey('daily_backup_time')) {
-      context.handle(
-          _dailyBackupTimeMeta,
-          dailyBackupTime.isAcceptableOrUnknown(
-              data['daily_backup_time']!, _dailyBackupTimeMeta));
-    }
-    if (data.containsKey('last_backup_at')) {
-      context.handle(
-          _lastBackupAtMeta,
-          lastBackupAt.isAcceptableOrUnknown(
-              data['last_backup_at']!, _lastBackupAtMeta));
+          _catalogVersionMeta,
+          catalogVersion.isAcceptableOrUnknown(
+              data['catalog_version']!, _catalogVersionMeta));
     }
     if (data.containsKey('updated_at')) {
       context.handle(_updatedAtMeta,
@@ -9677,86 +8914,56 @@ class $BackupSettingsTable extends BackupSettings
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  BackupSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CatalogCacheSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return BackupSetting(
+    return CatalogCacheSetting(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      backupDirectory: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}backup_directory']),
-      automaticBackupsEnabled: attachedDatabase.typeMapping.read(
-          DriftSqlType.bool,
-          data['${effectivePrefix}automatic_backups_enabled'])!,
-      dailyBackupTime: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}daily_backup_time'])!,
-      lastBackupAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}last_backup_at']),
+      catalogVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}catalog_version'])!,
       updatedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}updated_at'])!,
     );
   }
 
   @override
-  $BackupSettingsTable createAlias(String alias) {
-    return $BackupSettingsTable(attachedDatabase, alias);
+  $CatalogCacheSettingsTable createAlias(String alias) {
+    return $CatalogCacheSettingsTable(attachedDatabase, alias);
   }
 }
 
-class BackupSetting extends DataClass implements Insertable<BackupSetting> {
+class CatalogCacheSetting extends DataClass
+    implements Insertable<CatalogCacheSetting> {
   final String id;
-  final String? backupDirectory;
-  final bool automaticBackupsEnabled;
-  final String dailyBackupTime;
-  final String? lastBackupAt;
+  final int catalogVersion;
   final String updatedAt;
-  const BackupSetting(
+  const CatalogCacheSetting(
       {required this.id,
-      this.backupDirectory,
-      required this.automaticBackupsEnabled,
-      required this.dailyBackupTime,
-      this.lastBackupAt,
+      required this.catalogVersion,
       required this.updatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    if (!nullToAbsent || backupDirectory != null) {
-      map['backup_directory'] = Variable<String>(backupDirectory);
-    }
-    map['automatic_backups_enabled'] = Variable<bool>(automaticBackupsEnabled);
-    map['daily_backup_time'] = Variable<String>(dailyBackupTime);
-    if (!nullToAbsent || lastBackupAt != null) {
-      map['last_backup_at'] = Variable<String>(lastBackupAt);
-    }
+    map['catalog_version'] = Variable<int>(catalogVersion);
     map['updated_at'] = Variable<String>(updatedAt);
     return map;
   }
 
-  BackupSettingsCompanion toCompanion(bool nullToAbsent) {
-    return BackupSettingsCompanion(
+  CatalogCacheSettingsCompanion toCompanion(bool nullToAbsent) {
+    return CatalogCacheSettingsCompanion(
       id: Value(id),
-      backupDirectory: backupDirectory == null && nullToAbsent
-          ? const Value.absent()
-          : Value(backupDirectory),
-      automaticBackupsEnabled: Value(automaticBackupsEnabled),
-      dailyBackupTime: Value(dailyBackupTime),
-      lastBackupAt: lastBackupAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastBackupAt),
+      catalogVersion: Value(catalogVersion),
       updatedAt: Value(updatedAt),
     );
   }
 
-  factory BackupSetting.fromJson(Map<String, dynamic> json,
+  factory CatalogCacheSetting.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return BackupSetting(
+    return CatalogCacheSetting(
       id: serializer.fromJson<String>(json['id']),
-      backupDirectory: serializer.fromJson<String?>(json['backupDirectory']),
-      automaticBackupsEnabled:
-          serializer.fromJson<bool>(json['automaticBackupsEnabled']),
-      dailyBackupTime: serializer.fromJson<String>(json['dailyBackupTime']),
-      lastBackupAt: serializer.fromJson<String?>(json['lastBackupAt']),
+      catalogVersion: serializer.fromJson<int>(json['catalogVersion']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
     );
   }
@@ -9765,144 +8972,90 @@ class BackupSetting extends DataClass implements Insertable<BackupSetting> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'backupDirectory': serializer.toJson<String?>(backupDirectory),
-      'automaticBackupsEnabled':
-          serializer.toJson<bool>(automaticBackupsEnabled),
-      'dailyBackupTime': serializer.toJson<String>(dailyBackupTime),
-      'lastBackupAt': serializer.toJson<String?>(lastBackupAt),
+      'catalogVersion': serializer.toJson<int>(catalogVersion),
       'updatedAt': serializer.toJson<String>(updatedAt),
     };
   }
 
-  BackupSetting copyWith(
-          {String? id,
-          Value<String?> backupDirectory = const Value.absent(),
-          bool? automaticBackupsEnabled,
-          String? dailyBackupTime,
-          Value<String?> lastBackupAt = const Value.absent(),
-          String? updatedAt}) =>
-      BackupSetting(
+  CatalogCacheSetting copyWith(
+          {String? id, int? catalogVersion, String? updatedAt}) =>
+      CatalogCacheSetting(
         id: id ?? this.id,
-        backupDirectory: backupDirectory.present
-            ? backupDirectory.value
-            : this.backupDirectory,
-        automaticBackupsEnabled:
-            automaticBackupsEnabled ?? this.automaticBackupsEnabled,
-        dailyBackupTime: dailyBackupTime ?? this.dailyBackupTime,
-        lastBackupAt:
-            lastBackupAt.present ? lastBackupAt.value : this.lastBackupAt,
+        catalogVersion: catalogVersion ?? this.catalogVersion,
         updatedAt: updatedAt ?? this.updatedAt,
       );
-  BackupSetting copyWithCompanion(BackupSettingsCompanion data) {
-    return BackupSetting(
+  CatalogCacheSetting copyWithCompanion(CatalogCacheSettingsCompanion data) {
+    return CatalogCacheSetting(
       id: data.id.present ? data.id.value : this.id,
-      backupDirectory: data.backupDirectory.present
-          ? data.backupDirectory.value
-          : this.backupDirectory,
-      automaticBackupsEnabled: data.automaticBackupsEnabled.present
-          ? data.automaticBackupsEnabled.value
-          : this.automaticBackupsEnabled,
-      dailyBackupTime: data.dailyBackupTime.present
-          ? data.dailyBackupTime.value
-          : this.dailyBackupTime,
-      lastBackupAt: data.lastBackupAt.present
-          ? data.lastBackupAt.value
-          : this.lastBackupAt,
+      catalogVersion: data.catalogVersion.present
+          ? data.catalogVersion.value
+          : this.catalogVersion,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('BackupSetting(')
+    return (StringBuffer('CatalogCacheSetting(')
           ..write('id: $id, ')
-          ..write('backupDirectory: $backupDirectory, ')
-          ..write('automaticBackupsEnabled: $automaticBackupsEnabled, ')
-          ..write('dailyBackupTime: $dailyBackupTime, ')
-          ..write('lastBackupAt: $lastBackupAt, ')
+          ..write('catalogVersion: $catalogVersion, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, backupDirectory, automaticBackupsEnabled,
-      dailyBackupTime, lastBackupAt, updatedAt);
+  int get hashCode => Object.hash(id, catalogVersion, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is BackupSetting &&
+      (other is CatalogCacheSetting &&
           other.id == this.id &&
-          other.backupDirectory == this.backupDirectory &&
-          other.automaticBackupsEnabled == this.automaticBackupsEnabled &&
-          other.dailyBackupTime == this.dailyBackupTime &&
-          other.lastBackupAt == this.lastBackupAt &&
+          other.catalogVersion == this.catalogVersion &&
           other.updatedAt == this.updatedAt);
 }
 
-class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
+class CatalogCacheSettingsCompanion
+    extends UpdateCompanion<CatalogCacheSetting> {
   final Value<String> id;
-  final Value<String?> backupDirectory;
-  final Value<bool> automaticBackupsEnabled;
-  final Value<String> dailyBackupTime;
-  final Value<String?> lastBackupAt;
+  final Value<int> catalogVersion;
   final Value<String> updatedAt;
   final Value<int> rowid;
-  const BackupSettingsCompanion({
+  const CatalogCacheSettingsCompanion({
     this.id = const Value.absent(),
-    this.backupDirectory = const Value.absent(),
-    this.automaticBackupsEnabled = const Value.absent(),
-    this.dailyBackupTime = const Value.absent(),
-    this.lastBackupAt = const Value.absent(),
+    this.catalogVersion = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  BackupSettingsCompanion.insert({
+  CatalogCacheSettingsCompanion.insert({
     required String id,
-    this.backupDirectory = const Value.absent(),
-    this.automaticBackupsEnabled = const Value.absent(),
-    this.dailyBackupTime = const Value.absent(),
-    this.lastBackupAt = const Value.absent(),
+    this.catalogVersion = const Value.absent(),
     required String updatedAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         updatedAt = Value(updatedAt);
-  static Insertable<BackupSetting> custom({
+  static Insertable<CatalogCacheSetting> custom({
     Expression<String>? id,
-    Expression<String>? backupDirectory,
-    Expression<bool>? automaticBackupsEnabled,
-    Expression<String>? dailyBackupTime,
-    Expression<String>? lastBackupAt,
+    Expression<int>? catalogVersion,
     Expression<String>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (backupDirectory != null) 'backup_directory': backupDirectory,
-      if (automaticBackupsEnabled != null)
-        'automatic_backups_enabled': automaticBackupsEnabled,
-      if (dailyBackupTime != null) 'daily_backup_time': dailyBackupTime,
-      if (lastBackupAt != null) 'last_backup_at': lastBackupAt,
+      if (catalogVersion != null) 'catalog_version': catalogVersion,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  BackupSettingsCompanion copyWith(
+  CatalogCacheSettingsCompanion copyWith(
       {Value<String>? id,
-      Value<String?>? backupDirectory,
-      Value<bool>? automaticBackupsEnabled,
-      Value<String>? dailyBackupTime,
-      Value<String?>? lastBackupAt,
+      Value<int>? catalogVersion,
       Value<String>? updatedAt,
       Value<int>? rowid}) {
-    return BackupSettingsCompanion(
+    return CatalogCacheSettingsCompanion(
       id: id ?? this.id,
-      backupDirectory: backupDirectory ?? this.backupDirectory,
-      automaticBackupsEnabled:
-          automaticBackupsEnabled ?? this.automaticBackupsEnabled,
-      dailyBackupTime: dailyBackupTime ?? this.dailyBackupTime,
-      lastBackupAt: lastBackupAt ?? this.lastBackupAt,
+      catalogVersion: catalogVersion ?? this.catalogVersion,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -9914,18 +9067,8 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (backupDirectory.present) {
-      map['backup_directory'] = Variable<String>(backupDirectory.value);
-    }
-    if (automaticBackupsEnabled.present) {
-      map['automatic_backups_enabled'] =
-          Variable<bool>(automaticBackupsEnabled.value);
-    }
-    if (dailyBackupTime.present) {
-      map['daily_backup_time'] = Variable<String>(dailyBackupTime.value);
-    }
-    if (lastBackupAt.present) {
-      map['last_backup_at'] = Variable<String>(lastBackupAt.value);
+    if (catalogVersion.present) {
+      map['catalog_version'] = Variable<int>(catalogVersion.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<String>(updatedAt.value);
@@ -9938,12 +9081,9 @@ class BackupSettingsCompanion extends UpdateCompanion<BackupSetting> {
 
   @override
   String toString() {
-    return (StringBuffer('BackupSettingsCompanion(')
+    return (StringBuffer('CatalogCacheSettingsCompanion(')
           ..write('id: $id, ')
-          ..write('backupDirectory: $backupDirectory, ')
-          ..write('automaticBackupsEnabled: $automaticBackupsEnabled, ')
-          ..write('dailyBackupTime: $dailyBackupTime, ')
-          ..write('lastBackupAt: $lastBackupAt, ')
+          ..write('catalogVersion: $catalogVersion, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -10250,9 +9390,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $CompanyProfilesTable companyProfiles =
       $CompanyProfilesTable(this);
   late final $InvoiceItemsTable invoiceItems = $InvoiceItemsTable(this);
-  late final $LocalSessionsTable localSessions = $LocalSessionsTable(this);
-  late final $BackupEventsTable backupEvents = $BackupEventsTable(this);
-  late final $BackupSettingsTable backupSettings = $BackupSettingsTable(this);
+  late final $CatalogCacheSettingsTable catalogCacheSettings =
+      $CatalogCacheSettingsTable(this);
   late final $HybridCacheSettingsTable hybridCacheSettings =
       $HybridCacheSettingsTable(this);
   @override
@@ -10270,9 +9409,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
         buyerTransactions,
         companyProfiles,
         invoiceItems,
-        localSessions,
-        backupEvents,
-        backupSettings,
+        catalogCacheSettings,
         hybridCacheSettings
       ];
 }
@@ -10386,21 +9523,6 @@ final class $$LocalUsersTableReferences
 
     final cache =
         $_typedResult.readTableOrNull(_buyerTransactionsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
-  static MultiTypedResultKey<$LocalSessionsTable, List<LocalSession>>
-      _localSessionsRefsTable(_$LocalDatabase db) =>
-          MultiTypedResultKey.fromTable(db.localSessions,
-              aliasName: $_aliasNameGenerator(
-                  db.localUsers.id, db.localSessions.localUserId));
-
-  $$LocalSessionsTableProcessedTableManager get localSessionsRefs {
-    final manager = $$LocalSessionsTableTableManager($_db, $_db.localSessions)
-        .filter((f) => f.localUserId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_localSessionsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -10541,27 +9663,6 @@ class $$LocalUsersTableFilterComposer
             $$BuyerTransactionsTableFilterComposer(
               $db: $db,
               $table: $db.buyerTransactions,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
-  Expression<bool> localSessionsRefs(
-      Expression<bool> Function($$LocalSessionsTableFilterComposer f) f) {
-    final $$LocalSessionsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.localSessions,
-        getReferencedColumn: (t) => t.localUserId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalSessionsTableFilterComposer(
-              $db: $db,
-              $table: $db.localSessions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -10753,27 +9854,6 @@ class $$LocalUsersTableAnnotationComposer
                 ));
     return f(composer);
   }
-
-  Expression<T> localSessionsRefs<T extends Object>(
-      Expression<T> Function($$LocalSessionsTableAnnotationComposer a) f) {
-    final $$LocalSessionsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.localSessions,
-        getReferencedColumn: (t) => t.localUserId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalSessionsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.localSessions,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
 }
 
 class $$LocalUsersTableTableManager extends RootTableManager<
@@ -10792,8 +9872,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
         bool canceledInvoices,
         bool stockMovementsRefs,
         bool customerTransactionsRefs,
-        bool buyerTransactionsRefs,
-        bool localSessionsRefs})> {
+        bool buyerTransactionsRefs})> {
   $$LocalUsersTableTableManager(_$LocalDatabase db, $LocalUsersTable table)
       : super(TableManagerState(
           db: db,
@@ -10863,8 +9942,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
               canceledInvoices = false,
               stockMovementsRefs = false,
               customerTransactionsRefs = false,
-              buyerTransactionsRefs = false,
-              localSessionsRefs = false}) {
+              buyerTransactionsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
@@ -10872,8 +9950,7 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                 if (canceledInvoices) db.invoices,
                 if (stockMovementsRefs) db.stockMovements,
                 if (customerTransactionsRefs) db.customerTransactions,
-                if (buyerTransactionsRefs) db.buyerTransactions,
-                if (localSessionsRefs) db.localSessions
+                if (buyerTransactionsRefs) db.buyerTransactions
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -10942,19 +10019,6 @@ class $$LocalUsersTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.createdByUserId == item.id),
-                        typedResults: items),
-                  if (localSessionsRefs)
-                    await $_getPrefetchedData<LocalUser, $LocalUsersTable,
-                            LocalSession>(
-                        currentTable: table,
-                        referencedTable: $$LocalUsersTableReferences
-                            ._localSessionsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$LocalUsersTableReferences(db, table, p0)
-                                .localSessionsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.localUserId == item.id),
                         typedResults: items)
                 ];
               },
@@ -10979,8 +10043,7 @@ typedef $$LocalUsersTableProcessedTableManager = ProcessedTableManager<
         bool canceledInvoices,
         bool stockMovementsRefs,
         bool customerTransactionsRefs,
-        bool buyerTransactionsRefs,
-        bool localSessionsRefs})>;
+        bool buyerTransactionsRefs})>;
 typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String id,
   required String itemNumber,
@@ -16334,514 +15397,24 @@ typedef $$InvoiceItemsTableProcessedTableManager = ProcessedTableManager<
     (InvoiceItem, $$InvoiceItemsTableReferences),
     InvoiceItem,
     PrefetchHooks Function({bool invoiceId, bool productId})>;
-typedef $$LocalSessionsTableCreateCompanionBuilder = LocalSessionsCompanion
-    Function({
+typedef $$CatalogCacheSettingsTableCreateCompanionBuilder
+    = CatalogCacheSettingsCompanion Function({
   required String id,
-  required String localUserId,
-  required String sessionTokenHash,
-  required String refreshTokenHash,
-  required String createdAt,
-  Value<String?> expiresAt,
-  Value<int> rowid,
-});
-typedef $$LocalSessionsTableUpdateCompanionBuilder = LocalSessionsCompanion
-    Function({
-  Value<String> id,
-  Value<String> localUserId,
-  Value<String> sessionTokenHash,
-  Value<String> refreshTokenHash,
-  Value<String> createdAt,
-  Value<String?> expiresAt,
-  Value<int> rowid,
-});
-
-final class $$LocalSessionsTableReferences
-    extends BaseReferences<_$LocalDatabase, $LocalSessionsTable, LocalSession> {
-  $$LocalSessionsTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
-
-  static $LocalUsersTable _localUserIdTable(_$LocalDatabase db) =>
-      db.localUsers.createAlias(
-          $_aliasNameGenerator(db.localSessions.localUserId, db.localUsers.id));
-
-  $$LocalUsersTableProcessedTableManager get localUserId {
-    final $_column = $_itemColumn<String>('local_user_id')!;
-
-    final manager = $$LocalUsersTableTableManager($_db, $_db.localUsers)
-        .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_localUserIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
-
-class $$LocalSessionsTableFilterComposer
-    extends Composer<_$LocalDatabase, $LocalSessionsTable> {
-  $$LocalSessionsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get sessionTokenHash => $composableBuilder(
-      column: $table.sessionTokenHash,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get refreshTokenHash => $composableBuilder(
-      column: $table.refreshTokenHash,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get expiresAt => $composableBuilder(
-      column: $table.expiresAt, builder: (column) => ColumnFilters(column));
-
-  $$LocalUsersTableFilterComposer get localUserId {
-    final $$LocalUsersTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.localUserId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableFilterComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LocalSessionsTableOrderingComposer
-    extends Composer<_$LocalDatabase, $LocalSessionsTable> {
-  $$LocalSessionsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get sessionTokenHash => $composableBuilder(
-      column: $table.sessionTokenHash,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get refreshTokenHash => $composableBuilder(
-      column: $table.refreshTokenHash,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get expiresAt => $composableBuilder(
-      column: $table.expiresAt, builder: (column) => ColumnOrderings(column));
-
-  $$LocalUsersTableOrderingComposer get localUserId {
-    final $$LocalUsersTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.localUserId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableOrderingComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LocalSessionsTableAnnotationComposer
-    extends Composer<_$LocalDatabase, $LocalSessionsTable> {
-  $$LocalSessionsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get sessionTokenHash => $composableBuilder(
-      column: $table.sessionTokenHash, builder: (column) => column);
-
-  GeneratedColumn<String> get refreshTokenHash => $composableBuilder(
-      column: $table.refreshTokenHash, builder: (column) => column);
-
-  GeneratedColumn<String> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<String> get expiresAt =>
-      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
-
-  $$LocalUsersTableAnnotationComposer get localUserId {
-    final $$LocalUsersTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.localUserId,
-        referencedTable: $db.localUsers,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$LocalUsersTableAnnotationComposer(
-              $db: $db,
-              $table: $db.localUsers,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-}
-
-class $$LocalSessionsTableTableManager extends RootTableManager<
-    _$LocalDatabase,
-    $LocalSessionsTable,
-    LocalSession,
-    $$LocalSessionsTableFilterComposer,
-    $$LocalSessionsTableOrderingComposer,
-    $$LocalSessionsTableAnnotationComposer,
-    $$LocalSessionsTableCreateCompanionBuilder,
-    $$LocalSessionsTableUpdateCompanionBuilder,
-    (LocalSession, $$LocalSessionsTableReferences),
-    LocalSession,
-    PrefetchHooks Function({bool localUserId})> {
-  $$LocalSessionsTableTableManager(
-      _$LocalDatabase db, $LocalSessionsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$LocalSessionsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$LocalSessionsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$LocalSessionsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> localUserId = const Value.absent(),
-            Value<String> sessionTokenHash = const Value.absent(),
-            Value<String> refreshTokenHash = const Value.absent(),
-            Value<String> createdAt = const Value.absent(),
-            Value<String?> expiresAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              LocalSessionsCompanion(
-            id: id,
-            localUserId: localUserId,
-            sessionTokenHash: sessionTokenHash,
-            refreshTokenHash: refreshTokenHash,
-            createdAt: createdAt,
-            expiresAt: expiresAt,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String localUserId,
-            required String sessionTokenHash,
-            required String refreshTokenHash,
-            required String createdAt,
-            Value<String?> expiresAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              LocalSessionsCompanion.insert(
-            id: id,
-            localUserId: localUserId,
-            sessionTokenHash: sessionTokenHash,
-            refreshTokenHash: refreshTokenHash,
-            createdAt: createdAt,
-            expiresAt: expiresAt,
-            rowid: rowid,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$LocalSessionsTableReferences(db, table, e)
-                  ))
-              .toList(),
-          prefetchHooksCallback: ({localUserId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (localUserId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.localUserId,
-                    referencedTable:
-                        $$LocalSessionsTableReferences._localUserIdTable(db),
-                    referencedColumn:
-                        $$LocalSessionsTableReferences._localUserIdTable(db).id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ));
-}
-
-typedef $$LocalSessionsTableProcessedTableManager = ProcessedTableManager<
-    _$LocalDatabase,
-    $LocalSessionsTable,
-    LocalSession,
-    $$LocalSessionsTableFilterComposer,
-    $$LocalSessionsTableOrderingComposer,
-    $$LocalSessionsTableAnnotationComposer,
-    $$LocalSessionsTableCreateCompanionBuilder,
-    $$LocalSessionsTableUpdateCompanionBuilder,
-    (LocalSession, $$LocalSessionsTableReferences),
-    LocalSession,
-    PrefetchHooks Function({bool localUserId})>;
-typedef $$BackupEventsTableCreateCompanionBuilder = BackupEventsCompanion
-    Function({
-  required String id,
-  required String eventType,
-  required String status,
-  Value<String?> filePath,
-  Value<String?> message,
-  required String createdAt,
-  Value<int> rowid,
-});
-typedef $$BackupEventsTableUpdateCompanionBuilder = BackupEventsCompanion
-    Function({
-  Value<String> id,
-  Value<String> eventType,
-  Value<String> status,
-  Value<String?> filePath,
-  Value<String?> message,
-  Value<String> createdAt,
-  Value<int> rowid,
-});
-
-class $$BackupEventsTableFilterComposer
-    extends Composer<_$LocalDatabase, $BackupEventsTable> {
-  $$BackupEventsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get eventType => $composableBuilder(
-      column: $table.eventType, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get filePath => $composableBuilder(
-      column: $table.filePath, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get message => $composableBuilder(
-      column: $table.message, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-}
-
-class $$BackupEventsTableOrderingComposer
-    extends Composer<_$LocalDatabase, $BackupEventsTable> {
-  $$BackupEventsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get eventType => $composableBuilder(
-      column: $table.eventType, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get filePath => $composableBuilder(
-      column: $table.filePath, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get message => $composableBuilder(
-      column: $table.message, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-}
-
-class $$BackupEventsTableAnnotationComposer
-    extends Composer<_$LocalDatabase, $BackupEventsTable> {
-  $$BackupEventsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get eventType =>
-      $composableBuilder(column: $table.eventType, builder: (column) => column);
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumn<String> get filePath =>
-      $composableBuilder(column: $table.filePath, builder: (column) => column);
-
-  GeneratedColumn<String> get message =>
-      $composableBuilder(column: $table.message, builder: (column) => column);
-
-  GeneratedColumn<String> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-}
-
-class $$BackupEventsTableTableManager extends RootTableManager<
-    _$LocalDatabase,
-    $BackupEventsTable,
-    BackupEvent,
-    $$BackupEventsTableFilterComposer,
-    $$BackupEventsTableOrderingComposer,
-    $$BackupEventsTableAnnotationComposer,
-    $$BackupEventsTableCreateCompanionBuilder,
-    $$BackupEventsTableUpdateCompanionBuilder,
-    (
-      BackupEvent,
-      BaseReferences<_$LocalDatabase, $BackupEventsTable, BackupEvent>
-    ),
-    BackupEvent,
-    PrefetchHooks Function()> {
-  $$BackupEventsTableTableManager(_$LocalDatabase db, $BackupEventsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$BackupEventsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$BackupEventsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$BackupEventsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> eventType = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            Value<String?> filePath = const Value.absent(),
-            Value<String?> message = const Value.absent(),
-            Value<String> createdAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              BackupEventsCompanion(
-            id: id,
-            eventType: eventType,
-            status: status,
-            filePath: filePath,
-            message: message,
-            createdAt: createdAt,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String eventType,
-            required String status,
-            Value<String?> filePath = const Value.absent(),
-            Value<String?> message = const Value.absent(),
-            required String createdAt,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              BackupEventsCompanion.insert(
-            id: id,
-            eventType: eventType,
-            status: status,
-            filePath: filePath,
-            message: message,
-            createdAt: createdAt,
-            rowid: rowid,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $$BackupEventsTableProcessedTableManager = ProcessedTableManager<
-    _$LocalDatabase,
-    $BackupEventsTable,
-    BackupEvent,
-    $$BackupEventsTableFilterComposer,
-    $$BackupEventsTableOrderingComposer,
-    $$BackupEventsTableAnnotationComposer,
-    $$BackupEventsTableCreateCompanionBuilder,
-    $$BackupEventsTableUpdateCompanionBuilder,
-    (
-      BackupEvent,
-      BaseReferences<_$LocalDatabase, $BackupEventsTable, BackupEvent>
-    ),
-    BackupEvent,
-    PrefetchHooks Function()>;
-typedef $$BackupSettingsTableCreateCompanionBuilder = BackupSettingsCompanion
-    Function({
-  required String id,
-  Value<String?> backupDirectory,
-  Value<bool> automaticBackupsEnabled,
-  Value<String> dailyBackupTime,
-  Value<String?> lastBackupAt,
+  Value<int> catalogVersion,
   required String updatedAt,
   Value<int> rowid,
 });
-typedef $$BackupSettingsTableUpdateCompanionBuilder = BackupSettingsCompanion
-    Function({
+typedef $$CatalogCacheSettingsTableUpdateCompanionBuilder
+    = CatalogCacheSettingsCompanion Function({
   Value<String> id,
-  Value<String?> backupDirectory,
-  Value<bool> automaticBackupsEnabled,
-  Value<String> dailyBackupTime,
-  Value<String?> lastBackupAt,
+  Value<int> catalogVersion,
   Value<String> updatedAt,
   Value<int> rowid,
 });
 
-class $$BackupSettingsTableFilterComposer
-    extends Composer<_$LocalDatabase, $BackupSettingsTable> {
-  $$BackupSettingsTableFilterComposer({
+class $$CatalogCacheSettingsTableFilterComposer
+    extends Composer<_$LocalDatabase, $CatalogCacheSettingsTable> {
+  $$CatalogCacheSettingsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -16851,28 +15424,17 @@ class $$BackupSettingsTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get backupDirectory => $composableBuilder(
-      column: $table.backupDirectory,
+  ColumnFilters<int> get catalogVersion => $composableBuilder(
+      column: $table.catalogVersion,
       builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get automaticBackupsEnabled => $composableBuilder(
-      column: $table.automaticBackupsEnabled,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get dailyBackupTime => $composableBuilder(
-      column: $table.dailyBackupTime,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get lastBackupAt => $composableBuilder(
-      column: $table.lastBackupAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 }
 
-class $$BackupSettingsTableOrderingComposer
-    extends Composer<_$LocalDatabase, $BackupSettingsTable> {
-  $$BackupSettingsTableOrderingComposer({
+class $$CatalogCacheSettingsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $CatalogCacheSettingsTable> {
+  $$CatalogCacheSettingsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -16882,29 +15444,17 @@ class $$BackupSettingsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get backupDirectory => $composableBuilder(
-      column: $table.backupDirectory,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get automaticBackupsEnabled => $composableBuilder(
-      column: $table.automaticBackupsEnabled,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get dailyBackupTime => $composableBuilder(
-      column: $table.dailyBackupTime,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get lastBackupAt => $composableBuilder(
-      column: $table.lastBackupAt,
+  ColumnOrderings<int> get catalogVersion => $composableBuilder(
+      column: $table.catalogVersion,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
-class $$BackupSettingsTableAnnotationComposer
-    extends Composer<_$LocalDatabase, $BackupSettingsTable> {
-  $$BackupSettingsTableAnnotationComposer({
+class $$CatalogCacheSettingsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $CatalogCacheSettingsTable> {
+  $$CatalogCacheSettingsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -16914,81 +15464,63 @@ class $$BackupSettingsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get backupDirectory => $composableBuilder(
-      column: $table.backupDirectory, builder: (column) => column);
-
-  GeneratedColumn<bool> get automaticBackupsEnabled => $composableBuilder(
-      column: $table.automaticBackupsEnabled, builder: (column) => column);
-
-  GeneratedColumn<String> get dailyBackupTime => $composableBuilder(
-      column: $table.dailyBackupTime, builder: (column) => column);
-
-  GeneratedColumn<String> get lastBackupAt => $composableBuilder(
-      column: $table.lastBackupAt, builder: (column) => column);
+  GeneratedColumn<int> get catalogVersion => $composableBuilder(
+      column: $table.catalogVersion, builder: (column) => column);
 
   GeneratedColumn<String> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
-class $$BackupSettingsTableTableManager extends RootTableManager<
+class $$CatalogCacheSettingsTableTableManager extends RootTableManager<
     _$LocalDatabase,
-    $BackupSettingsTable,
-    BackupSetting,
-    $$BackupSettingsTableFilterComposer,
-    $$BackupSettingsTableOrderingComposer,
-    $$BackupSettingsTableAnnotationComposer,
-    $$BackupSettingsTableCreateCompanionBuilder,
-    $$BackupSettingsTableUpdateCompanionBuilder,
+    $CatalogCacheSettingsTable,
+    CatalogCacheSetting,
+    $$CatalogCacheSettingsTableFilterComposer,
+    $$CatalogCacheSettingsTableOrderingComposer,
+    $$CatalogCacheSettingsTableAnnotationComposer,
+    $$CatalogCacheSettingsTableCreateCompanionBuilder,
+    $$CatalogCacheSettingsTableUpdateCompanionBuilder,
     (
-      BackupSetting,
-      BaseReferences<_$LocalDatabase, $BackupSettingsTable, BackupSetting>
+      CatalogCacheSetting,
+      BaseReferences<_$LocalDatabase, $CatalogCacheSettingsTable,
+          CatalogCacheSetting>
     ),
-    BackupSetting,
+    CatalogCacheSetting,
     PrefetchHooks Function()> {
-  $$BackupSettingsTableTableManager(
-      _$LocalDatabase db, $BackupSettingsTable table)
+  $$CatalogCacheSettingsTableTableManager(
+      _$LocalDatabase db, $CatalogCacheSettingsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$BackupSettingsTableFilterComposer($db: db, $table: table),
+              $$CatalogCacheSettingsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$BackupSettingsTableOrderingComposer($db: db, $table: table),
+              $$CatalogCacheSettingsTableOrderingComposer(
+                  $db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$BackupSettingsTableAnnotationComposer($db: db, $table: table),
+              $$CatalogCacheSettingsTableAnnotationComposer(
+                  $db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String?> backupDirectory = const Value.absent(),
-            Value<bool> automaticBackupsEnabled = const Value.absent(),
-            Value<String> dailyBackupTime = const Value.absent(),
-            Value<String?> lastBackupAt = const Value.absent(),
+            Value<int> catalogVersion = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              BackupSettingsCompanion(
+              CatalogCacheSettingsCompanion(
             id: id,
-            backupDirectory: backupDirectory,
-            automaticBackupsEnabled: automaticBackupsEnabled,
-            dailyBackupTime: dailyBackupTime,
-            lastBackupAt: lastBackupAt,
+            catalogVersion: catalogVersion,
             updatedAt: updatedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
             required String id,
-            Value<String?> backupDirectory = const Value.absent(),
-            Value<bool> automaticBackupsEnabled = const Value.absent(),
-            Value<String> dailyBackupTime = const Value.absent(),
-            Value<String?> lastBackupAt = const Value.absent(),
+            Value<int> catalogVersion = const Value.absent(),
             required String updatedAt,
             Value<int> rowid = const Value.absent(),
           }) =>
-              BackupSettingsCompanion.insert(
+              CatalogCacheSettingsCompanion.insert(
             id: id,
-            backupDirectory: backupDirectory,
-            automaticBackupsEnabled: automaticBackupsEnabled,
-            dailyBackupTime: dailyBackupTime,
-            lastBackupAt: lastBackupAt,
+            catalogVersion: catalogVersion,
             updatedAt: updatedAt,
             rowid: rowid,
           ),
@@ -16999,21 +15531,23 @@ class $$BackupSettingsTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$BackupSettingsTableProcessedTableManager = ProcessedTableManager<
-    _$LocalDatabase,
-    $BackupSettingsTable,
-    BackupSetting,
-    $$BackupSettingsTableFilterComposer,
-    $$BackupSettingsTableOrderingComposer,
-    $$BackupSettingsTableAnnotationComposer,
-    $$BackupSettingsTableCreateCompanionBuilder,
-    $$BackupSettingsTableUpdateCompanionBuilder,
-    (
-      BackupSetting,
-      BaseReferences<_$LocalDatabase, $BackupSettingsTable, BackupSetting>
-    ),
-    BackupSetting,
-    PrefetchHooks Function()>;
+typedef $$CatalogCacheSettingsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$LocalDatabase,
+        $CatalogCacheSettingsTable,
+        CatalogCacheSetting,
+        $$CatalogCacheSettingsTableFilterComposer,
+        $$CatalogCacheSettingsTableOrderingComposer,
+        $$CatalogCacheSettingsTableAnnotationComposer,
+        $$CatalogCacheSettingsTableCreateCompanionBuilder,
+        $$CatalogCacheSettingsTableUpdateCompanionBuilder,
+        (
+          CatalogCacheSetting,
+          BaseReferences<_$LocalDatabase, $CatalogCacheSettingsTable,
+              CatalogCacheSetting>
+        ),
+        CatalogCacheSetting,
+        PrefetchHooks Function()>;
 typedef $$HybridCacheSettingsTableCreateCompanionBuilder
     = HybridCacheSettingsCompanion Function({
   required String id,
@@ -17202,12 +15736,8 @@ class $LocalDatabaseManager {
       $$CompanyProfilesTableTableManager(_db, _db.companyProfiles);
   $$InvoiceItemsTableTableManager get invoiceItems =>
       $$InvoiceItemsTableTableManager(_db, _db.invoiceItems);
-  $$LocalSessionsTableTableManager get localSessions =>
-      $$LocalSessionsTableTableManager(_db, _db.localSessions);
-  $$BackupEventsTableTableManager get backupEvents =>
-      $$BackupEventsTableTableManager(_db, _db.backupEvents);
-  $$BackupSettingsTableTableManager get backupSettings =>
-      $$BackupSettingsTableTableManager(_db, _db.backupSettings);
+  $$CatalogCacheSettingsTableTableManager get catalogCacheSettings =>
+      $$CatalogCacheSettingsTableTableManager(_db, _db.catalogCacheSettings);
   $$HybridCacheSettingsTableTableManager get hybridCacheSettings =>
       $$HybridCacheSettingsTableTableManager(_db, _db.hybridCacheSettings);
 }

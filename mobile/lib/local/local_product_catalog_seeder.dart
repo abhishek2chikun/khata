@@ -15,8 +15,7 @@ class LocalProductCatalogSeeder {
         _loadCatalogJson = loadCatalogJson,
         _clock = clock ?? DateTime.now;
 
-  static const catalogAssetPath =
-      'assets/catalog/preinstalled_catalog.json';
+  static const catalogAssetPath = 'assets/catalog/preinstalled_catalog.json';
   static const _settingsId = 'preinstalled-catalog';
   static const _seedTimestamp = '2026-06-13T00:00:00.000Z';
 
@@ -135,23 +134,22 @@ class LocalProductCatalogSeeder {
   }
 
   Future<int> _readStoredCatalogVersion() async {
-    final settings = await (_database.select(_database.backupSettings)
+    final settings = await (_database.select(_database.catalogCacheSettings)
           ..where((row) => row.id.equals(_settingsId)))
         .getSingleOrNull();
-    if (settings == null || settings.lastBackupAt == null) {
-      return 0;
-    }
-    return int.tryParse(settings.lastBackupAt!) ?? 0;
+    return settings?.catalogVersion ?? 0;
   }
 
   Future<void> _writeStoredCatalogVersion(
     int catalogVersion, {
     required String now,
   }) {
-    return _database.into(_database.backupSettings).insertOnConflictUpdate(
-          BackupSettingsCompanion.insert(
+    return _database
+        .into(_database.catalogCacheSettings)
+        .insertOnConflictUpdate(
+          CatalogCacheSettingsCompanion.insert(
             id: _settingsId,
-            lastBackupAt: Value(catalogVersion.toString()),
+            catalogVersion: Value(catalogVersion),
             updatedAt: now,
           ),
         );

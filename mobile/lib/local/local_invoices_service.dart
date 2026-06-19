@@ -102,14 +102,14 @@ class LocalInvoicesService implements InvoicesService {
                 createdAt: now,
               ),
             );
-      } on Object catch (error) {
+      } on Object catch (_) {
         final duplicate = await (_database.select(_database.invoices)
               ..where((invoice) => invoice.requestId.equals(requestId)))
             .getSingleOrNull();
         if (duplicate != null) {
           return _replayExistingCreate(draft: draft, existing: duplicate);
         }
-        throw error;
+        rethrow;
       }
 
       final stockQuantitiesByProductId = <String, double>{};

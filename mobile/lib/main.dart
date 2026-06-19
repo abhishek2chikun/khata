@@ -8,10 +8,6 @@ import 'app/app_dependencies.dart';
 import 'app/app_mode.dart';
 import 'hybrid/supabase_config.dart';
 import 'debug/agent_debug_log.dart';
-import 'backup/backup_scheduler.dart';
-import 'backup/backup_screen.dart';
-import 'backup/drive_backup_service.dart';
-import 'backup/local_backup_transfer_service.dart';
 import 'models/customer.dart';
 import 'screens/buyer_list_screen.dart';
 import 'screens/analytics_screen.dart';
@@ -19,7 +15,6 @@ import 'screens/company_profile_screen.dart';
 import 'screens/create_invoice_screen.dart';
 import 'screens/invoice_list_screen.dart';
 import 'screens/inventory_list_screen.dart';
-import 'screens/local_first_user_setup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/product_form_screen.dart';
@@ -40,29 +35,25 @@ import 'widgets/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final mode = resolveDataMode();
-  if (mode == DataMode.local) {
-    await initializeLocalBackupPlatformServices();
-  }
-  if (mode == DataMode.hybrid) {
-    final config = SupabaseConfig.fromEnvironment();
-    // #region agent log
-    AgentDebugLog.write(
-      location: 'main.dart:main',
-      message: 'hybrid startup config',
-      hypothesisId: 'H3',
-      data: {
-        'configPresent': config != null,
-        'urlConfigured': config?.url.isNotEmpty ?? false,
-        'anonConfigured': config?.anonKey.isNotEmpty ?? false,
-      },
+  final config = SupabaseConfig.fromEnvironment();
+  // #region agent log
+  AgentDebugLog.write(
+    location: 'main.dart:main',
+    message: 'hybrid startup config',
+    hypothesisId: 'H3',
+    data: {
+      'mode': mode.name,
+      'configPresent': config != null,
+      'urlConfigured': config?.url.isNotEmpty ?? false,
+      'anonConfigured': config?.anonKey.isNotEmpty ?? false,
+    },
+  );
+  // #endregion
+  if (config != null) {
+    await Supabase.initialize(
+      url: config.url,
+      publishableKey: config.anonKey,
     );
-    // #endregion
-    if (config != null) {
-      await Supabase.initialize(
-        url: config.url,
-        anonKey: config.anonKey,
-      );
-    }
   }
 
   final dependencies = await AppDependencies.create();
@@ -76,7 +67,7 @@ Future<void> main() async {
 class BillingApp extends StatefulWidget {
   BillingApp({
     super.key,
-    AppDependencies? dependencies,
+    this.dependencies,
     AuthController? controller,
     ProductsService? productsService,
     CustomersService? customersService,
@@ -85,11 +76,7 @@ class BillingApp extends StatefulWidget {
     PaymentsService? paymentsService,
     InvoicesService? invoicesService,
     AnalyticsService? analyticsService,
-    DriveBackupService? driveBackupService,
-    BackupScheduler? backupScheduler,
-    BackupTransferService? backupTransferService,
-  })  : dependencies = dependencies,
-        controller = controller ?? dependencies!.controller,
+  })  : controller = controller ?? dependencies!.controller,
         productsService = productsService ?? dependencies!.productsService,
         customersService = customersService ?? dependencies!.customersService,
         buyersService = buyersService ?? dependencies!.buyersService,
@@ -97,12 +84,7 @@ class BillingApp extends StatefulWidget {
             companyProfileService ?? dependencies!.companyProfileService,
         paymentsService = paymentsService ?? dependencies!.paymentsService,
         invoicesService = invoicesService ?? dependencies!.invoicesService,
-        analyticsService = analyticsService ?? dependencies!.analyticsService,
-        driveBackupService =
-            driveBackupService ?? dependencies?.driveBackupService,
-        backupScheduler = backupScheduler ?? dependencies?.backupScheduler,
-        backupTransferService =
-            backupTransferService ?? dependencies?.backupTransferService;
+        analyticsService = analyticsService ?? dependencies!.analyticsService;
 
   final AppDependencies? dependencies;
   final AuthController controller;
@@ -113,9 +95,6 @@ class BillingApp extends StatefulWidget {
   final PaymentsService paymentsService;
   final InvoicesService invoicesService;
   final AnalyticsService analyticsService;
-  final DriveBackupService? driveBackupService;
-  final BackupScheduler? backupScheduler;
-  final BackupTransferService? backupTransferService;
 
   @override
   State<BillingApp> createState() => _BillingAppState();
@@ -123,9 +102,6 @@ class BillingApp extends StatefulWidget {
 
 class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
   AppDestination _selectedDestination = AppDestination.inventory;
-  bool _isCheckingLocalUsers = false;
-  bool _needsLocalFirstUserSetup = false;
-  bool _didStartLocalBackupScheduling = false;
   bool _hybridBootstrapStarted = false;
   bool _hybridBootstrapInFlight = false;
   String? _hybridSyncError;
@@ -135,7 +111,6 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_maybeBootstrapHybrid);
-    _checkLocalUsers();
     unawaited(widget.controller.restoreSession());
   }
 
@@ -224,7 +199,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     try {
       await syncService.syncAll();
       _hybridSyncError = null;
-      if (!mounted) {
+      if (!mounted || !context.mounted) {
         return;
       }
       final productCount = syncService.lastSyncedCounts?['products'];
@@ -243,7 +218,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
       setState(() {});
     } on Object catch (error) {
       _hybridSyncError = error.toString();
-      if (mounted) {
+      if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Sync failed: $error')),
         );
@@ -294,28 +269,13 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_isCheckingLocalUsers || widget.controller.isRestoringSession) {
+    if (widget.controller.isRestoringSession) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
-    final localAuthService = widget.dependencies?.localAuthService;
-    if (!widget.controller.isAuthenticated &&
-        _needsLocalFirstUserSetup &&
-        localAuthService != null) {
-      return LocalFirstUserSetupScreen(
-        authService: localAuthService,
-        onUserCreated: () {
-          setState(() {
-            _needsLocalFirstUserSetup = false;
-          });
-        },
-      );
-    }
-
     if (widget.controller.isAuthenticated) {
-      _startLocalBackupSchedulingOnce();
       _maybeBootstrapHybrid();
 
       final syncService = widget.dependencies?.syncService;
@@ -327,8 +287,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
           });
         },
         onLogout: widget.controller.logout,
-        showLocalBackup: widget.dependencies?.mode == DataMode.local,
-        showSyncCatalog: widget.dependencies?.mode == DataMode.hybrid,
+        showSyncCatalog: true,
         onSyncCatalog:
             syncService == null ? null : () => _handleSyncCatalog(context),
         isSyncing: syncService?.isSyncing ?? false,
@@ -357,8 +316,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
                     productsService: widget.productsService,
                     buyersService: widget.buyersService,
                     product: product,
-                    supportsProductReactivation:
-                        widget.dependencies?.mode == DataMode.local,
+                    supportsProductReactivation: true,
                   ),
                 ),
               );
@@ -405,15 +363,6 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
             companyProfileService: widget.companyProfileService,
           );
           break;
-        case AppDestination.backup:
-          screen = BackupScreen(
-            drawer: drawer,
-            driveBackupService:
-                widget.driveBackupService ?? const GoogleDriveBackupService(),
-            backupTransferService: widget.backupTransferService,
-            onRestoreCompleted: widget.controller.logout,
-          );
-          break;
       }
 
       return screen;
@@ -439,53 +388,5 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
         ) ??
         false;
     return created;
-  }
-
-  Future<void> _checkLocalUsers() async {
-    if (widget.dependencies?.mode != DataMode.local) {
-      return;
-    }
-    final hasLocalUsers = widget.dependencies?.hasLocalUsers;
-    if (hasLocalUsers == null) {
-      return;
-    }
-
-    setState(() {
-      _isCheckingLocalUsers = true;
-    });
-
-    final hasUsers = await hasLocalUsers();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _needsLocalFirstUserSetup = !hasUsers;
-      _isCheckingLocalUsers = false;
-    });
-  }
-
-  void _startLocalBackupSchedulingOnce() {
-    if (_didStartLocalBackupScheduling ||
-        widget.dependencies?.mode != DataMode.local) {
-      return;
-    }
-    _didStartLocalBackupScheduling = true;
-
-    final scheduler = widget.backupScheduler;
-    if (scheduler == null) {
-      return;
-    }
-    Future<void>.microtask(() async {
-      try {
-        await scheduler.registerPlatformSchedule();
-      } on Object {
-        // Backup scheduling must not block opening the local app shell.
-      }
-      try {
-        await scheduler.runCatchUpIfDue();
-      } on Object {
-        // Catch-up failures are recorded by the scheduler and should not block startup.
-      }
-    });
   }
 }

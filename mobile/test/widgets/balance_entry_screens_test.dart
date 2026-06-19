@@ -8,7 +8,7 @@ import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 
 void main() {
   testWidgets('opening balance submits generated request id', (tester) async {
-    final service = FakePaymentsService();
+    final service = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -44,7 +44,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: OpeningBalanceScreen(
-          paymentsService: FakePaymentsService(
+          paymentsService: _FakePaymentsService(
             openingBalanceError:
                 const ApiError(message: 'Unable to save opening balance'),
           ),
@@ -65,7 +65,7 @@ void main() {
 
   testWidgets('opening balance requires valid amount and occurred on',
       (tester) async {
-    final service = FakePaymentsService();
+    final service = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -95,7 +95,7 @@ void main() {
 
   testWidgets('balance adjustment submits generated request id',
       (tester) async {
-    final service = FakePaymentsService();
+    final service = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -141,7 +141,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: BalanceAdjustmentScreen(
-          paymentsService: FakePaymentsService(
+          paymentsService: _FakePaymentsService(
             adjustmentError:
                 const ApiError(message: 'Unable to save adjustment'),
           ),
@@ -163,7 +163,7 @@ void main() {
 
   testWidgets('balance adjustment requires valid amount and occurred on',
       (tester) async {
-    final service = FakePaymentsService();
+    final service = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -204,14 +204,12 @@ const _customer = Customer(
   pendingBalance: 500,
 );
 
-class FakePaymentsService implements PaymentsService {
-  FakePaymentsService({
-    this.paymentError,
+class _FakePaymentsService implements PaymentsService {
+  _FakePaymentsService({
     this.openingBalanceError,
     this.adjustmentError,
   });
 
-  final ApiError? paymentError;
   final ApiError? openingBalanceError;
   final ApiError? adjustmentError;
   final List<_OpeningBalanceCall> openingBalances = <_OpeningBalanceCall>[];
@@ -242,11 +240,8 @@ class FakePaymentsService implements PaymentsService {
   }
 
   @override
-  Future<void> recordCollection(RecordCollectionInput input) async {
-    if (paymentError != null) {
-      throw paymentError!;
-    }
-  }
+  Future<void> recordCollection(RecordCollectionInput input) async {}
+
   @override
   Future<CollectionGridData> loadCollectionGrid({
     required String fromDate,
@@ -256,10 +251,10 @@ class FakePaymentsService implements PaymentsService {
   }
 
   @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input) {
     throw UnimplementedError();
   }
-
 }
 
 class _OpeningBalanceCall {

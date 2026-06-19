@@ -29,4 +29,8 @@ void main() {
   test('resolveDataMode defaults to hybrid', () {
     expect(resolveDataMode(), DataMode.hybrid);
   });
+
+  test('hybrid is the only compiled runtime mode', () {
+    expect(DataMode.values, const <DataMode>[DataMode.hybrid]);
+  });
 }

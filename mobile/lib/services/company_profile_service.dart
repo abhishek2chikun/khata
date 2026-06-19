@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import '../models/company_profile.dart';
-import 'api_client.dart';
 
 class UpsertCompanyProfileInput {
   const UpsertCompanyProfileInput({
@@ -60,27 +57,4 @@ abstract class CompanyProfileService {
   Future<CompanyProfile> fetchCompanyProfile();
 
   Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input);
-}
-
-class ApiCompanyProfileService implements CompanyProfileService {
-  ApiCompanyProfileService({required ApiClient apiClient})
-      : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  @override
-  Future<CompanyProfile> fetchCompanyProfile() async {
-    final response = await _apiClient.get('/company-profile');
-    return CompanyProfile.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<CompanyProfile> upsertCompanyProfile(
-      UpsertCompanyProfileInput input) async {
-    final response =
-        await _apiClient.put('/company-profile', body: input.toJson());
-    return CompanyProfile.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>);
-  }
 }

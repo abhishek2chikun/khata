@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'dart:math';
-
-import 'api_client.dart';
 
 class RecordCollectionInput {
   const RecordCollectionInput({
@@ -90,7 +87,8 @@ class CollectionGridCustomerRow {
 
   factory CollectionGridCustomerRow.fromJson(Map<String, dynamic> json) {
     final totals = <String, double>{};
-    final rawTotals = json['existing_totals'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final rawTotals = json['existing_totals'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
     for (final entry in rawTotals.entries) {
       totals[entry.key] = _parseAmount(entry.value);
     }
@@ -122,7 +120,8 @@ class CollectionGridData {
       toDate: json['to_date'] as String,
       dates: (json['dates'] as List<dynamic>).cast<String>(),
       customers: (json['customers'] as List<dynamic>)
-          .map((row) => CollectionGridCustomerRow.fromJson(row as Map<String, dynamic>))
+          .map((row) =>
+              CollectionGridCustomerRow.fromJson(row as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -213,55 +212,8 @@ abstract class PaymentsService {
     required String toDate,
   });
 
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input);
-}
-
-class ApiPaymentsService implements PaymentsService {
-  ApiPaymentsService({required ApiClient apiClient}) : _apiClient = apiClient;
-
-  final ApiClient _apiClient;
-
-  @override
-  Future<void> addBalanceAdjustment({
-    required String customerId,
-    required BalanceAdjustmentInput input,
-  }) async {
-    await _apiClient.post('/customers/$customerId/balance-adjustment', body: input.toJson());
-  }
-
-  @override
-  Future<void> addOpeningBalance({
-    required String customerId,
-    required OpeningBalanceInput input,
-  }) async {
-    await _apiClient.post('/customers/$customerId/opening-balance', body: input.toJson());
-  }
-
-  @override
-  Future<void> recordCollection(RecordCollectionInput input) async {
-    await _apiClient.post('/collections', body: input.toJson());
-  }
-
-  @override
-  Future<CollectionGridData> loadCollectionGrid({
-    required String fromDate,
-    required String toDate,
-  }) async {
-    final response = await _apiClient.get(
-      '/customers/collection-grid',
-      queryParameters: <String, String>{
-        'from_date': fromDate,
-        'to_date': toDate,
-      },
-    );
-    return CollectionGridData.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) async {
-    final response = await _apiClient.post('/customers/collection-batch', body: input.toJson());
-    return BatchCollectionResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input);
 }
 
 String generateRequestId() {
@@ -269,6 +221,7 @@ String generateRequestId() {
   final bytes = List<int>.generate(16, (_) => random.nextInt(256));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  final hex = bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join();
+  final hex =
+      bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join();
   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
 }

@@ -46,7 +46,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -94,7 +94,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -129,7 +129,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -155,7 +155,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -215,7 +215,7 @@ void main() {
         home: CustomerDetailScreen(
           customerId: 'customer-1',
           customersService: customersService,
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -273,7 +273,7 @@ void main() {
         home: CustomerDetailScreen(
           customerId: 'customer-1',
           customersService: customersService,
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -337,7 +337,7 @@ void main() {
         ),
       ],
     );
-    final paymentsService = FakePaymentsService();
+    final paymentsService = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -392,7 +392,7 @@ void main() {
         ),
       ],
     );
-    final paymentsService = FakePaymentsService();
+    final paymentsService = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -445,7 +445,7 @@ void main() {
         ),
       ],
     );
-    final paymentsService = FakePaymentsService();
+    final paymentsService = _FakePaymentsService();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -493,7 +493,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (customer) async {
             invoiceCustomer = customer;
             return false;
@@ -541,7 +541,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -566,7 +566,7 @@ void main() {
             ledgers: <CustomerLedger>[],
             error: const ApiError(message: 'Unable to load customer detail'),
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -588,7 +588,7 @@ void main() {
             ledgers: <CustomerLedger>[],
             error: const SocketException('timed out'),
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
         ),
       ),
@@ -614,7 +614,7 @@ void main() {
               ),
             ],
           ),
-          paymentsService: FakePaymentsService(),
+          paymentsService: _FakePaymentsService(),
           onCreateInvoice: (_) async => false,
           companyProfileService: _FakeCompanyProfileService(),
           balanceShareService: shareService,
@@ -702,7 +702,7 @@ class FakeCustomersService implements CustomersService {
   }
 }
 
-class FakePaymentsService implements PaymentsService {
+class _FakePaymentsService implements PaymentsService {
   final List<RecordCollectionInput> recordedCollections =
       <RecordCollectionInput>[];
   final List<_OpeningBalanceCall> openingBalances = <_OpeningBalanceCall>[];
@@ -730,6 +730,7 @@ class FakePaymentsService implements PaymentsService {
   Future<void> recordCollection(RecordCollectionInput input) async {
     recordedCollections.add(input);
   }
+
   @override
   Future<CollectionGridData> loadCollectionGrid({
     required String fromDate,
@@ -739,10 +740,10 @@ class FakePaymentsService implements PaymentsService {
   }
 
   @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) {
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input) {
     throw UnimplementedError();
   }
-
 }
 
 class _OpeningBalanceCall {
@@ -782,8 +783,7 @@ class _FakeCompanyProfileService implements CompanyProfileService {
   }
 
   @override
-  Future<CompanyProfile> upsertCompanyProfile(
-      UpsertCompanyProfileInput input) {
+  Future<CompanyProfile> upsertCompanyProfile(UpsertCompanyProfileInput input) {
     throw UnimplementedError();
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:internal_billing_khata_mobile/models/api_error.dart';
 import 'package:internal_billing_khata_mobile/models/product.dart';
 import 'package:internal_billing_khata_mobile/screens/product_detail_screen.dart';
 import 'package:internal_billing_khata_mobile/screens/product_form_screen.dart';
@@ -122,8 +121,7 @@ void main() {
                   MaterialPageRoute<Product>(
                     builder: (_) => ProductDetailScreen(
                       product: _product,
-                      productsService:
-                          FakeProductsService(product: _product),
+                      productsService: FakeProductsService(product: _product),
                       supportsProductReactivation: true,
                     ),
                   ),

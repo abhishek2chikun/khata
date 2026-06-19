@@ -1,17 +1,9 @@
-import 'dart:io';
-
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_controller.dart';
 import 'package:internal_billing_khata_mobile/auth/auth_service.dart';
 import 'package:internal_billing_khata_mobile/auth/session_store.dart';
 import 'package:internal_billing_khata_mobile/app/app_dependencies.dart';
 import 'package:internal_billing_khata_mobile/app/app_mode.dart';
-import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
-import 'package:internal_billing_khata_mobile/local/local_buyers_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_customers_service.dart';
 import 'package:internal_billing_khata_mobile/models/buyer.dart';
 import 'package:internal_billing_khata_mobile/models/buyer_ledger.dart';
 import 'package:internal_billing_khata_mobile/models/company_profile.dart';
@@ -32,130 +24,10 @@ import 'package:internal_billing_khata_mobile/services/products_service.dart';
 import 'package:internal_billing_khata_mobile/services/customers_service.dart';
 
 void main() {
-  final testApiBaseUri = Uri.parse('http://example.invalid/');
-
-  test('API dependencies preserve api mode label', () async {
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.api,
-      apiBaseUri: testApiBaseUri,
-    );
-    expect(dependencies.mode, DataMode.api);
-    await dependencies.dispose();
-  });
-
-  test('API dependencies use expected service types', () async {
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.api,
-      apiBaseUri: testApiBaseUri,
-    );
-
-    expect(dependencies.controller, isA<AuthController>());
-    expect(dependencies.productsService, isA<ApiProductsService>());
-    expect(dependencies.customersService, isA<ApiCustomersService>());
-    expect(dependencies.buyersService, isA<ApiBuyersService>());
-    expect(dependencies.companyProfileService, isA<ApiCompanyProfileService>());
-    expect(dependencies.paymentsService, isA<ApiPaymentsService>());
-    expect(dependencies.invoicesService, isA<ApiInvoicesService>());
-    await dependencies.dispose();
-  });
-
-  test('API dependencies close created http clients on dispose', () async {
-    HttpClient? authHttpClient;
-    HttpClient? apiHttpClient;
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.api,
-      apiBaseUri: testApiBaseUri,
-      onApiHttpClientsCreated: (authClient, apiClient) {
-        authHttpClient = authClient;
-        apiHttpClient = apiClient;
-      },
-    );
-
-    expect(authHttpClient, isNotNull);
-    expect(apiHttpClient, isNotNull);
-
-    await dependencies.dispose();
-
-    await expectLater(
-      _openUrl(authHttpClient!, testApiBaseUri),
-      throwsA(isA<StateError>()),
-    );
-    await expectLater(
-      _openUrl(apiHttpClient!, testApiBaseUri),
-      throwsA(isA<StateError>()),
-    );
-  });
-
-  test('local dependencies create local auth and local data services',
-      () async {
-    final database = db.LocalDatabase.memory();
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.local,
-      localDatabase: database,
-      loadCatalogJson: () async =>
-          '{"catalog_version":1,"buyers":[],"products":[]}',
-    );
-
-    expect(dependencies.mode, DataMode.local);
-    expect(dependencies.controller, isA<AuthController>());
-    expect(dependencies.productsService, isA<LocalProductsService>());
-    expect(dependencies.customersService, isA<LocalCustomersService>());
-    expect(dependencies.buyersService, isA<LocalBuyersService>());
-    expect(dependencies.paymentsService, isA<LocalPaymentsService>());
-    await dependencies.dispose();
-  });
-
-  test('local hasLocalUsers returns true when multiple users exist', () async {
-    final database = db.LocalDatabase.memory();
-    await database.into(database.localUsers).insert(
-          db.LocalUsersCompanion.insert(
-            id: 'local-user-1',
-            username: 'owner',
-            passwordHash: 'hash-1',
-            salt: 'salt-1',
-            passwordHashVersion: 1,
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-            displayName: const Value('Owner'),
-          ),
-        );
-    await database.into(database.localUsers).insert(
-          db.LocalUsersCompanion.insert(
-            id: 'local-user-2',
-            username: 'system',
-            passwordHash: 'hash-2',
-            salt: 'salt-2',
-            passwordHashVersion: 1,
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-            displayName: const Value('System'),
-          ),
-        );
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.local,
-      localDatabase: database,
-      sessionStore: _FakeSessionStore(),
-    );
-
-    await expectLater(dependencies.hasLocalUsers!(), completion(isTrue));
-
-    await dependencies.dispose();
-  });
-
-  test('explicit local dependencies remain available for reference tests',
-      () async {
-    final dependencies = await AppDependencies.create(
-      mode: DataMode.local,
-      localDatabase: db.LocalDatabase.memory(),
-    );
-    expect(dependencies.mode, DataMode.local);
-    await dependencies.dispose();
-  });
-
   test('dispose invokes optional dispose callback', () async {
     var disposed = false;
     final dependencies = AppDependencies(
-      mode: DataMode.api,
+      mode: DataMode.hybrid,
       controller: AuthController(
         authService: _FakeAuthService(),
         sessionStore: _FakeSessionStore(),
@@ -176,10 +48,6 @@ void main() {
 
     expect(disposed, isTrue);
   });
-}
-
-Future<void> _openUrl(HttpClient client, Uri uri) async {
-  await client.getUrl(uri);
 }
 
 class _FakeAuthService implements AuthService {

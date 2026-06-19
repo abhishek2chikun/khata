@@ -69,7 +69,7 @@ void main() {
     }
   });
 
-  InvoiceDetail _sampleInvoice({
+  InvoiceDetail sampleInvoice({
     String invoiceNumber = '42',
     String customerName = 'Acme Stores',
     double grandTotal = 236.0,
@@ -154,7 +154,7 @@ void main() {
   }
 
   test('generateInvoicePdf creates a non-empty file', () async {
-    final invoice = _sampleInvoice();
+    final invoice = sampleInvoice();
     final path = await service.generateInvoicePdf(invoice);
 
     final file = File(path);
@@ -164,14 +164,14 @@ void main() {
   });
 
   test('generateInvoicePdf creates file with invoice number in name', () async {
-    final invoice = _sampleInvoice(invoiceNumber: '99');
+    final invoice = sampleInvoice(invoiceNumber: '99');
     final path = await service.generateInvoicePdf(invoice);
 
     expect(path, contains('invoice_99'));
   });
 
   test('generateInvoicePdf handles INTER_STATE tax regime', () async {
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       taxRegime: 'INTER_STATE',
       items: [
         InvoiceDetailItem(
@@ -233,7 +233,7 @@ void main() {
   });
 
   test('generateInvoicePdf handles partial payment', () async {
-    final invoice = _sampleInvoice();
+    final invoice = sampleInvoice();
     final path = await service.generateInvoicePdf(invoice);
 
     final file = File(path);
@@ -244,7 +244,7 @@ void main() {
   });
 
   test('generateInvoicePdf handles invoice with discounts', () async {
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       grandTotal: 212.4,
       items: [
         InvoiceDetailItem(
@@ -283,7 +283,7 @@ void main() {
   });
 
   test('uses A5 when the complete GST invoice fits on one half page', () async {
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       items:
           List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
     );
@@ -296,7 +296,7 @@ void main() {
 
   test('uses A5 when the complete non-GST invoice fits on one half page',
       () async {
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       gstFlag: false,
       items:
           List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
@@ -308,9 +308,8 @@ void main() {
     expect(height, closeTo(595, 5));
   });
 
-  test('uses A5 for a standard 15-row GST invoice',
-      () async {
-    final invoice = _sampleInvoice(
+  test('uses A5 for a standard 15-row GST invoice', () async {
+    final invoice = sampleInvoice(
       items:
           List<InvoiceDetailItem>.generate(15, (i) => _lineItem(index: i + 1)),
     );
@@ -321,9 +320,8 @@ void main() {
     expect(height, closeTo(595, 5));
   });
 
-  test('uses A5 for a standard 15-row non-GST invoice',
-      () async {
-    final invoice = _sampleInvoice(
+  test('uses A5 for a standard 15-row non-GST invoice', () async {
+    final invoice = sampleInvoice(
       gstFlag: false,
       items:
           List<InvoiceDetailItem>.generate(15, (i) => _lineItem(index: i + 1)),
@@ -341,7 +339,7 @@ void main() {
       20,
       'extra descriptive product and delivery information',
     ).join(' ');
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       customerAddress: longText,
       companyAddress: longText,
       notes: longText,
@@ -358,7 +356,7 @@ void main() {
   });
 
   test('uses A4 directly for more than 15 line items', () async {
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       items:
           List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
     );
@@ -385,7 +383,7 @@ void main() {
     expect(invoicePdfShowsCustomerGstin(gstFlag: false), isFalse);
     expect(invoicePdfIncludesGstSupplySection(gstFlag: false), isFalse);
 
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       gstFlag: false,
       items:
           List<InvoiceDetailItem>.generate(1, (i) => _lineItem(index: i + 1)),
@@ -397,10 +395,11 @@ void main() {
     expect(await file.length(), greaterThan(0));
   });
 
-  test('a4 non-gst invoice uses letterhead only without seller column', () async {
+  test('a4 non-gst invoice uses letterhead only without seller column',
+      () async {
     expect(invoicePdfA4ShowsSeparateSellerColumn(), isFalse);
 
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       gstFlag: false,
       items:
           List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
@@ -415,7 +414,7 @@ void main() {
   test('a4 gst invoice uses letterhead only without seller column', () async {
     expect(invoicePdfA4ShowsSeparateSellerColumn(), isFalse);
 
-    final invoice = _sampleInvoice(
+    final invoice = sampleInvoice(
       items:
           List<InvoiceDetailItem>.generate(16, (i) => _lineItem(index: i + 1)),
     );
@@ -442,14 +441,14 @@ void main() {
     expect(invoicePdfFormatUnitPrice(12.3), '12.300');
   });
 
-  test('historical discount summary remains when discount_total is positive', () {
+  test('historical discount summary remains when discount_total is positive',
+      () {
     expect(invoicePdfShowsHistoricalDiscount(10), isTrue);
     expect(invoicePdfShowsHistoricalDiscount(0), isFalse);
   });
 
   test('gst pdf table uses hsn snapshot in headers and row formatting', () {
-    final headers =
-        invoicePdfTableHeaders(gstFlag: true, isInterState: false);
+    final headers = invoicePdfTableHeaders(gstFlag: true, isInterState: false);
     expect(headers, contains('HSN'));
     expect(headers, isNot(contains('Disc')));
 
@@ -462,8 +461,7 @@ void main() {
   });
 
   test('non-gst pdf table omits hsn and gst columns', () {
-    final headers =
-        invoicePdfTableHeaders(gstFlag: false, isInterState: false);
+    final headers = invoicePdfTableHeaders(gstFlag: false, isInterState: false);
     expect(headers, isNot(contains('HSN')));
     expect(headers, isNot(contains('GST%')));
     expect(headers, isNot(contains('Code')));
@@ -476,7 +474,7 @@ void main() {
 
   test('legacy discounted invoice keeps compact discount summary', () async {
     expect(invoicePdfShowsHistoricalDiscount(23.6), isTrue);
-    final base = _sampleInvoice(
+    final base = sampleInvoice(
       grandTotal: 212.4,
       items: [
         InvoiceDetailItem(

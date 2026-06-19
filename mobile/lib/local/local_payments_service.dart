@@ -81,7 +81,8 @@ class LocalPaymentsService implements PaymentsService {
     _validateDateOnly(fromDate);
     _validateDateOnly(toDate);
     final today = _todayString();
-    final dates = _validateCollectionWindow(fromDate: fromDate, toDate: toDate, today: today);
+    final dates = _validateCollectionWindow(
+        fromDate: fromDate, toDate: toDate, today: today);
     final customers = await (_database.select(_database.customers)
           ..where((customer) => customer.isActive.equals(true))
           ..orderBy([(customer) => OrderingTerm.asc(customer.name)]))
@@ -93,15 +94,16 @@ class LocalPaymentsService implements PaymentsService {
       if (pendingBalance <= 0) {
         continue;
       }
-      final collections = await (_database.select(_database.customerTransactions)
-            ..where(
-              (transaction) =>
-                  transaction.customerId.equals(customer.id) &
-                  transaction.entryType.equals('COLLECTION') &
-                  transaction.occurredOn.isBiggerOrEqualValue(fromDate) &
-                  transaction.occurredOn.isSmallerOrEqualValue(toDate),
-            ))
-          .get();
+      final collections =
+          await (_database.select(_database.customerTransactions)
+                ..where(
+                  (transaction) =>
+                      transaction.customerId.equals(customer.id) &
+                      transaction.entryType.equals('COLLECTION') &
+                      transaction.occurredOn.isBiggerOrEqualValue(fromDate) &
+                      transaction.occurredOn.isSmallerOrEqualValue(toDate),
+                ))
+              .get();
       final existingTotals = <String, double>{};
       for (final collection in collections) {
         existingTotals.update(
@@ -128,7 +130,8 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   @override
-  Future<BatchCollectionResult> recordCollectionBatch(BatchCollectionInput input) async {
+  Future<BatchCollectionResult> recordCollectionBatch(
+      BatchCollectionInput input) async {
     _validateRequestId(input.requestId);
     if (input.entries.isEmpty) {
       throw const ApiError(
@@ -147,15 +150,17 @@ class LocalPaymentsService implements PaymentsService {
     final batchNotes = _batchNotes(input.requestId, batchHash);
 
     return _database.transaction(() async {
-      final conflicting = await (_database.select(_database.customerTransactions)
-            ..where(
-              (transaction) =>
-                  transaction.entryType.equals('COLLECTION') &
-                  transaction.notes.like('$_batchNotesPrefix${input.requestId}|%') &
-                  transaction.notes.equals(batchNotes).not(),
-            )
-            ..limit(1))
-          .getSingleOrNull();
+      final conflicting =
+          await (_database.select(_database.customerTransactions)
+                ..where(
+                  (transaction) =>
+                      transaction.entryType.equals('COLLECTION') &
+                      transaction.notes
+                          .like('$_batchNotesPrefix${input.requestId}|%') &
+                      transaction.notes.equals(batchNotes).not(),
+                )
+                ..limit(1))
+              .getSingleOrNull();
       if (conflicting != null) {
         throw _idempotencyConflictError();
       }
@@ -172,7 +177,10 @@ class LocalPaymentsService implements PaymentsService {
       }
 
       _validateBatchEntries(input.entries, today: today);
-      final customerIds = input.entries.map((entry) => entry.customerId).toSet().toList()
+      final customerIds = input.entries
+          .map((entry) => entry.customerId)
+          .toSet()
+          .toList()
         ..sort();
       final customers = await (_database.select(_database.customers)
             ..where((customer) => customer.id.isIn(customerIds))
@@ -185,7 +193,9 @@ class LocalPaymentsService implements PaymentsService {
           statusCode: 404,
         );
       }
-      final customersById = {for (final customer in customers) customer.id: customer};
+      final customersById = {
+        for (final customer in customers) customer.id: customer
+      };
       final totalsByCustomer = <String, double>{};
       for (final entry in input.entries) {
         final customer = customersById[entry.customerId];
@@ -196,7 +206,9 @@ class LocalPaymentsService implements PaymentsService {
             statusCode: 400,
           );
         }
-        totalsByCustomer.update(entry.customerId, (total) => total + entry.amount, ifAbsent: () => entry.amount);
+        totalsByCustomer.update(
+            entry.customerId, (total) => total + entry.amount,
+            ifAbsent: () => entry.amount);
       }
 
       final balances = await _pendingBalancesByCustomerId();
@@ -222,7 +234,8 @@ class LocalPaymentsService implements PaymentsService {
         });
       final inserted = <CustomerTransaction>[];
       for (final entry in sortedEntries) {
-        final requestId = _batchEntryRequestId(input.requestId, entry.customerId, entry.occurredOn);
+        final requestId = _batchEntryRequestId(
+            input.requestId, entry.customerId, entry.occurredOn);
         final requestHash = _collectionEntryHash(
           customerId: entry.customerId,
           occurredOn: entry.occurredOn,
@@ -262,12 +275,16 @@ class LocalPaymentsService implements PaymentsService {
     });
   }
 
-  BatchCollectionResult _buildBatchResult(String requestId, List<CustomerTransaction> transactions) {
+  BatchCollectionResult _buildBatchResult(
+      String requestId, List<CustomerTransaction> transactions) {
     final totalAmount = transactions.fold<double>(
       0,
       (total, transaction) => total + double.parse(transaction.amount),
     );
-    final affectedCustomers = transactions.map((transaction) => transaction.customerId).toSet().length;
+    final affectedCustomers = transactions
+        .map((transaction) => transaction.customerId)
+        .toSet()
+        .length;
     return BatchCollectionResult(
       requestId: requestId,
       entryCount: transactions.length,
@@ -276,7 +293,8 @@ class LocalPaymentsService implements PaymentsService {
     );
   }
 
-  void _validateBatchEntries(List<BatchCollectionEntryInput> entries, {required String today}) {
+  void _validateBatchEntries(List<BatchCollectionEntryInput> entries,
+      {required String today}) {
     final seen = <String>{};
     for (final entry in entries) {
       if (entry.occurredOn.compareTo(today) > 0) {
@@ -350,7 +368,8 @@ class LocalPaymentsService implements PaymentsService {
   }
 
   Future<Map<String, double>> _pendingBalancesByCustomerId() async {
-    final transactions = await _database.select(_database.customerTransactions).get();
+    final transactions =
+        await _database.select(_database.customerTransactions).get();
     final balances = <String, double>{};
     for (final transaction in transactions) {
       balances.update(
@@ -401,7 +420,8 @@ class LocalPaymentsService implements PaymentsService {
     return sha256.convert(utf8.encode(jsonEncode(canonical))).toString();
   }
 
-  String _batchEntryRequestId(String batchRequestId, String customerId, String occurredOn) {
+  String _batchEntryRequestId(
+      String batchRequestId, String customerId, String occurredOn) {
     final namespace = _uuidFromString(batchRequestId);
     return _uuidV5(namespace, '$customerId:$occurredOn');
   }
@@ -431,7 +451,8 @@ class LocalPaymentsService implements PaymentsService {
 
   DateTime _parseDate(String value) {
     final parts = value.split('-');
-    return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    return DateTime(
+        int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
 
   int _daysBetween(String earlier, String later) {
@@ -515,7 +536,7 @@ class LocalPaymentsService implements PaymentsService {
               createdAt: DateTime.now().toUtc().toIso8601String(),
             ),
           );
-    } on Object catch (error) {
+    } on Object catch (_) {
       final existing = await (_database.select(_database.customerTransactions)
             ..where((transaction) => transaction.requestId.equals(requestId)))
           .getSingleOrNull();
@@ -530,7 +551,7 @@ class LocalPaymentsService implements PaymentsService {
           statusCode: 409,
         );
       }
-      throw error;
+      rethrow;
     }
   }
 

@@ -1,20 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:internal_billing_khata_mobile/backup/backup_crypto.dart';
-import 'package:internal_billing_khata_mobile/backup/backup_models.dart';
-import 'package:internal_billing_khata_mobile/backup/drive_platform.dart';
-import 'package:internal_billing_khata_mobile/backup/encrypted_drive_backup_orchestrator.dart';
-import 'package:internal_billing_khata_mobile/backup/local_backup_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_analytics_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_company_profile_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_customers_service.dart';
-import 'package:internal_billing_khata_mobile/local/local_database.dart'
-    hide Customer, Product;
-import 'package:internal_billing_khata_mobile/local/local_database.dart'
-    as db;
+import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
 import 'package:internal_billing_khata_mobile/local/local_invoices_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_payments_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_products_service.dart';
@@ -29,46 +20,28 @@ import 'package:internal_billing_khata_mobile/services/invoice_settlement.dart';
 import 'package:internal_billing_khata_mobile/services/payments_service.dart';
 import 'package:internal_billing_khata_mobile/services/products_service.dart';
 
-import '../backup/backup_test_fixtures.dart';
-import '../backup/drive_backup_orchestrator_test.dart' show canonicalDatabaseDigest;
-import '../backup/fake_drive_platform.dart';
-
 void main() {
   setUpAll(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   });
 
   group('cycle upgrade cross-slice regressions', () {
-    test('schema-10 backup with hsn and three-decimal prices restores for pdf and analytics',
+    test(
+        'cached canonical invoice supports hsn, precise prices, pdf and analytics',
         () async {
-      final source = db.LocalDatabase.memory();
-      final target = db.LocalDatabase.memory();
-      addTearDown(source.close);
-      addTearDown(target.close);
+      final database = db.LocalDatabase.memory();
+      addTearDown(database.close);
+      await _seedCrossSliceBusinessData(database);
 
-      await _seedCrossSliceBusinessData(source);
+      final cachedProduct =
+          await database.select(database.products).getSingle();
+      expect(cachedProduct.hsnCode, '96081099');
+      final cachedItem =
+          await database.select(database.invoiceItems).getSingle();
+      expect(cachedItem.productHsnCode, '96081099');
+      expect(cachedItem.enteredUnitPrice, '12.008');
 
-      final package = await LocalBackupService(database: source).exportEncrypted(
-        password: 'backup-password',
-      );
-      final payload = LocalBackupPayload.decode(
-        await BackupCrypto()
-            .decrypt(package: package, password: 'backup-password'),
-      );
-      expect(payload.schemaVersion, 10);
-
-      await LocalBackupService(database: target).importEncrypted(
-        package: package,
-        password: 'backup-password',
-      );
-
-      final restoredProduct = await target.select(target.products).getSingle();
-      expect(restoredProduct.hsnCode, '96081099');
-      final restoredItem = await target.select(target.invoiceItems).getSingle();
-      expect(restoredItem.productHsnCode, '96081099');
-      expect(restoredItem.enteredUnitPrice, '12.008');
-
-      final analytics = LocalAnalyticsService(database: target);
+      final analytics = LocalAnalyticsService(database: database);
       final dashboard = await analytics.getDashboard(
         fromDate: '2026-06-01',
         toDate: '2026-06-30',
@@ -76,7 +49,7 @@ void main() {
       expect(dashboard.totalRevenue, closeTo(12.01, 0.01));
       expect(dashboard.activeInvoiceCount, 1);
 
-      final invoices = LocalInvoicesService(database: target);
+      final invoices = LocalInvoicesService(database: database);
       final detail = await invoices.fetchInvoiceDetail('invoice-cross-0001');
       final pdfDir = Directory.systemTemp.createTempSync('khata-pdf-cross');
       addTearDown(() => pdfDir.deleteSync(recursive: true));
@@ -130,7 +103,8 @@ void main() {
       expect(after.customerReceivables, closeTo(350, 0.01));
     });
 
-    test('cash and credit invoices affect receivables kpi differently', () async {
+    test('cash and credit invoices affect receivables kpi differently',
+        () async {
       final database = db.LocalDatabase.memory();
       addTearDown(database.close);
       await _seedLocalUser(database);
@@ -142,10 +116,9 @@ void main() {
 
       await companyService.upsertCompanyProfile(_companyInput());
       final product = await productsService.createProduct(_productInput());
-      final creditCustomer =
-          await customersService.createCustomer(_customerInput(name: 'Credit Shop'));
-      final cashCustomer =
-          await customersService.createCustomer(_customerInput(
+      final creditCustomer = await customersService
+          .createCustomer(_customerInput(name: 'Credit Shop'));
+      final cashCustomer = await customersService.createCustomer(_customerInput(
         name: 'Cash Shop',
         phone: '8888888888',
       ));
@@ -195,7 +168,8 @@ void main() {
 
       await expectLater(
         invoicesService.quoteInvoice(
-          _draft(customer: customer, product: noHsn, quantity: 1, gstFlag: true),
+          _draft(
+              customer: customer, product: noHsn, quantity: 1, gstFlag: true),
         ),
         throwsA(_apiError(code: 'MISSING_PRODUCT_HSN', statusCode: 400)),
       );
@@ -212,55 +186,6 @@ void main() {
         ),
       );
       expect(nonGstQuote.totals.gstTotal, 0);
-    });
-
-    test('drive backup after v9 restore uploads restorable schema-10 package',
-        () async {
-      final database = db.LocalDatabase.memory();
-      addTearDown(database.close);
-      await seedRoundTripData(database);
-
-      final v9Package = await _tamperToV9Backup(
-        database: database,
-        password: 'backup-password',
-      );
-
-      final migrated = db.LocalDatabase.memory();
-      addTearDown(migrated.close);
-      await LocalBackupService(database: migrated).importEncrypted(
-        package: v9Package,
-        password: 'backup-password',
-      );
-      expect((await migrated.select(migrated.products).getSingle()).hsnCode,
-          isNull);
-
-      final gateway = FakeDriveGateway();
-      final orchestrator = EncryptedDriveBackupOrchestrator(
-        database: migrated,
-        authGateway: FakeGoogleAuthGateway(),
-        secretStore: FakeBackupSecretStore(initialPassword: 'backup-password'),
-        driveGatewayFactory: () async => gateway,
-        clock: () => DateTime.utc(2026, 6, 14, 2, 0),
-      );
-
-      final beforeDigest = await canonicalDatabaseDigest(migrated);
-      await orchestrator.runVerifiedBackup(eventType: 'scheduled_drive_backup');
-
-      final uploaded = gateway.files.values.single;
-      expect(uploaded.appProperties['schema_version'], '10');
-
-      await migrated.customStatement('DELETE FROM invoice_items');
-      await migrated.customStatement('DELETE FROM products');
-
-      final backups = await orchestrator.listBackups();
-      await orchestrator.restoreFromBackup(
-        fileId: backups.single.id,
-        password: 'backup-password',
-      );
-
-      final afterDigest = await canonicalDatabaseDigest(migrated);
-      expect(afterDigest, beforeDigest);
-      expect(await migrated.select(migrated.products).get(), isNotEmpty);
     });
   });
 }
@@ -378,30 +303,6 @@ Future<void> _seedCrossSliceBusinessData(db.LocalDatabase database) async {
           sellingPrice: const Value('12.0080'),
         ),
       );
-}
-
-Future<LocalBackupPackage> _tamperToV9Backup({
-  required db.LocalDatabase database,
-  required String password,
-}) async {
-  final service = LocalBackupService(database: database);
-  final crypto = BackupCrypto();
-  final package = await service.exportEncrypted(password: password);
-  final payload = LocalBackupPayload.decode(
-    await crypto.decrypt(package: package, password: password),
-  ).toJson();
-  payload['schema_version'] = 9;
-  final tables = payload['tables'] as Map<String, Object?>;
-  for (final row in tables['products'] as List<Object?>) {
-    (row as Map<String, Object?>).remove('hsn_code');
-  }
-  for (final row in tables['invoice_items'] as List<Object?>) {
-    (row as Map<String, Object?>).remove('product_hsn_code');
-  }
-  return crypto.encrypt(
-    payloadBytes: utf8.encode(jsonEncode(payload)),
-    password: password,
-  );
 }
 
 Future<void> _seedLocalUser(db.LocalDatabase database) {

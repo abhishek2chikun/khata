@@ -36,11 +36,11 @@ class LocalCustomersService implements CustomersService {
               updatedAt: now,
             ),
           );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicate(name: input.name, phone: input.phone)) {
         throw _duplicateCustomerError();
       }
-      throw error;
+      rethrow;
     }
 
     final customer = await (_database.select(_database.customers)
@@ -86,12 +86,12 @@ class LocalCustomersService implements CustomersService {
           updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
         ),
       );
-    } on Object catch (error) {
+    } on Object catch (_) {
       if (await _hasDuplicateExcluding(
           name: input.name, phone: input.phone, excludeId: id)) {
         throw _duplicateCustomerError();
       }
-      throw error;
+      rethrow;
     }
 
     final balances = await _pendingBalancesByCustomerId();

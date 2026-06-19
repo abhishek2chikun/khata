@@ -1,10 +1,9 @@
-import 'package:gotrue/gotrue.dart' as gotrue;
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException, AuthUser;
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../auth/auth_service.dart' as app_auth;
 import '../debug/agent_debug_log.dart';
 
-String mapGotrueAuthError(gotrue.AuthException error) {
+String mapGotrueAuthError(supabase.AuthException error) {
   final code = error.code ?? '';
   if (code == 'invalid_credentials' ||
       error.message.toLowerCase().contains('invalid login credentials')) {
@@ -19,7 +18,7 @@ String mapGotrueAuthError(gotrue.AuthException error) {
 class HybridAuthService implements app_auth.AuthService {
   HybridAuthService(this._client);
 
-  final SupabaseClient _client;
+  final supabase.SupabaseClient _client;
 
   @override
   Future<app_auth.AuthSessionTokens> login({
@@ -59,7 +58,7 @@ class HybridAuthService implements app_auth.AuthService {
       );
       // #endregion
       return _tokensFromSession(session);
-    } on gotrue.AuthException catch (error) {
+    } on supabase.AuthException catch (error) {
       // #region agent log
       AgentDebugLog.write(
         location: 'hybrid_auth_service.dart:login',
@@ -81,15 +80,17 @@ class HybridAuthService implements app_auth.AuthService {
   }
 
   @override
-  Future<app_auth.AuthSessionTokens> refresh({required String refreshToken}) async {
+  Future<app_auth.AuthSessionTokens> refresh(
+      {required String refreshToken}) async {
     try {
       final response = await _client.auth.refreshSession(refreshToken);
       final session = response.session;
       if (session == null) {
-        throw const app_auth.AuthException('Unable to restore Supabase session');
+        throw const app_auth.AuthException(
+            'Unable to restore Supabase session');
       }
       return _tokensFromSession(session);
-    } on gotrue.AuthException catch (error) {
+    } on supabase.AuthException catch (error) {
       throw app_auth.AuthException(
         error.message,
         statusCode: int.tryParse(error.statusCode ?? ''),
@@ -116,7 +117,7 @@ class HybridAuthService implements app_auth.AuthService {
     );
   }
 
-  app_auth.AuthSessionTokens _tokensFromSession(Session session) {
+  app_auth.AuthSessionTokens _tokensFromSession(supabase.Session session) {
     return app_auth.AuthSessionTokens(
       accessToken: session.accessToken,
       refreshToken: session.refreshToken ?? '',
@@ -128,7 +129,7 @@ class HybridAuthService implements app_auth.AuthService {
 class HybridConnectivityGate {
   HybridConnectivityGate(this._client);
 
-  final SupabaseClient _client;
+  final supabase.SupabaseClient _client;
 
   void requireOnlineSession() {
     if (_client.auth.currentSession == null) {

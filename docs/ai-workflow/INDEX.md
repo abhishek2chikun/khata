@@ -20,7 +20,7 @@ Last updated: 2026-06-18 IST
 |---|---|---|---|---|---|---|---|---|---|
 | `khata-app-baseline` | first-cycle | GST/non-GST invoicing, adaptive PDFs, sharing, local production audit | accepted-with-followups | `7699ae6` | `de7318a` | historical / superseded by upgrade cycle | invoicing, pdf, sharing | none | `khata-app-baseline/` |
 | `20260614-invoice-collections-backup-analytics` | new-cycle | HSN/precision, invoice UX/PDF, batch collections, Drive backup, owner analytics | accepted-with-followups; merged-and-verified; release-unverified | `837ccbc` | `5b66165` | `1d8e5dc` merged into `main`; post-merge commits through `862dc34` | hsn, collections, drive, analytics, local-mode | `khata-app-baseline` | `cycles/20260614-invoice-collections-backup-analytics/` |
-| `20260618-hybrid-supabase` | new-cycle | Supabase authority, Drift cache, RPC-only writes, hybrid-only runtime cleanup | stage-2-planned; awaiting-stage-3 | `f873c38` | n/a | not-started | supabase, sync, rpc, cache, cleanup | `20260614-invoice-collections-backup-analytics` | `cycles/20260618-hybrid-supabase/` |
+| `20260618-hybrid-supabase` | new-cycle | Supabase authority, Drift cache, RPC-only writes, hybrid-only runtime cleanup | production-code-validated; physical-device-smoke-pending | `f873c38` | main | validated | supabase, sync, rpc, cache, cleanup | `20260614-invoice-collections-backup-analytics` | `cycles/20260618-hybrid-supabase/` |
 
 ## Active Cross-Cycle Blockers
 
