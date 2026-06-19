@@ -459,7 +459,8 @@ class HybridSyncService {
     // #endregion
   }
 
-  static const _syncPageSize = 2000;
+  // PostgREST caps responses at max_rows (1000 in supabase/config.toml).
+  static const _syncPageSize = 1000;
 
   Future<void> syncAll({bool forceFull = false}) async {
     if (_client.auth.currentSession == null) {
@@ -646,6 +647,7 @@ class HybridSyncService {
     if (localCount < remoteCount) {
       _lastError =
           'Catalog sync incomplete: $localCount of $remoteCount products cached locally';
+      throw StateError(_lastError!);
     }
   }
 }

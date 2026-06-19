@@ -106,6 +106,30 @@ void main() {
     expect(await repository.countActiveProducts(), 1);
   });
 
+  test('syncPaginatedTable stops early when server caps below pageSize', () async {
+    final upserted = <Map<String, dynamic>>[];
+
+    final total = await syncPaginatedTable(
+      pageSize: 2000,
+      fetchPage: (from, to) async {
+        if (from == 0) {
+          // PostgREST max_rows=1000 returns fewer rows than requested range.
+          return List<Map<String, dynamic>>.generate(
+            1000,
+            (index) => {'id': 'row-$index'},
+          );
+        }
+        return const <Map<String, dynamic>>[];
+      },
+      upsert: (row) async {
+        upserted.add(row);
+      },
+    );
+
+    expect(total, 1000);
+    expect(upserted.length, 1000);
+  });
+
   test('syncPaginatedTable fetches all pages until short page', () async {
     final upserted = <Map<String, dynamic>>[];
     var fetchCalls = 0;
