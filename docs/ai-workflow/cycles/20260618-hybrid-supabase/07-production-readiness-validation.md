@@ -48,7 +48,7 @@ passed with all 1,530 current active products. The canonical workbook contribute
 | `flutter analyze` | pass, no issues |
 | Release APK build | pass, 66.4 MB |
 | APK ZIP integrity | pass |
-| APK SHA-256 | `31d79d8f2d9fa73ca34007260b94c3f2af5b78665bc9e52f4ebcfc069d433b72` |
+| APK SHA-256 | `02b81f95b461681f26faafcaeaf7cd20ee5b179e7e6887a6967df4d6ca88cef3` |
 
 APK: `mobile/build/app/outputs/flutter-apk/app-release.apk`
 
