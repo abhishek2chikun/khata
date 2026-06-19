@@ -230,9 +230,10 @@ PYTHONPATH=backend .venv/bin/python -m pytest backend/pure_tests -q
 
 ## Progress
 
+- **2026-06-19 (critical sync fix):** Hybrid sync page size corrected to 1000 to match PostgREST `max_rows`; incomplete catalog sync now fails closed so bootstrap does not mark cache initialized with truncated inventory.
 - **2026-06-18 (catalog v6):** Restored deduplicated master catalog (1,528 unique products from 1,591 spreadsheet rows). Duplicate (company, item, category) rows are merged; v5 variant products deactivated in Supabase. Inventory and hybrid sync show active products only.
 - **2026-06-18 (catalog v5):** Reverted — brief experiment keeping all spreadsheet rows as separate products; not desired.
-- **2026-06-18 (invoice PDF + catalog sync):** Non-GST PDFs now always print seller company profile (name, address, GSTIN, phone) without tax columns; A4 invoices (16+ items) no longer duplicate company in a Seller column; hybrid sync page size raised to 2000 with paginated fetch, local vs remote product count check, stale-1000 auto recovery, and drawer **Sync catalog** action.
+- **2026-06-18 (invoice PDF + catalog sync):** Non-GST PDFs now always print seller company profile (name, address, GSTIN, phone) without tax columns; A4 invoices (16+ items) no longer duplicate company in a Seller column; hybrid sync uses paginated fetch, local vs remote product count check, stale-1000 auto recovery, and drawer **Sync catalog** action.
 - **2026-06-18 (hybrid-supabase, Stage 5 fix pass):** Hybrid mode now wires product/customer/buyer/payment/company/invoice official writes through Supabase RPC wrappers; sync includes stock movements, customer transactions, and buyer transactions; `DATA_MODE=api/local` is rejected by runtime parsing. SQL RPC smoke tests pass against remote Postgres; 485 mobile tests pass.
 - **2026-06-18:** Invoice preview improvements — pre-confirm **View PDF** on quote screen (actual generated PDF via `printing`); non-GST PDFs drop Code column; place of supply auto-resolves customer → company state (optional override on create form, hidden for non-GST).
 - **2026-06-15:** Preinstalled catalog v3 — rebuilt from corrected `Invoices (3).xlsx` source (`data/source/products.xlsx`); 1,199 products / 29 buyers; buying prices and HSN fixes; case-insensitive company merge (`Linc` → `linc`); existing local installs upgrade prices/HSN on startup.
