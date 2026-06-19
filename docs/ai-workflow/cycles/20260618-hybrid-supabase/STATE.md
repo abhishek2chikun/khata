@@ -43,7 +43,8 @@ Merge owner: Stage 5 persistent LLM
 
 Merge authorization: required
 
-Merge status: completed at `140fa28fe03e975b3e913490cc5f7c0a497035d4`
+Merge status: integrated and pushed as clean squash
+`a4a3101a064c1cb4e60af25d6d6e4023e6a5e2c3`
 
 Worktree cleanliness: clean after final validation follow-up commit
 
@@ -57,7 +58,9 @@ Stage 5 fixes completed:
 - Task 05 runtime reachability: `DATA_MODE=api|local` now throws; production runtime accepts only empty/hybrid.
 - SQL proof: smoke tests now exercise invoice create/idempotency/conflict, second invoice numbering, cancel stock/ledger reversal, collection, customer ledger, and buyer ledger RPCs.
 - Write latency: RPC results are applied directly to Drift, while debounced and 10-minute background syncs reconcile other-device changes without blocking the write UI.
-- Integration: `codex/hybrid-supabase` was merged into `main` after preserving the newer main catalog, pagination, authentication, and PDF fixes.
+- Integration: the reviewed feature tree was applied as a clean squash onto
+  `origin/main`, preserving the newer main catalog, pagination, authentication,
+  and PDF fixes without importing an old commit that contained `.env`.
 
 Final validation evidence:
 - `bash supabase/tests/run_migrations_and_tests.sh`: pass.

@@ -91,9 +91,12 @@ operational evidence, not an automated code-test failure found in this pass.
 
 8. Main integration
 
-   Merged `codex/hybrid-supabase` into `main` at
-   `140fa28fe03e975b3e913490cc5f7c0a497035d4`, preserving newer main fixes for
+   Integrated the reviewed feature tree into `main` as clean squash
+   `a4a3101a064c1cb4e60af25d6d6e4023e6a5e2c3`, preserving newer main fixes for
    catalog pagination/recovery, authentication, catalog v6, and invoice PDFs.
+   The original local merge graph is retained on
+   `codex/main-pre-sanitize`; it was not pushed because an old ancestor
+   contained a committed `.env`.
 
 ## Validation Evidence
 
