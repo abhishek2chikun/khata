@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:postgrest/postgrest.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -421,10 +423,103 @@ class HybridSyncService {
   bool _isSyncing = false;
   String? _lastError;
   Map<String, int>? _lastSyncedCounts;
+  Timer? _backgroundSyncTimer;
+  Timer? _periodicSyncTimer;
 
   bool get isSyncing => _isSyncing;
   String? get lastError => _lastError;
   Map<String, int>? get lastSyncedCounts => _lastSyncedCounts;
+
+  void scheduleBackgroundSync({
+    Duration delay = const Duration(seconds: 2),
+  }) {
+    _backgroundSyncTimer?.cancel();
+    _backgroundSyncTimer = Timer(delay, () {
+      unawaited(
+        syncAll().catchError((Object error) {
+          _lastError = error.toString();
+        }),
+      );
+    });
+  }
+
+  void startPeriodicBackgroundSync({
+    Duration interval = const Duration(minutes: 10),
+  }) {
+    if (_periodicSyncTimer != null) {
+      return;
+    }
+    _periodicSyncTimer = Timer.periodic(interval, (_) {
+      scheduleBackgroundSync(delay: Duration.zero);
+    });
+  }
+
+  void stopPeriodicBackgroundSync() {
+    _periodicSyncTimer?.cancel();
+    _periodicSyncTimer = null;
+  }
+
+  void dispose() {
+    _backgroundSyncTimer?.cancel();
+    _periodicSyncTimer?.cancel();
+  }
+
+  Future<void> applyRpcResult(
+    String functionName,
+    Map<String, dynamic> result,
+  ) async {
+    switch (functionName) {
+      case 'create_product':
+      case 'update_product':
+      case 'archive_product':
+      case 'reactivate_product':
+        await _cacheRepository.upsertProduct(result);
+        break;
+      case 'adjust_stock':
+        await _upsertObject(
+          result['stock_movement'],
+          _cacheRepository.upsertStockMovement,
+        );
+        await _upsertObject(result['product'], _cacheRepository.upsertProduct);
+        break;
+      case 'create_customer':
+      case 'update_customer':
+        await _cacheRepository.upsertCustomer(result);
+        break;
+      case 'create_buyer':
+      case 'update_buyer':
+      case 'archive_buyer':
+      case 'reactivate_buyer':
+        await _cacheRepository.upsertBuyer(result);
+        break;
+      case 'upsert_company_profile':
+        await _cacheRepository.upsertCompanyProfile(result);
+        break;
+      case 'record_collection':
+      case 'record_customer_ledger_entry':
+        await _cacheRepository.upsertCustomerTransaction(result);
+        break;
+      case 'record_buyer_ledger_entry':
+        await _cacheRepository.upsertBuyerTransaction(result);
+        break;
+      case 'create_invoice':
+      case 'cancel_invoice':
+        await _upsertRows(result['products'], _cacheRepository.upsertProduct);
+        await _upsertObject(result['invoice'], _cacheRepository.upsertInvoice);
+        await _upsertRows(result['items'], _cacheRepository.upsertInvoiceItem);
+        await _upsertRows(
+          result['stock_movements'],
+          _cacheRepository.upsertStockMovement,
+        );
+        await _upsertRows(
+          result['customer_transactions'],
+          _cacheRepository.upsertCustomerTransaction,
+        );
+        break;
+      case 'record_batch_collections':
+        break;
+    }
+  }
 
   Future<void> initializeHybridCacheIfNeeded() async {
     if (await _cacheRepository.isHybridInitialized()) {
@@ -462,6 +557,9 @@ class HybridSyncService {
   static const _syncPageSize = 2000;
 
   Future<void> syncAll({bool forceFull = false}) async {
+    if (_isSyncing) {
+      return;
+    }
     if (_client.auth.currentSession == null) {
       _lastError = 'Sign in required before sync';
       // #region agent log
@@ -530,6 +628,28 @@ class HybridSyncService {
       rethrow;
     } finally {
       _isSyncing = false;
+    }
+  }
+
+  Future<void> _upsertObject(
+    Object? row,
+    Future<void> Function(Map<String, dynamic>) upsert,
+  ) async {
+    if (row == null) {
+      return;
+    }
+    await upsert(Map<String, dynamic>.from(row as Map));
+  }
+
+  Future<void> _upsertRows(
+    Object? rows,
+    Future<void> Function(Map<String, dynamic>) upsert,
+  ) async {
+    if (rows == null) {
+      return;
+    }
+    for (final row in rows as Iterable) {
+      await upsert(Map<String, dynamic>.from(row as Map));
     }
   }
 

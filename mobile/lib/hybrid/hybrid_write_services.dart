@@ -16,7 +16,10 @@ import '../services/payments_service.dart';
 import '../services/products_service.dart';
 import 'hybrid_rpc_client.dart';
 
-typedef HybridRefresh = Future<void> Function();
+typedef HybridRefresh = Future<void> Function(
+  String functionName,
+  Map<String, dynamic> result,
+);
 
 class HybridProductsService implements ProductsService {
   HybridProductsService({
@@ -82,7 +85,7 @@ class HybridProductsService implements ProductsService {
         payloadParam: 'p_adjustment',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('adjust_stock', result);
     final products = await _localProductsService.fetchProducts(
       filter: const ProductFilter(active: null),
     );
@@ -106,7 +109,7 @@ class HybridProductsService implements ProductsService {
         payloadParam: 'p_product',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite(functionName, result);
     return Map<String, dynamic>.from(result);
   }
 
@@ -124,7 +127,7 @@ class HybridProductsService implements ProductsService {
         idParam: id,
       },
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite(functionName, result);
     return Map<String, dynamic>.from(result);
   }
 }
@@ -185,7 +188,7 @@ class HybridCustomersService implements CustomersService {
         payloadParam: 'p_customer',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite(functionName, result);
     return Map<String, dynamic>.from(result);
   }
 }
@@ -299,7 +302,7 @@ class HybridBuyersService implements BuyersService {
         payloadParam: 'p_buyer',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite(functionName, result);
     return Map<String, dynamic>.from(result);
   }
 
@@ -314,7 +317,7 @@ class HybridBuyersService implements BuyersService {
       'buyer_id': buyerId,
       'entry_type': entryType,
     };
-    await _rpcClient.invokeWrite(
+    final result = await _rpcClient.invokeWrite(
       'record_buyer_ledger_entry',
       _params(
         requestId: requestId,
@@ -322,7 +325,7 @@ class HybridBuyersService implements BuyersService {
         payloadParam: 'p_entry',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('record_buyer_ledger_entry', result);
   }
 }
 
@@ -357,7 +360,7 @@ class HybridCompanyProfileService implements CompanyProfileService {
         payloadParam: 'p_profile',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('upsert_company_profile', result);
     return CompanyProfile.fromJson(Map<String, dynamic>.from(result));
   }
 }
@@ -388,7 +391,7 @@ class HybridPaymentsService implements PaymentsService {
 
   @override
   Future<void> recordCollection(RecordCollectionInput input) async {
-    await _rpcClient.invokeWrite(
+    final result = await _rpcClient.invokeWrite(
       'record_collection',
       _params(
         requestId: input.requestId,
@@ -396,7 +399,7 @@ class HybridPaymentsService implements PaymentsService {
         payloadParam: 'p_collection',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('record_collection', result);
   }
 
   @override
@@ -440,7 +443,7 @@ class HybridPaymentsService implements PaymentsService {
         payloadParam: 'p_batch',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('record_batch_collections', result);
     return BatchCollectionResult.fromJson(result);
   }
 
@@ -455,7 +458,7 @@ class HybridPaymentsService implements PaymentsService {
       'customer_id': customerId,
       'entry_type': entryType,
     };
-    await _rpcClient.invokeWrite(
+    final result = await _rpcClient.invokeWrite(
       'record_customer_ledger_entry',
       _params(
         requestId: requestId,
@@ -463,7 +466,7 @@ class HybridPaymentsService implements PaymentsService {
         payloadParam: 'p_entry',
       ),
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('record_customer_ledger_entry', result);
   }
 }
 

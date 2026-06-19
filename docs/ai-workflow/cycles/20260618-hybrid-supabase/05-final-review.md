@@ -2,9 +2,9 @@
 
 Cycle: `20260618-hybrid-supabase`
 
-Worktree: `/Users/abhishek/python_venv/khata_app/.worktrees/hybrid-supabase`
+Final integration worktree: `/Users/abhishek/python_venv/khata_app`
 
-Branch: `codex/hybrid-supabase`
+Final integration branch: `main`
 
 Stage 5 baseline: `9263520ff18faf7e23fddc137c8a88adc46fa530`
 
@@ -12,17 +12,17 @@ Review mode: `review_and_fix`
 
 ## Verdict
 
-`accept-with-manual-cutover-validation`
+`merged-ready-for-device-testing`
 
-The Stage 4 code blockers are fixed in the feature branch. Hybrid production
+The Stage 4 code blockers are fixed and merged into `main`. Hybrid production
 runtime now uses Supabase as the write authority for official business writes,
 Drift as the read/cache layer, and row-level sync for all business tables needed
 by invoice create/cancel and ledger visibility.
 
-Do not merge to `main` as a production release until the manual Supabase
-login/initial sync/two-device scenario is run against the exact built APK. The
-remaining gap is operational evidence, not an automated code-test failure found
-in this pass.
+The main-branch APK is ready for controlled device testing. Do not treat it as
+family-production-validated until the manual Supabase login/initial
+sync/two-device scenario is run against the built APK. The remaining gap is
+operational evidence, not an automated code-test failure found in this pass.
 
 ## Fixes Applied
 
@@ -82,15 +82,28 @@ in this pass.
    Updated root/mobile docs and workflow state so reviewers do not follow stale
    API/local runtime commands as production instructions.
 
+7. Write latency
+
+   Official writes now apply canonical RPC response rows directly into Drift and
+   return without awaiting a full remote refresh. A debounced background sync,
+   app-resume sync, manual sync, and a 10-minute in-app periodic sync reconcile
+   other-device changes.
+
+8. Main integration
+
+   Merged `codex/hybrid-supabase` into `main` at
+   `140fa28fe03e975b3e913490cc5f7c0a497035d4`, preserving newer main fixes for
+   catalog pagination/recovery, authentication, catalog v6, and invoice PDFs.
+
 ## Validation Evidence
 
 | Check | Result |
 | --- | --- |
 | `bash supabase/tests/run_migrations_and_tests.sh` | pass |
-| `flutter test test/hybrid test/app/app_mode_test.dart` | pass, 17 tests |
-| `flutter test test` | pass, 485 tests |
+| `flutter test test/hybrid test/app/app_mode_test.dart` | pass, 22 tests |
+| `flutter test test` | pass, 493 tests |
 | `python3 tools/test_catalog_parity.py` | pass, 30 buyers and 1528 products |
-| `flutter analyze` | no errors; existing 44 warnings/info remain |
+| `flutter analyze` | no errors; 51 warnings/info remain |
 | `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` | pass, `build/app/outputs/flutter-apk/app-release.apk` 68.7 MB |
 | Static scan: `service_role`, client `max(invoice_number)`, `invoice_number + 1` | no hits in `mobile/lib`, `supabase`, `tools` |
 
@@ -123,9 +136,8 @@ Before family cutover, run this exact-device checklist:
   reference, but production runtime parsing and hybrid dependency wiring make
   them unreachable from the default app path.
 
-## Merge Guidance
+## Release Guidance
 
-This branch is ready for controlled phone/device validation. After the manual
-two-device checklist passes, the Stage 5 owner may merge with an
-`accept-with-followups` verdict. If manual device validation fails, do not merge;
-capture the failing step and return to Stage 3 implementation.
+`main` is ready for controlled phone/device validation. If manual device
+validation fails, capture the failing step before family cutover and fix it on a
+new branch from `main`.

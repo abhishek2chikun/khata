@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internal_billing_khata_mobile/hybrid/hybrid_sync_service.dart';
 import 'package:internal_billing_khata_mobile/local/local_database.dart' as db;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   test('clearBusinessCache removes business rows', () async {
@@ -72,7 +73,8 @@ void main() {
     await repository.clearBusinessCache();
 
     final settings = await (database.select(database.hybridCacheSettings)
-          ..where((row) => row.id.equals(HybridCacheRepository.hybridSettingsId)))
+          ..where(
+              (row) => row.id.equals(HybridCacheRepository.hybridSettingsId)))
         .getSingleOrNull();
 
     expect(settings?.initialized, isTrue);
@@ -136,5 +138,38 @@ void main() {
     expect(total, 1528);
     expect(fetchCalls, 2);
     expect(upserted.length, 1528);
+  });
+
+  test('applyRpcResult hydrates product cache without full sync', () async {
+    final database = db.LocalDatabase.memory();
+    final repository = HybridCacheRepository(database);
+    final service = HybridSyncService(
+      client: SupabaseClient('https://example.supabase.co', 'anon-key'),
+      cacheRepository: repository,
+    );
+    final now = DateTime.utc(2026, 6, 19).toIso8601String();
+
+    await service.applyRpcResult('create_product', <String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Widget',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 0,
+      'hsn_code': null,
+      'quantity_on_hand': 8,
+      'low_stock_threshold': 1,
+      'is_active': true,
+      'created_at': now,
+      'updated_at': now,
+    });
+
+    final products = await database.select(database.products).get();
+    expect(products.single.id, 'product-1');
+    expect(products.single.quantityOnHand, '8');
   });
 }

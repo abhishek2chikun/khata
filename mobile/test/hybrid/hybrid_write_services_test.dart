@@ -23,7 +23,7 @@ void main() {
     final service = HybridProductsService(
       localProductsService: _ThrowingProductsService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
 
     final created = await service.createProduct(
@@ -58,12 +58,12 @@ void main() {
     final customers = HybridCustomersService(
       localCustomersService: _ThrowingCustomersService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
     final buyers = HybridBuyersService(
       localBuyersService: _ThrowingBuyersService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
 
     await customers.createCustomer(
@@ -90,12 +90,12 @@ void main() {
     final payments = HybridPaymentsService(
       localPaymentsService: _ThrowingPaymentsService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
     final buyers = HybridBuyersService(
       localBuyersService: _ThrowingBuyersService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
 
     await payments.recordCollection(
@@ -132,7 +132,7 @@ void main() {
     final service = HybridCompanyProfileService(
       localCompanyProfileService: _ThrowingCompanyProfileService(),
       rpcClient: rpc,
-      refreshAfterWrite: () async => refreshes++,
+      refreshAfterWrite: (_, __) async => refreshes++,
     );
 
     final profile = await service.upsertCompanyProfile(

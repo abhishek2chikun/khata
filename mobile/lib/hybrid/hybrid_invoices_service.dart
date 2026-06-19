@@ -16,14 +16,18 @@ class HybridInvoicesService implements InvoicesService {
   HybridInvoicesService({
     required LocalInvoicesService localInvoicesService,
     required HybridRpcExecutor rpcClient,
-    required Future<void> Function() refreshAfterWrite,
+    required Future<void> Function(
+      String functionName,
+      Map<String, dynamic> result,
+    ) refreshAfterWrite,
   })  : _localInvoicesService = localInvoicesService,
         _rpcClient = rpcClient,
         _refreshAfterWrite = refreshAfterWrite;
 
   final LocalInvoicesService _localInvoicesService;
   final HybridRpcExecutor _rpcClient;
-  final Future<void> Function() _refreshAfterWrite;
+  final Future<void> Function(String functionName, Map<String, dynamic> result)
+      _refreshAfterWrite;
 
   @override
   Future<InvoiceQuote> quoteInvoice(InvoiceDraft draft) {
@@ -56,7 +60,7 @@ class HybridInvoicesService implements InvoicesService {
         'p_invoice': payload,
       },
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('create_invoice', result);
     final invoiceId =
         (result['invoice'] as Map<String, dynamic>)['id'] as String;
     final invoice = await _localInvoicesService.fetchInvoiceDetail(invoiceId);
@@ -89,7 +93,7 @@ class HybridInvoicesService implements InvoicesService {
           ),
         )
         .toString();
-    await _rpcClient.invokeWrite(
+    final result = await _rpcClient.invokeWrite(
       'cancel_invoice',
       <String, dynamic>{
         'p_invoice_id': invoiceId,
@@ -98,7 +102,7 @@ class HybridInvoicesService implements InvoicesService {
         'p_cancel_reason': reason,
       },
     );
-    await _refreshAfterWrite();
+    await _refreshAfterWrite('cancel_invoice', result);
     return _localInvoicesService.fetchInvoiceDetail(invoiceId);
   }
 

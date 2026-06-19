@@ -161,9 +161,15 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     if (!mounted || widget.dependencies?.mode != DataMode.hybrid) {
       return;
     }
-    if (!widget.controller.isAuthenticated ||
-        _hybridBootstrapStarted ||
-        _hybridBootstrapInFlight) {
+    if (!widget.controller.isAuthenticated) {
+      widget.dependencies?.syncService?.stopPeriodicBackgroundSync();
+      return;
+    }
+    if (_hybridBootstrapStarted) {
+      widget.dependencies?.syncService?.startPeriodicBackgroundSync();
+      return;
+    }
+    if (_hybridBootstrapInFlight) {
       return;
     }
     unawaited(_bootstrapHybridCache());
@@ -179,6 +185,7 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
     try {
       await syncService.initializeHybridCacheIfNeeded();
       _hybridBootstrapStarted = true;
+      syncService.startPeriodicBackgroundSync();
       if (mounted) {
         setState(() {});
       }
@@ -322,9 +329,8 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
         onLogout: widget.controller.logout,
         showLocalBackup: widget.dependencies?.mode == DataMode.local,
         showSyncCatalog: widget.dependencies?.mode == DataMode.hybrid,
-        onSyncCatalog: syncService == null
-            ? null
-            : () => _handleSyncCatalog(context),
+        onSyncCatalog:
+            syncService == null ? null : () => _handleSyncCatalog(context),
         isSyncing: syncService?.isSyncing ?? false,
       );
 

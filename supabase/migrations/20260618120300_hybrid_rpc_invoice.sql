@@ -24,6 +24,7 @@ DECLARE
   v_items JSONB := '[]'::JSONB;
   v_stock JSONB := '[]'::JSONB;
   v_ledger JSONB := '[]'::JSONB;
+  v_products JSONB := '[]'::JSONB;
 BEGIN
   v_user := public.require_authenticated();
 
@@ -39,7 +40,10 @@ BEGIN
       'stock_movements', (SELECT COALESCE(jsonb_agg(to_jsonb(sm)), '[]'::JSONB)
                           FROM stock_movements sm WHERE sm.invoice_id = v_existing.id),
       'customer_transactions', (SELECT COALESCE(jsonb_agg(to_jsonb(ct)), '[]'::JSONB)
-                                FROM customer_transactions ct WHERE ct.invoice_id = v_existing.id)
+                                FROM customer_transactions ct WHERE ct.invoice_id = v_existing.id),
+      'products', (SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::JSONB)
+                   FROM products p
+                   WHERE p.id IN (SELECT ii.product_id FROM invoice_items ii WHERE ii.invoice_id = v_existing.id))
     );
   END IF;
 
@@ -193,12 +197,16 @@ BEGIN
               FROM stock_movements sm WHERE sm.invoice_id = v_invoice.id);
   v_ledger := (SELECT COALESCE(jsonb_agg(to_jsonb(ct)), '[]'::JSONB)
                FROM customer_transactions ct WHERE ct.invoice_id = v_invoice.id);
+  v_products := (SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::JSONB)
+                 FROM products p
+                 WHERE p.id IN (SELECT ii.product_id FROM invoice_items ii WHERE ii.invoice_id = v_invoice.id));
 
   RETURN jsonb_build_object(
     'invoice', to_jsonb(v_invoice),
     'items', v_items,
     'stock_movements', v_stock,
-    'customer_transactions', v_ledger
+    'customer_transactions', v_ledger,
+    'products', v_products
   );
 END;
 $$;
@@ -219,6 +227,9 @@ DECLARE
   v_invoice invoices%ROWTYPE;
   v_item invoice_items%ROWTYPE;
   v_product products%ROWTYPE;
+  v_stock JSONB := '[]'::JSONB;
+  v_ledger JSONB := '[]'::JSONB;
+  v_products JSONB := '[]'::JSONB;
 BEGIN
   v_user := public.require_authenticated();
 
@@ -227,7 +238,12 @@ BEGIN
 
   IF v_invoice.status = 'CANCELED' THEN
     IF v_invoice.cancel_request_id = p_cancel_request_id THEN
-      RETURN jsonb_build_object('invoice', to_jsonb(v_invoice));
+      RETURN jsonb_build_object(
+        'invoice', to_jsonb(v_invoice),
+        'stock_movements', (SELECT COALESCE(jsonb_agg(to_jsonb(sm)), '[]'::JSONB) FROM stock_movements sm WHERE sm.invoice_id = p_invoice_id AND sm.movement_type = 'INVOICE_CANCEL_REVERSAL'),
+        'customer_transactions', (SELECT COALESCE(jsonb_agg(to_jsonb(ct)), '[]'::JSONB) FROM customer_transactions ct WHERE ct.invoice_id = p_invoice_id AND ct.entry_type IN ('INVOICE_CANCEL_REVERSAL', 'COLLECTION_REVERSAL')),
+        'products', (SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::JSONB) FROM products p WHERE p.id IN (SELECT ii.product_id FROM invoice_items ii WHERE ii.invoice_id = p_invoice_id))
+      );
     END IF;
     PERFORM public.idempotency_conflict();
   END IF;
@@ -276,10 +292,15 @@ BEGIN
     );
   END IF;
 
+  v_stock := (SELECT COALESCE(jsonb_agg(to_jsonb(sm)), '[]'::JSONB) FROM stock_movements sm WHERE sm.invoice_id = p_invoice_id AND sm.movement_type = 'INVOICE_CANCEL_REVERSAL');
+  v_ledger := (SELECT COALESCE(jsonb_agg(to_jsonb(ct)), '[]'::JSONB) FROM customer_transactions ct WHERE ct.invoice_id = p_invoice_id AND ct.entry_type IN ('INVOICE_CANCEL_REVERSAL', 'COLLECTION_REVERSAL'));
+  v_products := (SELECT COALESCE(jsonb_agg(to_jsonb(p)), '[]'::JSONB) FROM products p WHERE p.id IN (SELECT ii.product_id FROM invoice_items ii WHERE ii.invoice_id = p_invoice_id));
+
   RETURN jsonb_build_object(
     'invoice', to_jsonb(v_invoice),
-    'stock_movements', (SELECT COALESCE(jsonb_agg(to_jsonb(sm)), '[]'::JSONB) FROM stock_movements sm WHERE sm.invoice_id = p_invoice_id AND sm.movement_type = 'INVOICE_CANCEL_REVERSAL'),
-    'customer_transactions', (SELECT COALESCE(jsonb_agg(to_jsonb(ct)), '[]'::JSONB) FROM customer_transactions ct WHERE ct.invoice_id = p_invoice_id AND ct.entry_type IN ('INVOICE_CANCEL_REVERSAL', 'COLLECTION_REVERSAL'))
+    'stock_movements', v_stock,
+    'customer_transactions', v_ledger,
+    'products', v_products
   );
 END;
 $$;

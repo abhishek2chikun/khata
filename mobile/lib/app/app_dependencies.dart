@@ -170,8 +170,12 @@ class AppDependencies {
     final localPaymentsService = LocalPaymentsService(database: localDatabase);
     final localInvoicesService = LocalInvoicesService(database: localDatabase);
 
-    Future<void> refreshAfterWrite() async {
-      await syncService.syncAll(forceFull: true);
+    Future<void> refreshAfterWrite(
+      String functionName,
+      Map<String, dynamic> result,
+    ) async {
+      await syncService.applyRpcResult(functionName, result);
+      syncService.scheduleBackgroundSync();
     }
 
     return AppDependencies(
@@ -210,6 +214,7 @@ class AppDependencies {
       analyticsService: LocalAnalyticsService(database: localDatabase),
       syncService: syncService,
       dispose: () async {
+        syncService.dispose();
         await localDatabase.close();
       },
     );

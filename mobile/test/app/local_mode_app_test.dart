@@ -57,9 +57,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-        find.text('Sign in with your username and password.'), findsOneWidget);
+      find.text('Sign in with your Supabase email and password.'),
+      findsOneWidget,
+    );
 
-    await tester.enterText(find.bySemanticsLabel('Username'), 'owner');
+    await tester.enterText(find.bySemanticsLabel('Email'), 'owner');
     await tester.enterText(find.bySemanticsLabel('Password'), 'password123');
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();

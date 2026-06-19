@@ -49,7 +49,9 @@ void main() {
 
     expect(find.text('Internal Billing'), findsOneWidget);
     expect(
-        find.text('Sign in with your username and password.'), findsOneWidget);
+      find.text('Sign in with your Supabase email and password.'),
+      findsOneWidget,
+    );
   });
 }
 

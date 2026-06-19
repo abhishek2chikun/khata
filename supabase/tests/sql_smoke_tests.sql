@@ -165,12 +165,14 @@ BEGIN
   ASSERT jsonb_array_length(v_result->'items') = 1, 'invoice item not returned';
   ASSERT jsonb_array_length(v_result->'stock_movements') = 1, 'stock movement not returned';
   ASSERT jsonb_array_length(v_result->'customer_transactions') = 1, 'ledger row not returned';
+  ASSERT jsonb_array_length(v_result->'products') = 1, 'updated product row not returned';
 
   SELECT quantity_on_hand INTO v_product_qty FROM products WHERE id = v_product_id;
   ASSERT v_product_qty = 8, 'invoice did not reduce stock';
 
   v_repeat := public.create_invoice(v_invoice_request, v_invoice_hash, v_result->'invoice' || jsonb_build_object('items', '[]'::JSONB));
   ASSERT (v_repeat->'invoice'->>'id')::UUID = v_invoice_id, 'invoice idempotency did not return original invoice';
+  ASSERT jsonb_array_length(v_repeat->'products') = 1, 'invoice idempotency did not return product row';
 
   BEGIN
     PERFORM public.create_invoice(v_invoice_request, 'different-hash', v_result->'invoice' || jsonb_build_object('items', '[]'::JSONB));
@@ -234,6 +236,16 @@ BEGIN
   ASSERT v_result->'invoice'->>'status' = 'CANCELED', 'cancel did not mark invoice canceled';
   ASSERT jsonb_array_length(v_result->'stock_movements') = 1, 'cancel stock reversal missing';
   ASSERT jsonb_array_length(v_result->'customer_transactions') >= 1, 'cancel ledger reversal missing';
+  ASSERT jsonb_array_length(v_result->'products') = 1, 'cancel product row missing';
+
+  v_repeat := public.cancel_invoice(
+    v_invoice_id,
+    v_cancel_request,
+    'cancel-hash',
+    'SQL smoke cancel retry'
+  );
+  ASSERT v_repeat->'invoice'->>'status' = 'CANCELED', 'cancel idempotency did not return canceled invoice';
+  ASSERT jsonb_array_length(v_repeat->'products') = 1, 'cancel idempotency did not return product row';
 
   SELECT quantity_on_hand INTO v_product_qty FROM products WHERE id = v_product_id;
   ASSERT v_product_qty = 9, 'cancel did not restore stock';
