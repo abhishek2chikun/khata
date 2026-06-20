@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build bundled Drift catalog JSON and Supabase seed JSON from the master workbook."""
+"""Build bundled Drift catalog JSON and Supabase seed JSON from the master catalog."""
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 import uuid
@@ -14,10 +15,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_XLSX = REPO_ROOT / "data" / "source" / "MASTER CATALOG.xlsx"
+SOURCE_DIR = REPO_ROOT / "data" / "source"
+SOURCE_CSV = SOURCE_DIR / "MASTER CATALOG.csv"
+SOURCE_XLSX = SOURCE_DIR / "MASTER CATALOG.xlsx"
 OUTPUT_JSON = REPO_ROOT / "mobile" / "assets" / "catalog" / "preinstalled_catalog.json"
 SUPABASE_SEED_JSON = REPO_ROOT / "supabase" / "seed" / "master_catalog.json"
-CATALOG_VERSION = 6
+CATALOG_VERSION = 7
 CATALOG_NAMESPACE = uuid.UUID("8f4e2c1a-9b3d-4f6e-a7c5-1d2e3f4a5b6c")
 
 HEADER_ALIASES = {
@@ -71,8 +74,16 @@ def normalize_hsn(value: str | None) -> str | None:
     return normalized
 
 
-def normalize_decimal(value: str, *, scale: int = 2, default: str = "") -> str:
+def _strip_numeric_text(value: str) -> str:
     text = value.strip()
+    text = text.replace("₹", "").replace(",", "")
+    if text.endswith("%"):
+        text = text[:-1].strip()
+    return text
+
+
+def normalize_decimal(value: str, *, scale: int = 2, default: str = "") -> str:
+    text = _strip_numeric_text(value)
     if not text:
         if default:
             return default
@@ -87,7 +98,7 @@ def normalize_decimal(value: str, *, scale: int = 2, default: str = "") -> str:
 
 
 def normalize_gst_rate(value: str) -> str:
-    text = value.strip().rstrip("%")
+    text = _strip_numeric_text(value)
     if not text:
         raise ValueError("missing gst rate")
     rate = Decimal(text)
@@ -109,7 +120,35 @@ def _normalize_header(value: str) -> str | None:
     return HEADER_ALIASES.get(value.strip().casefold())
 
 
-def read_rows(path: Path) -> list[dict[str, str]]:
+def read_csv_rows(path: Path) -> list[dict[str, str]]:
+    parsed_rows: list[dict[str, str]] = []
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            return []
+
+        header_map: dict[str, str] = {}
+        for header in reader.fieldnames:
+            normalized = _normalize_header(header)
+            if normalized is not None:
+                header_map[header] = normalized
+
+        for raw_row in reader:
+            record = {field: "" for field in HEADERS}
+            for source_header, field in header_map.items():
+                record[field] = (raw_row.get(source_header) or "").strip()
+
+            company = record["company"].strip()
+            item_name = record["item_name"].strip()
+            if not company or not item_name:
+                continue
+            if company.startswith("Total Unique Products"):
+                continue
+            parsed_rows.append(record)
+    return parsed_rows
+
+
+def read_xlsx_rows(path: Path) -> list[dict[str, str]]:
     with zipfile.ZipFile(path) as workbook:
         shared_strings: list[str] = []
         if "xl/sharedStrings.xml" in workbook.namelist():
@@ -172,6 +211,22 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return parsed_rows
 
 
+def read_rows(path: Path) -> list[dict[str, str]]:
+    if path.suffix.casefold() == ".csv":
+        return read_csv_rows(path)
+    return read_xlsx_rows(path)
+
+
+def resolve_source_path() -> Path:
+    if SOURCE_CSV.exists():
+        return SOURCE_CSV
+    if SOURCE_XLSX.exists():
+        return SOURCE_XLSX
+    raise FileNotFoundError(
+        f"Catalog source not found. Expected {SOURCE_CSV} or {SOURCE_XLSX}"
+    )
+
+
 def canonicalize_company_names(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     counts = Counter(row["company"].strip() for row in rows)
     preferred: dict[str, str] = {}
@@ -201,8 +256,8 @@ def dedupe_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
         if key not in merged:
             merged[key] = dict(row)
             continue
-        existing_qty = Decimal(merged[key]["quantity_on_hand"] or "0")
-        incoming_qty = Decimal(row["quantity_on_hand"] or "0")
+        existing_qty = Decimal(_strip_numeric_text(merged[key]["quantity_on_hand"] or "0") or "0")
+        incoming_qty = Decimal(_strip_numeric_text(row["quantity_on_hand"] or "0") or "0")
         merged[key]["quantity_on_hand"] = str(existing_qty + incoming_qty)
     return list(merged.values())
 
@@ -277,15 +332,14 @@ def write_outputs(catalog: dict[str, object]) -> None:
 
 
 def main() -> None:
-    if not SOURCE_XLSX.exists():
-        raise SystemExit(f"Source spreadsheet not found: {SOURCE_XLSX}")
-
-    rows = dedupe_rows(canonicalize_company_names(read_rows(SOURCE_XLSX)))
+    source_path = resolve_source_path()
+    rows = dedupe_rows(canonicalize_company_names(read_rows(source_path)))
     catalog = build_catalog(rows)
     write_outputs(catalog)
     print(
-        f"Wrote {OUTPUT_JSON} and {SUPABASE_SEED_JSON} "
-        f"({len(catalog['buyers'])} buyers, {len(catalog['products'])} products)"
+        f"Wrote {OUTPUT_JSON} and {SUPABASE_SEED_JSON} from {source_path.name} "
+        f"({len(catalog['buyers'])} buyers, {len(catalog['products'])} products, "
+        f"catalog_version={catalog['catalog_version']})"
     )
 
 

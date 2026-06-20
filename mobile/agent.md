@@ -49,12 +49,15 @@ flutter build apk --release \
   --dart-define=SUPABASE_ANON_KEY=<public-key>
 ```
 
-Catalog regeneration runs from the repository root:
+Catalog regeneration runs from the repository root (CSV preferred over xlsx):
 
 ```bash
 python3 tools/build_preinstalled_catalog.py
 python3 tools/test_catalog_parity.py
+python3 tools/seed_supabase_master_catalog.py --reset   # push to Supabase
 ```
+
+Current bundled catalog: **v7** — 30 buyers, 1528 products from `data/source/MASTER CATALOG.csv`.
 
 The backend directory is historical reference only. The Flutter app must not
 import or call it.

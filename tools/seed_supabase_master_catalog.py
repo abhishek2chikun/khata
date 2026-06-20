@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -47,11 +48,18 @@ def auth_token(url: str, anon_key: str, email: str, password: str) -> str:
     return token
 
 
-def rpc_seed(url: str, anon_key: str, access_token: str, catalog: dict) -> dict:
+def rpc_seed(
+    url: str,
+    anon_key: str,
+    access_token: str,
+    catalog: dict,
+    *,
+    allow_stock_reset: bool,
+) -> dict:
     payload = json.dumps(
         {
             "p_catalog": catalog,
-            "p_allow_stock_reset": False,
+            "p_allow_stock_reset": allow_stock_reset,
         }
     ).encode()
     request = urllib.request.Request(
@@ -201,6 +209,15 @@ def deactivate_catalog_orphans(database_url: str, catalog: dict) -> int:
     return _parse_psql_count(result.stdout)
 
 
+def reset_catalog_seed_history(database_url: str) -> None:
+    subprocess.run(
+        ["psql", database_url, "-c", "DELETE FROM catalog_seed_runs;"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 def ensure_catalog_json() -> dict:
     subprocess.run([sys.executable, str(BUILD_SCRIPT)], check=True, cwd=REPO_ROOT)
     catalog = json.loads(CATALOG_JSON.read_text(encoding="utf-8"))
@@ -212,6 +229,14 @@ def ensure_catalog_json() -> dict:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Force catalog reseed with stock reset from master_catalog.json",
+    )
+    args = parser.parse_args()
+
     load_dotenv(REPO_ROOT / ".env")
     url = os.environ.get("SUPABASE_URL")
     anon_key = os.environ.get("SUPABASE_ANON_KEY")
@@ -247,7 +272,11 @@ def main() -> int:
         f"active_products={active_before} catalog_seed_version={seeded_version}"
     )
 
-    if seeded_version >= catalog_version and active_before == expected_products:
+    if (
+        not args.reset
+        and seeded_version >= catalog_version
+        and active_before == expected_products
+    ):
         print(
             "catalog already present in Supabase "
             f"(version>={catalog_version}, active_products={expected_products}); skipping seed"
@@ -255,6 +284,11 @@ def main() -> int:
         return 0
 
     token = auth_token(url, anon_key, email, password)
+    if args.reset:
+        reset_catalog_seed_history(database_url)
+        print(f"cleared catalog_seed_runs for forced reseed to v{catalog_version}")
+        seeded_version = 0
+
     if seeded_version < catalog_version:
         staged = stage_catalog_identities_for_reseed(database_url, catalog)
         if staged:
@@ -269,7 +303,13 @@ def main() -> int:
         if removed:
             print(f"removed {removed} unreferenced products outside catalog v{catalog_version}")
 
-    result = rpc_seed(url, anon_key, token, catalog)
+    result = rpc_seed(
+        url,
+        anon_key,
+        token,
+        catalog,
+        allow_stock_reset=args.reset or seeded_version < catalog_version,
+    )
     print("seed result:", json.dumps(result, sort_keys=True))
 
     deactivated = deactivate_catalog_orphans(database_url, catalog)
