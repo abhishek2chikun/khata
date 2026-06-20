@@ -66,7 +66,8 @@ class AppDependencies {
       );
     }
 
-    final database = localDatabase ?? LocalDatabase();
+    final database =
+        localDatabase ?? await LocalDatabase.openWithRecovery();
     if (loadCatalogJson != null || localDatabase == null) {
       await LocalProductCatalogSeeder(
         database: database,

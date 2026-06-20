@@ -5,6 +5,9 @@ import '../models/product.dart';
 import '../services/products_service.dart';
 import '../widgets/error_banner.dart';
 
+/// Which products the inventory list shows.
+enum InventoryFilter { active, archived, all }
+
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({
     super.key,
@@ -31,6 +34,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   List<Product> _products = const <Product>[];
   bool _isLoading = true;
   String? _errorMessage;
+  InventoryFilter _inventoryFilter = InventoryFilter.active;
 
   @override
   void initState() {
@@ -121,6 +125,35 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               ],
             ),
             const SizedBox(height: 10),
+            SegmentedButton<InventoryFilter>(
+              key: const Key('inventoryFilterSegment'),
+              segments: const <ButtonSegment<InventoryFilter>>[
+                ButtonSegment<InventoryFilter>(
+                  value: InventoryFilter.active,
+                  label: Text('Active'),
+                  icon: Icon(Icons.check_circle_outline, size: 18),
+                ),
+                ButtonSegment<InventoryFilter>(
+                  value: InventoryFilter.archived,
+                  label: Text('Archived'),
+                  icon: Icon(Icons.archive_outlined, size: 18),
+                ),
+                ButtonSegment<InventoryFilter>(
+                  value: InventoryFilter.all,
+                  label: Text('All'),
+                  icon: Icon(Icons.list, size: 18),
+                ),
+              ],
+              selected: <InventoryFilter>{_inventoryFilter},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _inventoryFilter = selection.first;
+                });
+                _loadProducts();
+              },
+              showSelectedIcon: false,
+            ),
+            const SizedBox(height: 10),
             Row(
               children: <Widget>[
                 Text(
@@ -158,7 +191,13 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     }
 
     if (_products.isEmpty) {
-      return const Center(child: Text('No products found'));
+      return Center(
+        child: Text(switch (_inventoryFilter) {
+          InventoryFilter.archived => 'No archived products',
+          InventoryFilter.all => 'No products yet',
+          InventoryFilter.active => 'No products found',
+        }),
+      );
     }
 
     return ListView.separated(
@@ -252,11 +291,72 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   ),
               ],
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: product.isActive
+                ? const Icon(Icons.chevron_right)
+                : TextButton.icon(
+                    key: Key('unarchiveButton-${product.id}'),
+                    onPressed: () => _handleUnarchive(product),
+                    icon: const Icon(Icons.unarchive, size: 18),
+                    label: const Text('Unarchive'),
+                  ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _handleUnarchive(Product product) async {
+    final confirmed = await _confirmUnarchive(product);
+    if (!confirmed || !mounted) {
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await widget.productsService.reactivateProduct(id: product.id);
+      if (!mounted) {
+        return;
+      }
+      await _loadProducts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${product.itemName} restored')),
+        );
+      }
+    } on ApiError catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = error.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmUnarchive(Product product) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore product?'),
+        content: Text(
+          'Bring "${product.itemName}" back into your active inventory?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _loadProducts() async {
@@ -268,7 +368,11 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     try {
       final products = await widget.productsService.fetchProducts(
         filter: ProductFilter(
-          active: true,
+          active: switch (_inventoryFilter) {
+            InventoryFilter.active => true,
+            InventoryFilter.archived => false,
+            InventoryFilter.all => null,
+          },
           search: _searchController.text.trim(),
           companyName: _companyController.text.trim(),
           category: _categoryController.text.trim(),

@@ -4,12 +4,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 /// Session debug logger for agent investigations (cc4117).
+///
+/// This instrumentation was used to diagnose a specific auth/sync issue. In
+/// release/profile builds it is a no-op so that no debug telemetry, host
+/// filesystem paths, or extra logging ship to production devices. The debug
+/// build behaviour is preserved for ongoing investigations on the simulator.
 class AgentDebugLog {
   AgentDebugLog._();
-
-  static const _logPath =
-      '/Users/abhishek/python_venv/khata_app/.cursor/debug-cc4117.log';
-  static const _sessionId = 'cc4117';
 
   static void write({
     required String location,
@@ -18,6 +19,10 @@ class AgentDebugLog {
     Map<String, Object?> data = const {},
     String runId = 'pre-fix',
   }) {
+    if (kReleaseMode) {
+      return;
+    }
+
     final payload = <String, Object?>{
       'sessionId': _sessionId,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -41,3 +46,6 @@ class AgentDebugLog {
     // #endregion
   }
 }
+
+const _sessionId = 'cc4117';
+const _logPath = '/Users/abhishek/python_venv/khata_app/.cursor/debug-cc4117.log';

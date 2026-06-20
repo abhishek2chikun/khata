@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 
 import 'local_database_connection.dart';
 
@@ -336,34 +339,82 @@ class LocalDatabase extends _$LocalDatabase {
 
   LocalDatabase.forConnection(super.connection);
 
+  /// Opens the local cache database, recovering from a failed migration.
+  ///
+  /// The local SQLite file is only a read/cache layer: Supabase is the source
+  /// of truth and re-syncs on the next foreground sync. If a device carries a
+  /// stale schema (a phone that ran an older app build) and the Drift migration
+  /// throws, we discard the corrupt cache file and recreate it fresh instead of
+  /// leaving the app unable to start. This is a one-time recovery: once the
+  /// cache is valid it opens instantly on every subsequent launch, so the
+  /// healthy phones are never affected.
+  ///
+  /// Use this in production instead of the plain [LocalDatabase] constructor.
+  static Future<LocalDatabase> openWithRecovery() async {
+    final database = LocalDatabase();
+    try {
+      // Running a trivial read forces Drift's beforeOpen hook, which is where
+      // onCreate/onUpgrade migrations actually execute. A failure here means a
+      // migration could not be applied to the on-disk cache.
+      await database
+          .customSelect('SELECT 1')
+          .get();
+      return database;
+    } on Object catch (error, stackTrace) {
+      debugPrint('khata: local cache migration failed, resetting cache file. '
+          '$error');
+      FlutterError.reportError(FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'khata.local',
+        context: DiagnosticsNode.message(
+            'Local cache migration failed; resetting cache and re-syncing.'),
+      ));
+      await _safeClose(database);
+      await _deleteLocalCacheFile();
+      // Recreate from scratch. The new file is created at the current schema
+      // version, so no migration runs and the open cannot fail for the same
+      // reason. The next foreground sync repopulates it from Supabase.
+      return LocalDatabase();
+    }
+  }
+
+  static Future<void> _safeClose(LocalDatabase database) async {
+    try {
+      await database.close();
+    } on Object catch (e) {
+      debugPrint('khata: closing corrupt cache failed: $e');
+    }
+  }
+
+  static Future<void> _deleteLocalCacheFile() async {
+    try {
+      final file = await localDatabaseFile();
+      if (file.existsSync()) {
+        await file.delete();
+      }
+      // Best-effort cleanup of SQLite sidecar files left by WAL mode.
+      for (final suffix in const ['-journal', '-wal', '-shm']) {
+        final sidecar = File('${file.path}$suffix');
+        if (sidecar.existsSync()) {
+          await sidecar.delete();
+        }
+      }
+    } on Object catch (e) {
+      debugPrint('khata: cache file cleanup failed: $e');
+    }
+  }
+
   @override
   int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
-          if (from < 11) {
-            await m.createTable(hybridCacheSettings);
-          }
-          if (from < 12) {
-            await m.createTable(catalogCacheSettings);
-            if (await _tableExists('backup_settings')) {
-              await customStatement('''
-                INSERT OR REPLACE INTO catalog_cache_settings (
-                  id, catalog_version, updated_at
-                )
-                SELECT
-                  id,
-                  CAST(COALESCE(last_backup_at, '0') AS INTEGER),
-                  updated_at
-                FROM backup_settings
-                WHERE id = 'preinstalled-catalog'
-              ''');
-            }
-            await customStatement('DROP TABLE IF EXISTS local_sessions');
-            await customStatement('DROP TABLE IF EXISTS backup_events');
-            await customStatement('DROP TABLE IF EXISTS backup_settings');
-          }
+          // Migrations MUST run in ascending schema-version order. Older blocks
+          // (from < 2) rebuild legacy tables using columns that no longer exist
+          // in modern schemas, so they are heavily guarded and must execute
+          // before the newer blocks that drop/rename those legacy tables.
           if (from < 2) {
             await customStatement('PRAGMA foreign_keys = OFF');
             await customStatement('''
@@ -583,6 +634,28 @@ class LocalDatabase extends _$LocalDatabase {
                 !await _columnExists('invoice_items', 'product_hsn_code')) {
               await m.addColumn(invoiceItems, invoiceItems.productHsnCode);
             }
+          }
+          if (from < 11) {
+            await m.createTable(hybridCacheSettings);
+          }
+          if (from < 12) {
+            await m.createTable(catalogCacheSettings);
+            if (await _tableExists('backup_settings')) {
+              await customStatement('''
+                INSERT OR REPLACE INTO catalog_cache_settings (
+                  id, catalog_version, updated_at
+                )
+                SELECT
+                  id,
+                  CAST(COALESCE(last_backup_at, '0') AS INTEGER),
+                  updated_at
+                FROM backup_settings
+                WHERE id = 'preinstalled-catalog'
+              ''');
+            }
+            await customStatement('DROP TABLE IF EXISTS local_sessions');
+            await customStatement('DROP TABLE IF EXISTS backup_events');
+            await customStatement('DROP TABLE IF EXISTS backup_settings');
           }
         },
         beforeOpen: (_) async {

@@ -260,8 +260,58 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Archived products are hidden behind the Active filter by default.
+    expect(find.text('Old Pen'), findsNothing);
+
+    // Switching to the Archived filter reveals them.
+    await tester.tap(find.text('Archived'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Old Pen'), findsOneWidget);
     expect(find.text('Archived'), findsWidgets);
     expect(find.text('Editing disabled for archived products'), findsOneWidget);
+    expect(find.byKey(const Key('unarchiveButton-9')), findsOneWidget);
+  });
+
+  testWidgets('unarchive button restores an archived product', (tester) async {
+    final archivedProduct = Product(
+      id: '9',
+      companyName: 'Acme',
+      category: 'Pens',
+      itemName: 'Old Pen',
+      itemNumber: 'OLD-1',
+      buyingPrice: 8,
+      sellingPrice: 8,
+      gstRate: 18,
+      quantityOnHand: 0,
+      lowStockThreshold: 1,
+      isActive: false,
+    );
+    final service = FakeProductsService(products: <Product>[archivedProduct]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InventoryListScreen(
+          productsService: service,
+          onAddProduct: () async => false,
+          onProductSelected: (_) async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Archived'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('unarchiveButton-9')));
+    await tester.pumpAndSettle();
+
+    // Confirm dialog appears, then confirm restore.
+    expect(find.text('Restore product?'), findsOneWidget);
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+
+    expect(service.reactivatedId, '9');
   });
 
   testWidgets('opens add and detail product flows through callbacks',
@@ -342,7 +392,6 @@ void main() {
     expect(find.text('Stock 2 box'), findsOneWidget);
     expect(find.text('10.50'), findsOneWidget);
     expect(find.text('GST 18%'), findsOneWidget);
-    expect(find.text('Active'), findsNothing);
   });
 
   testWidgets('default list navigation opens product detail screen',
@@ -398,6 +447,7 @@ class FakeProductsService implements ProductsService {
   final List<Product> products;
   final ApiError? error;
   ProductFilter? lastFilter;
+  String? reactivatedId;
 
   @override
   Future<Product> createProduct(CreateProductInput input) {
@@ -410,8 +460,9 @@ class FakeProductsService implements ProductsService {
   }
 
   @override
-  Future<Product> reactivateProduct({required String id}) {
-    throw UnimplementedError();
+  Future<Product> reactivateProduct({required String id}) async {
+    reactivatedId = id;
+    return products.firstWhere((product) => product.id == id);
   }
 
   @override
@@ -432,7 +483,9 @@ class FakeProductsService implements ProductsService {
       final search = filter?.search?.toLowerCase();
       final company = filter?.companyName?.toLowerCase();
       final category = filter?.category?.toLowerCase();
+      final active = filter?.active;
 
+      final matchesActive = active == null || product.isActive == active;
       final matchesSearch = search == null || search.isEmpty
           ? true
           : product.itemName.toLowerCase().contains(search) ||
@@ -443,7 +496,7 @@ class FakeProductsService implements ProductsService {
       final matchesCategory = category == null || category.isEmpty
           ? true
           : product.category.toLowerCase() == category;
-      return matchesSearch && matchesCompany && matchesCategory;
+      return matchesActive && matchesSearch && matchesCompany && matchesCategory;
     }).toList();
   }
 
