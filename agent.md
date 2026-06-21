@@ -2,7 +2,11 @@
 
 ## Recent Changes (latest first)
 
-1. **2026-06-19 — Catalog v7 from CSV + Supabase reseed**
+1. **2026-06-21 — Batch collections local cache hydration**
+   - `record_batch_collections` RPC returns summary stats only; `applyRpcResult` now fetches batch rows by `__batch__|request_id|%` notes marker and upserts into Drift immediately.
+   - Prevents stale receivables in daily collections grid and duplicate server entries on re-submit before background sync.
+
+2. **2026-06-19 — Catalog v7 from CSV + Supabase reseed**
    - Source: `data/source/MASTER CATALOG.csv` (from `MASTER CATALOG - Master Catalog.csv`)
    - Generator updated: CSV support, ₹/comma parsing, `CATALOG_VERSION=7`
    - Outputs: `mobile/assets/catalog/preinstalled_catalog.json`, `supabase/seed/master_catalog.json`

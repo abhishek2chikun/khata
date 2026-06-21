@@ -172,4 +172,11 @@ void main() {
     expect(products.single.id, 'product-1');
     expect(products.single.quantityOnHand, '8');
   });
+
+  test('batchCollectionNotesFilter matches RPC batch marker format', () {
+    expect(
+      batchCollectionNotesFilter('550e8400-e29b-41d4-a716-446655440000'),
+      '__batch__|550e8400-e29b-41d4-a716-446655440000|%',
+    );
+  });
 }
