@@ -516,8 +516,21 @@ class HybridSyncService {
         );
         break;
       case 'record_batch_collections':
+        await _hydrateBatchCollections(result);
         break;
     }
+  }
+
+  Future<void> _hydrateBatchCollections(Map<String, dynamic> result) async {
+    final requestId = result['request_id'] as String?;
+    if (requestId == null || _client.auth.currentSession == null) {
+      return;
+    }
+    final rows = await _client
+        .from('customer_transactions')
+        .select()
+        .like('notes', batchCollectionNotesFilter(requestId));
+    await _upsertRows(rows, _cacheRepository.upsertCustomerTransaction);
   }
 
   Future<void> initializeHybridCacheIfNeeded() async {
@@ -775,3 +788,7 @@ class HybridSyncService {
     }
   }
 }
+
+/// PostgREST `notes` filter for rows created by [record_batch_collections].
+String batchCollectionNotesFilter(String requestId) =>
+    '__batch__|$requestId|%';
