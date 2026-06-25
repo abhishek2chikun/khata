@@ -2,7 +2,11 @@
 
 ## Recent Changes (latest first)
 
-1. **2026-06-21 — Batch collections local cache hydration**
+1. **2026-06-25 — Hybrid sync race with concurrent RPC writes**
+   - Background `syncAll()` could overwrite fresher RPC-hydrated product rows and hide newly created products via `deactivateProductsNotIn`.
+   - Fix: track RPC-touched active product IDs during sync, union them before deactivation, and use `upsertProductIfNewer` during paginated product sync. Skip `markHybridInitialized` when catalog sync is incomplete.
+
+2. **2026-06-21 — Batch collections local cache hydration**
    - `record_batch_collections` RPC returns summary stats only; `applyRpcResult` now fetches batch rows by `__batch__|request_id|%` notes marker and upserts into Drift immediately.
    - Prevents stale receivables in daily collections grid and duplicate server entries on re-submit before background sync.
 
