@@ -131,6 +131,19 @@ class HybridCacheRepository {
         );
   }
 
+  /// Upsert only when the remote row is at least as fresh as the local cache.
+  Future<void> upsertProductIfNewer(Map<String, dynamic> row) async {
+    final id = row['id'] as String;
+    final remoteUpdatedAt = _asIso(row['updated_at']);
+    final local = await (_database.select(_database.products)
+          ..where((product) => product.id.equals(id)))
+        .getSingleOrNull();
+    if (local != null && local.updatedAt.compareTo(remoteUpdatedAt) > 0) {
+      return;
+    }
+    await upsertProduct(row);
+  }
+
   Future<void> upsertBuyer(Map<String, dynamic> row) async {
     await _database.into(_database.buyers).insertOnConflictUpdate(
           BuyersCompanion.insert(
@@ -424,6 +437,7 @@ class HybridSyncService {
   Map<String, int>? _lastSyncedCounts;
   Timer? _backgroundSyncTimer;
   Timer? _periodicSyncTimer;
+  final Set<String> _rpcTouchedActiveProductIds = {};
 
   bool get isSyncing => _isSyncing;
   String? get lastError => _lastError;
@@ -473,6 +487,7 @@ class HybridSyncService {
       case 'archive_product':
       case 'reactivate_product':
         await _cacheRepository.upsertProduct(result);
+        _trackRpcProduct(result);
         break;
       case 'adjust_stock':
         await _upsertObject(
@@ -480,6 +495,9 @@ class HybridSyncService {
           _cacheRepository.upsertStockMovement,
         );
         await _upsertObject(result['product'], _cacheRepository.upsertProduct);
+        if (result['product'] != null) {
+          _trackRpcProduct(Map<String, dynamic>.from(result['product'] as Map));
+        }
         break;
       case 'create_customer':
       case 'update_customer':
@@ -504,6 +522,9 @@ class HybridSyncService {
       case 'create_invoice':
       case 'cancel_invoice':
         await _upsertRows(result['products'], _cacheRepository.upsertProduct);
+        for (final row in result['products'] as Iterable? ?? const []) {
+          _trackRpcProduct(Map<String, dynamic>.from(row as Map));
+        }
         await _upsertObject(result['invoice'], _cacheRepository.upsertInvoice);
         await _upsertRows(result['items'], _cacheRepository.upsertInvoiceItem);
         await _upsertRows(
@@ -555,7 +576,9 @@ class HybridSyncService {
     // #endregion
     await _cacheRepository.clearBusinessCache();
     await syncAll(forceFull: true);
-    await _cacheRepository.markHybridInitialized();
+    if (_lastError == null) {
+      await _cacheRepository.markHybridInitialized();
+    }
     // #region agent log
     AgentDebugLog.write(
       location: 'hybrid_sync_service.dart:initializeHybridCacheIfNeeded',
@@ -590,6 +613,7 @@ class HybridSyncService {
     _isSyncing = true;
     _lastError = null;
     _lastSyncedCounts = null;
+    _rpcTouchedActiveProductIds.clear();
     final syncedCounts = <String, int>{};
     try {
       syncedCounts['buyers'] =
@@ -643,6 +667,16 @@ class HybridSyncService {
       rethrow;
     } finally {
       _isSyncing = false;
+      _rpcTouchedActiveProductIds.clear();
+    }
+  }
+
+  void _trackRpcProduct(Map<String, dynamic> row) {
+    if (!_isSyncing) {
+      return;
+    }
+    if ((row['is_active'] as bool?) ?? true) {
+      _rpcTouchedActiveProductIds.add(row['id'] as String);
     }
   }
 
@@ -685,9 +719,10 @@ class HybridSyncService {
       },
       upsert: (row) async {
         activeIds.add(row['id'] as String);
-        await _cacheRepository.upsertProduct(row);
+        await _cacheRepository.upsertProductIfNewer(row);
       },
     );
+    activeIds.addAll(_rpcTouchedActiveProductIds);
     await _cacheRepository.deactivateProductsNotIn(activeIds);
     return total;
   }

@@ -179,4 +179,51 @@ void main() {
       '__batch__|550e8400-e29b-41d4-a716-446655440000|%',
     );
   });
+
+  test('upsertProductIfNewer keeps fresher local cache row', () async {
+    final database = db.LocalDatabase.memory();
+    final repository = HybridCacheRepository(database);
+    final stale = DateTime.utc(2026, 6, 18).toIso8601String();
+    final fresh = DateTime.utc(2026, 6, 20).toIso8601String();
+
+    await database.into(database.products).insert(
+          db.ProductsCompanion.insert(
+            id: 'product-1',
+            itemNumber: 'P-1',
+            itemName: 'Fresh local',
+            category: 'General',
+            companyName: 'Acme',
+            buyingPrice: '10.000',
+            sellingPrice: '12.000',
+            gstRate: '18.00',
+            quantityOnHand: '99',
+            lowStockThreshold: '0',
+            createdAt: stale,
+            updatedAt: fresh,
+          ),
+        );
+
+    await repository.upsertProductIfNewer(<String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Stale remote',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 18,
+      'hsn_code': null,
+      'quantity_on_hand': 1,
+      'low_stock_threshold': 0,
+      'is_active': true,
+      'created_at': stale,
+      'updated_at': stale,
+    });
+
+    final products = await database.select(database.products).get();
+    expect(products.single.itemName, 'Fresh local');
+    expect(products.single.quantityOnHand, '99');
+  });
 }
