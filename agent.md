@@ -2,7 +2,13 @@
 
 ## Recent Changes (latest first)
 
-1. **2026-06-21 — Batch collections local cache hydration**
+1. **2026-06-26 — Hybrid sync concurrency hardening**
+   - Background `syncAll()` no longer deactivates products hydrated by in-flight RPC writes (`_rpcTouchedProductIds` merged into deactivate guard set).
+   - Paginated product sync uses `upsertProductIfNewer` so stale remote pages cannot overwrite fresher RPC cache rows.
+   - Coalesced background sync schedules a follow-up pass when `_isSyncing` instead of silently dropping.
+   - App resume only marks bootstrap complete when `syncAll()` actually ran.
+
+2. **2026-06-21 — Batch collections local cache hydration**
    - `record_batch_collections` RPC returns summary stats only; `applyRpcResult` now fetches batch rows by `__batch__|request_id|%` notes marker and upserts into Drift immediately.
    - Prevents stale receivables in daily collections grid and duplicate server entries on re-submit before background sync.
 

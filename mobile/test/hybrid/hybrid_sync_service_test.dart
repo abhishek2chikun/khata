@@ -179,4 +179,100 @@ void main() {
       '__batch__|550e8400-e29b-41d4-a716-446655440000|%',
     );
   });
+
+  test('upsertProductIfNewer keeps fresher local product row', () async {
+    final database = db.LocalDatabase.memory();
+    final repository = HybridCacheRepository(database);
+    final older = DateTime.utc(2026, 6, 19, 10).toIso8601String();
+    final newer = DateTime.utc(2026, 6, 19, 12).toIso8601String();
+
+    await repository.upsertProduct(<String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Widget',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 0,
+      'hsn_code': null,
+      'quantity_on_hand': 3,
+      'low_stock_threshold': 0,
+      'is_active': true,
+      'created_at': older,
+      'updated_at': newer,
+    });
+
+    await repository.upsertProductIfNewer(<String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Widget',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 0,
+      'hsn_code': null,
+      'quantity_on_hand': 5,
+      'low_stock_threshold': 0,
+      'is_active': true,
+      'created_at': older,
+      'updated_at': older,
+    });
+
+    final products = await database.select(database.products).get();
+    expect(products.single.quantityOnHand, '3');
+  });
+
+  test('upsertProductIfNewer applies newer remote product row', () async {
+    final database = db.LocalDatabase.memory();
+    final repository = HybridCacheRepository(database);
+    final older = DateTime.utc(2026, 6, 19, 10).toIso8601String();
+    final newer = DateTime.utc(2026, 6, 19, 12).toIso8601String();
+
+    await repository.upsertProduct(<String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Widget',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 0,
+      'hsn_code': null,
+      'quantity_on_hand': 3,
+      'low_stock_threshold': 0,
+      'is_active': true,
+      'created_at': older,
+      'updated_at': older,
+    });
+
+    await repository.upsertProductIfNewer(<String, dynamic>{
+      'id': 'product-1',
+      'item_number': 'P-1',
+      'item_name': 'Widget',
+      'category': 'General',
+      'buyer_id': null,
+      'company_name': 'Acme',
+      'buying_price': 10,
+      'selling_price': 12,
+      'unit': null,
+      'gst_rate': 0,
+      'hsn_code': null,
+      'quantity_on_hand': 7,
+      'low_stock_threshold': 0,
+      'is_active': true,
+      'created_at': older,
+      'updated_at': newer,
+    });
+
+    final products = await database.select(database.products).get();
+    expect(products.single.quantityOnHand, '7');
+  });
 }
