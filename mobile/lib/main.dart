@@ -237,9 +237,9 @@ class _BillingAppState extends State<BillingApp> with WidgetsBindingObserver {
       return;
     }
     try {
-      await syncService.syncAll();
+      final synced = await syncService.syncAll();
       _hybridSyncError = null;
-      if (!_hybridBootstrapStarted) {
+      if (synced && !_hybridBootstrapStarted) {
         _hybridBootstrapStarted = true;
       }
       if (mounted) {

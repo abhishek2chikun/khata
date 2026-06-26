@@ -131,6 +131,24 @@ class HybridCacheRepository {
         );
   }
 
+  /// Applies a remote product row only when it is newer than the local cache.
+  /// RPC hydration uses [upsertProduct] instead because the server response is
+  /// authoritative for writes initiated on this device.
+  Future<void> upsertProductIfNewer(Map<String, dynamic> row) async {
+    final id = row['id'] as String;
+    final incomingUpdatedAt = DateTime.parse(_asIso(row['updated_at']));
+    final existing = await (_database.select(_database.products)
+          ..where((product) => product.id.equals(id)))
+        .getSingleOrNull();
+    if (existing != null) {
+      final localUpdatedAt = DateTime.parse(existing.updatedAt);
+      if (!incomingUpdatedAt.isAfter(localUpdatedAt)) {
+        return;
+      }
+    }
+    await upsertProduct(row);
+  }
+
   Future<void> upsertBuyer(Map<String, dynamic> row) async {
     await _database.into(_database.buyers).insertOnConflictUpdate(
           BuyersCompanion.insert(
@@ -420,6 +438,8 @@ class HybridSyncService {
   final HybridCacheRepository _cacheRepository;
 
   bool _isSyncing = false;
+  bool _syncPending = false;
+  final Set<String> _rpcTouchedProductIds = <String>{};
   String? _lastError;
   Map<String, int>? _lastSyncedCounts;
   Timer? _backgroundSyncTimer;
@@ -463,6 +483,16 @@ class HybridSyncService {
     _periodicSyncTimer?.cancel();
   }
 
+  void _trackRpcProduct(Object? row) {
+    if (row is! Map) {
+      return;
+    }
+    final id = row['id'];
+    if (id is String && id.isNotEmpty) {
+      _rpcTouchedProductIds.add(id);
+    }
+  }
+
   Future<void> applyRpcResult(
     String functionName,
     Map<String, dynamic> result,
@@ -472,6 +502,7 @@ class HybridSyncService {
       case 'update_product':
       case 'archive_product':
       case 'reactivate_product':
+        _trackRpcProduct(result);
         await _cacheRepository.upsertProduct(result);
         break;
       case 'adjust_stock':
@@ -479,6 +510,7 @@ class HybridSyncService {
           result['stock_movement'],
           _cacheRepository.upsertStockMovement,
         );
+        _trackRpcProduct(result['product']);
         await _upsertObject(result['product'], _cacheRepository.upsertProduct);
         break;
       case 'create_customer':
@@ -503,6 +535,9 @@ class HybridSyncService {
         break;
       case 'create_invoice':
       case 'cancel_invoice':
+        for (final row in (result['products'] as Iterable?) ?? const []) {
+          _trackRpcProduct(row);
+        }
         await _upsertRows(result['products'], _cacheRepository.upsertProduct);
         await _upsertObject(result['invoice'], _cacheRepository.upsertInvoice);
         await _upsertRows(result['items'], _cacheRepository.upsertInvoiceItem);
@@ -571,9 +606,12 @@ class HybridSyncService {
   // remains a reliable end-of-table signal.
   static const _syncPageSize = 1000;
 
-  Future<void> syncAll({bool forceFull = false}) async {
+  /// Returns true when a sync pass actually ran; false when skipped because
+  /// another sync was already in flight (a follow-up pass is scheduled).
+  Future<bool> syncAll({bool forceFull = false}) async {
     if (_isSyncing) {
-      return;
+      _syncPending = true;
+      return false;
     }
     if (_client.auth.currentSession == null) {
       _lastError = 'Sign in required before sync';
@@ -584,12 +622,13 @@ class HybridSyncService {
         hypothesisId: 'H-session',
       );
       // #endregion
-      return;
+      return false;
     }
 
     _isSyncing = true;
     _lastError = null;
     _lastSyncedCounts = null;
+    _rpcTouchedProductIds.clear();
     final syncedCounts = <String, int>{};
     try {
       syncedCounts['buyers'] =
@@ -643,7 +682,17 @@ class HybridSyncService {
       rethrow;
     } finally {
       _isSyncing = false;
+      final shouldRerun = _syncPending;
+      _syncPending = false;
+      if (shouldRerun) {
+        unawaited(
+          syncAll(forceFull: forceFull).catchError((Object error) {
+            _lastError = error.toString();
+          }),
+        );
+      }
     }
+    return true;
   }
 
   Future<void> _upsertObject(
@@ -685,10 +734,11 @@ class HybridSyncService {
       },
       upsert: (row) async {
         activeIds.add(row['id'] as String);
-        await _cacheRepository.upsertProduct(row);
+        await _cacheRepository.upsertProductIfNewer(row);
       },
     );
-    await _cacheRepository.deactivateProductsNotIn(activeIds);
+    final protectedIds = <String>{...activeIds, ..._rpcTouchedProductIds};
+    await _cacheRepository.deactivateProductsNotIn(protectedIds);
     return total;
   }
 
