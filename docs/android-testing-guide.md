@@ -1,314 +1,226 @@
-# Android Testing Guide
+# Android Testing Guide (Hybrid Supabase)
 
-This guide covers both ways to test the Flutter app on Android:
+This guide covers running the Khata Flutter app on Android emulator or a physical
+device against a live Supabase project. There is **no local FastAPI backend** in
+the current runtime — do not follow older guides that mention port forwarding to
+`localhost:8000` or `8010`.
 
-- Android emulator on this Mac
-- Physical Pixel over USB
+## What you need
 
-The mobile app currently talks to `http://localhost:8000/` in `mobile/lib/main.dart`, so Android testing must forward port `8000` from the device back to your Mac.
+| Requirement | Notes |
+| --- | --- |
+| Flutter SDK | Stable channel; run `flutter doctor` |
+| Android SDK | Platform tools, build-tools, at least one system image |
+| Supabase project | Migrations applied; operator account in Supabase Auth |
+| Credentials | `SUPABASE_URL` + `SUPABASE_ANON_KEY` (public anon/publishable key) |
 
-## 1. One-Time Android Setup On macOS
-
-I already installed these pieces on this Mac:
-
-- `openjdk@17`
-- `android-commandlinetools`
-- Android SDK licenses
-- Android SDK packages for platform tools, emulator, build tools, Android 35/36, and an ARM64 system image
-- AVD: `Pixel_9_API_35`
-
-If you need to repeat the setup on another Mac, run:
+Apply schema and seed catalog from the repo root before first device login:
 
 ```bash
-brew install openjdk@17
-brew install --cask android-commandlinetools
-
-export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
-export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
-export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-
-yes | sdkmanager --licenses
-sdkmanager --install \
-  "platform-tools" \
-  "emulator" \
-  "platforms;android-35" \
-  "platforms;android-36" \
-  "build-tools;35.0.0" \
-  "build-tools;28.0.3" \
-  "system-images;android-35;google_apis;arm64-v8a"
-
-avdmanager create avd \
-  -n Pixel_9_API_35 \
-  -k "system-images;android-35;google_apis;arm64-v8a" \
-  -d pixel_9 \
-  --force
+bash supabase/tests/run_migrations_and_tests.sh
+python3 tools/build_preinstalled_catalog.py
+python3 tools/test_catalog_parity.py
 ```
 
-For the current terminal, export the same variables before running Flutter Android commands:
+Provision email/password operator accounts in the Supabase dashboard (Auth →
+Users). The app does not bootstrap users locally.
+
+## Environment variables
+
+Export before every `flutter run` or build:
 
 ```bash
-export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
-export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
-export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+export SUPABASE_URL='https://<project-ref>.supabase.co'
+export SUPABASE_ANON_KEY='<public-anon-key>'
 ```
 
-If you want Flutter to remember the setup across shells, run:
+Optional: store values in a repo-root `.env` (gitignored) and use
+`tools/build_hybrid_apk.sh` for release APKs.
+
+**No `adb reverse` is required.** The app talks to Supabase over HTTPS, not a
+local backend.
+
+## Install Flutter dependencies
 
 ```bash
-flutter config --jdk-dir="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
-flutter config --android-sdk="/opt/homebrew/share/android-commandlinetools"
-```
-
-Verify the toolchain:
-
-```bash
-flutter doctor -v
-```
-
-Expected result:
-
-- `Flutter` is green
-- `Android toolchain` is green
-
-## 2. Start The Backend First
-
-From the repo root, start PostgreSQL if needed:
-
-```bash
-docker start khata-postgres
-```
-
-If the container does not exist yet:
-
-```bash
-docker run --name khata-postgres \
-  -e POSTGRES_USER=khata \
-  -e POSTGRES_PASSWORD=khata \
-  -e POSTGRES_DB=internal_billing \
-  -p 55432:5432 \
-  -d postgres:16
-```
-
-Set the backend database URL:
-
-```bash
-export BILLING_DATABASE_URL='postgresql+psycopg://khata:khata@localhost:55432/internal_billing'
-```
-
-Run migrations:
-
-```bash
-(cd backend && BILLING_DATABASE_URL="$BILLING_DATABASE_URL" ../.venv/bin/python -m alembic upgrade head)
-```
-
-Create the first login user if needed:
-
-```bash
-BILLING_DATABASE_URL="$BILLING_DATABASE_URL" \
-PYTHONPATH=backend \
-.venv/bin/python -m app.commands.bootstrap_user \
-  --username owner \
-  --password secret123 \
-  --display-name Owner
-```
-
-Start the backend server and leave it running:
-
-```bash
-BILLING_DATABASE_URL="$BILLING_DATABASE_URL" \
-PYTHONPATH=backend \
-.venv/bin/python -m uvicorn app.main:app --app-dir backend --reload
-```
-
-You should now have the API on `http://localhost:8010/`.
-
-## 3. Install Flutter Dependencies
-
-From the `mobile/` directory:
-
-```bash
+cd mobile
 flutter pub get
 ```
 
-## 4. Test With The Android Emulator
+## Emulator workflow
 
-### 4.1 Start the emulator
+### 1. Start an Android emulator
 
-On this machine, `flutter emulators` does not currently discover the Homebrew-installed emulator source cleanly, so use the emulator binary directly:
+List available AVDs and launch one:
 
 ```bash
-"/opt/homebrew/share/android-commandlinetools/emulator/emulator" -avd Pixel_9_API_35
+flutter emulators
+flutter emulators --launch <emulator-id>
 ```
 
-Wait until the emulator finishes booting.
+Wait until the emulator finishes booting, then confirm visibility:
 
-### 4.2 Confirm adb sees it
+```bash
+adb devices
+# Expected: emulator-5554    device
+```
+
+### 2. Run the app
+
+```bash
+cd mobile
+flutter run -d emulator-5554 \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+```
+
+Replace `emulator-5554` with the ID from `adb devices` or `flutter devices`.
+
+## Physical device workflow
+
+### 1. Enable USB debugging
+
+On the phone:
+
+1. Settings → About phone → tap **Build number** seven times
+2. Settings → System → Developer options → enable **USB debugging**
+
+### 2. Connect and authorize
 
 ```bash
 adb devices
 ```
 
-Expected result: a device like `emulator-5554` shows as `device`.
+If the device shows `unauthorized`, unlock the phone and accept the USB debugging
+prompt.
 
-### 4.3 Forward backend port 8010
-
-If you want to use `localhost` inside Android, forward the port from the emulator back to your Mac:
-
-```bash
-adb reverse tcp:8010 tcp:8010
-```
-
-### 4.4 Run the Flutter app
-
-From `mobile/`:
+### 3. Run the app
 
 ```bash
-flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:8010/
-```
-
-If your emulator ID differs, use the value from `adb devices` or `flutter devices`.
-
-## 5. Test With A Physical Pixel
-
-### 5.1 Enable developer mode on the phone
-
-On the Pixel:
-
-1. Open `Settings`.
-2. Go to `About phone`.
-3. Tap `Build number` seven times.
-4. Go back to `System` -> `Developer options`.
-5. Enable `USB debugging`.
-
-### 5.2 Connect the phone
-
-Connect the Pixel with a USB cable and accept the trust/debugging prompt on the device.
-
-### 5.3 Confirm adb sees it
-
-```bash
-adb devices
-```
-
-Expected result: your phone serial appears as `device`.
-
-If it shows `unauthorized`, unlock the phone and accept the USB debugging prompt.
-
-### 5.4 Forward backend port 8010
-
-```bash
-adb reverse tcp:8010 tcp:8010
-```
-
-### 5.5 Run the Flutter app on the phone
-
-From `mobile/`:
-
-```bash
+cd mobile
 flutter devices
-flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:8010/
+flutter run -d <device-id> \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 ```
 
-Replace `<device-id>` with your Pixel device ID.
+## Release APK for sideloading
 
-## 6. First Manual Test Pass
-
-Once the app opens, use this quick smoke test:
-
-1. Log in with `owner` / `secret123`.
-2. Open the inventory screen.
-3. Add a product.
-4. Edit the product.
-5. Open sellers.
-6. Create or inspect seller details.
-7. Record a payment or balance adjustment if available.
-8. Create an invoice and verify the preview flow.
-
-If anything fails, capture:
-
-- whether it happened on emulator or Pixel
-- exact screen and button tapped
-- expected result
-- actual result
-- backend terminal output
-- `flutter run` output
-
-## 7. Useful Commands While Debugging
-
-Check connected Android devices:
+From the repo root (loads `.env` when present):
 
 ```bash
-adb devices
+bash tools/build_hybrid_apk.sh
 ```
 
-List Flutter-visible devices:
+Output: `mobile/build/app/outputs/flutter-apk/app-release.apk`
+
+Install on device:
 
 ```bash
-flutter devices
+adb install -r mobile/build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Re-run port forwarding:
+## Manual smoke test (single device)
+
+After login and initial sync complete:
+
+1. Open inventory and confirm catalog products load.
+2. Create or edit a product; verify it appears after sync indicator clears.
+3. Create a customer and draft an invoice; confirm PDF preview renders.
+4. Confirm the invoice on device; verify stock movement and ledger update.
+5. Background the app and resume; confirm sync runs without data loss.
+6. Toggle airplane mode; confirm cached reads work but official writes are blocked.
+
+## Two-device sync smoke (pre-production)
+
+Install the **same APK** on two devices with different operator accounts (or the
+same account on two phones for cache isolation testing):
+
+1. Login and complete initial sync on both devices.
+2. Create a product/customer and confirm an invoice on device A.
+3. Sync device B (pull-to-refresh or wait for background sync) and compare
+   invoice, stock movement, quantity, and customer ledger.
+4. Cancel the invoice on device B.
+5. Sync device A and verify canceled invoice, stock reversal, and ledger reversal.
+
+Automated remote proof (requires `.env` with live Supabase):
 
 ```bash
-adb reverse tcp:8000 tcp:8000
+bash tools/run_remote_two_client_smoke.sh
 ```
 
-Remove port forwarding:
+## Automated checks (no device)
 
 ```bash
-adb reverse --remove tcp:8000
+cd mobile && flutter test test
+cd mobile && flutter analyze
+python3 tools/test_catalog_parity.py
+bash supabase/tests/run_migrations_and_tests.sh
+bash tools/check_hybrid_runtime_cleanup.sh
 ```
 
-Show connected emulators and phones with logs in the active `flutter run` session:
+## Useful debug commands
 
 ```bash
-flutter run -d <device-id>
+adb devices                    # connected emulators/phones
+flutter devices                # Flutter-visible targets
+flutter logs                   # stream device logs while app runs
+adb logcat | grep -i flutter   # raw Android log filter
 ```
 
-## 8. Common Problems
+## Common problems
 
-### `flutter doctor -v` shows Android toolchain errors
+### App crashes at startup with dart-define error
 
-Re-export the environment variables:
+Hybrid mode requires both Supabase defines. Re-export `SUPABASE_URL` and
+`SUPABASE_ANON_KEY` and rebuild.
+
+### Login works in debug but fails on release APK
+
+Release builds bake dart-defines at compile time. Rebuild the APK with the
+correct Supabase project keys.
+
+### API / network errors on emulator
+
+Confirm the emulator has internet access (Supabase is cloud-hosted). This is not
+a localhost port-forward issue.
+
+### Stale catalog or missing products
+
+Regenerate and reseed:
+
+```bash
+python3 tools/build_preinstalled_catalog.py
+python3 tools/seed_supabase_master_catalog.py --reset
+```
+
+Reinstall the app or trigger a full sync after reseed.
+
+### `flutter doctor` Android toolchain errors
+
+Install Android SDK command-line tools and accept licenses:
+
+```bash
+flutter doctor --android-licenses
+```
+
+On macOS with Homebrew Java:
 
 ```bash
 export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
-export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
-export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+flutter config --jdk-dir="$JAVA_HOME"
 ```
 
-### `adb devices` shows no device
+### Legacy docs mention FastAPI, Docker Postgres, or `API_BASE_URL`
 
-- For emulator: wait until Android finishes booting.
-- For Pixel: unlock the phone and approve USB debugging.
-- Replug the cable and run `adb devices` again.
+Those apply to the pre-hybrid runtime on branch `main_backup`. The current app
+uses Supabase RPC + Drift cache only. See [`../README.md`](../README.md) and
+[`../mobile/README.md`](../mobile/README.md).
 
-### Login or API calls fail on Android
+## Recommended daily loop
 
-Most likely cause: port forwarding was not applied.
-
-Run:
-
-```bash
-adb reverse tcp:8000 tcp:8000
-```
-
-Then retry the request.
-
-### Emulator starts but `flutter emulators` shows nothing
-
-Use the direct emulator command from section 4.1. The AVD exists and can be launched directly even if `flutter emulators` does not list it.
-
-## 9. Recommended Daily Flow
-
-For day-to-day testing, this is the shortest reliable loop:
-
-1. Start PostgreSQL.
-2. Start the FastAPI backend.
-3. Start the emulator or connect the Pixel.
-4. Run `adb reverse tcp:8000 tcp:8000`.
-5. Run `flutter run -d <device-id>` from `mobile/`.
-6. Reproduce bugs and keep the backend and Flutter logs open.
+1. Ensure Supabase migrations are current.
+2. Export `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+3. Start emulator or connect physical device.
+4. `flutter run` from `mobile/` with dart-defines.
+5. Keep `flutter logs` open while reproducing bugs.
