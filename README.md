@@ -28,6 +28,9 @@ cache used for fast screens, invoice drafts, analytics, PDFs, and sharing.
 | `tools/build_preinstalled_catalog.py` | Generates Drift JSON and Supabase seed SQL |
 | `backend/` | Historical pre-hybrid reference; not used by the app |
 | `docs/ai-workflow/cycles/20260618-hybrid-supabase/` | Design and release evidence |
+| `docs/android-testing-guide.md` | Emulator and physical-device testing (Supabase hybrid) |
+| `docs/hybrid-supabase-architecture.html` | Architecture diagram and RPC inventory |
+| `mobile/README.md` | Flutter module layout, invariants, and troubleshooting |
 
 ## Configure Supabase
 

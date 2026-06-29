@@ -2,7 +2,14 @@
 
 ## Recent Changes (latest first)
 
-1. **2026-06-26 — Hybrid sync concurrency hardening**
+1. **2026-06-29 — Hybrid developer docs refresh (documentation automation)**
+   - Replaced stale Flutter template in `mobile/README.md` with hybrid runtime
+     contract, layout, sync invariants, catalog commands, and troubleshooting.
+   - Rewrote `docs/android-testing-guide.md` for Supabase hybrid (removed
+     obsolete FastAPI/Docker/port-forward instructions from pre-hybrid runtime).
+   - Linked new docs from root `README.md`.
+
+2. **2026-06-26 — Hybrid sync concurrency hardening**
    - Background `syncAll()` no longer deactivates products hydrated by in-flight RPC writes (`_rpcTouchedProductIds` merged into deactivate guard set).
    - Paginated product sync uses `upsertProductIfNewer` so stale remote pages cannot overwrite fresher RPC cache rows.
    - Coalesced background sync schedules a follow-up pass when `_isSyncing` instead of silently dropping.
